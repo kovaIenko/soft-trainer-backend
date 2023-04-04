@@ -18,6 +18,7 @@ const Login = () => {
 	const loginToGoogle = useGoogleLogin({
 		onSuccess: tokenResponse => {
 			localStorage.setItem("loginWith", "Google")
+			console.log(tokenResponse)
 			localStorage.setItem("accessToken", tokenResponse.access_token)
 			navigate("/home")
 		},
@@ -37,14 +38,14 @@ const Login = () => {
 					Login with
 				</Text>
 				<Spacer y={1} />
-				<Button color='gradient' auto ghost onClick={() => loginToGithub()}>
+				<Button color='gradient' auto ghost onPress={() => loginToGithub()}>
 					<IconGitHub />
 					<Spacer x={0.5} />
 					GitHub
 				</Button>
 				<Spacer y={1} />
 
-				<Button color='gradient' auto ghost onClick={() => loginToGoogle()}>
+				<Button color='gradient' auto ghost onPress={() => loginToGoogle()}>
 					<IconGoogle />
 					<Spacer x={0.5} />
 					Google

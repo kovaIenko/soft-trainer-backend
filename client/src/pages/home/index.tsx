@@ -4,6 +4,8 @@ import { Button, Col, Container, Navbar, Row, Text, User } from "@nextui-org/rea
 
 import { getAccessTokenGithub, getUserDataGithub, getUserDataGoogle } from "./services/home-services"
 
+import { Buffer } from 'buffer';
+
 import { LogOutIcon } from "../../assets/icons"
 
 interface UserDataGithub {
@@ -21,6 +23,9 @@ interface UserdataGoogle {
 const Home = () => {
 	const [userDataGithub, setUserDataGithub] = useState<null | UserDataGithub>(null)
 	const [userDataGoogle, setUserDataGoogle] = useState<null | UserdataGoogle>(null)
+
+	const [prompt, setPrompt] = useState('');
+	const [images, setImages] = useState(['']);
 
 	const loginWith = useRef(localStorage.getItem("loginWith"))
 
@@ -66,6 +71,27 @@ const Home = () => {
 
 	if (!userDataGithub && !userDataGoogle) return null
 
+  const handlePromptChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPrompt(event.target.value);
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const response = await fetch('http://localhost:3001/api/txt2img', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+		'Authorization': `Bearer ${localStorage.getItem("accessToken")}`
+      },
+      body: JSON.stringify({prompt})
+    });
+
+	const data = await response.json();
+	//console.log(data.image)
+	setImages([`data:image/png;base64,${data.image}`]);
+	//console.log(images)
+  };
+
 	return (
 		<>
 			<Navbar isBordered variant='sticky'>
@@ -100,6 +126,19 @@ const Home = () => {
 						<Text h2>Login with {loginWith.current}</Text>
 					</Col>
 				</Row>
+			</Container>
+			<Container gap={1}>
+			<form onSubmit={handleSubmit}>
+        <label>
+          Prompt:
+          <input type="text" value={prompt} onChange={handlePromptChange} />
+        </label>
+        <button type="submit">Submit</button>
+      </form>
+      	{images.map((image) => (
+	
+        <img src={image} key={image} alt="Generated image" />
+      ))}
 			</Container>
 		</>
 	)

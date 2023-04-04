@@ -10,7 +10,7 @@ export const getUserData = async (accessToken: string) => {
         },
       },
     );
-
+    console.log(data)
     return data;
   } catch (error) {
     return null;
