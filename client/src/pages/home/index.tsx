@@ -75,7 +75,7 @@ const Home = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const response = await fetch('http://localhost:3001/api/txt2img', {
+    const response = await fetch('http://ec2-3-101-132-173.us-west-1.compute.amazonaws.com:3001/api/txt2img', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
