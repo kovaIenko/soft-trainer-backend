@@ -4,8 +4,6 @@ import { Button, Col, Container, Navbar, Row, Text, User } from "@nextui-org/rea
 
 import { getAccessTokenGithub, getUserDataGithub, getUserDataGoogle } from "./services/home-services"
 
-import { Buffer } from 'buffer';
-
 import { LogOutIcon } from "../../assets/icons"
 
 interface UserDataGithub {
