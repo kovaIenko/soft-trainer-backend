@@ -14,6 +14,7 @@ export const getUserDataGithub = async (accessToken: string) => {
 	const { data } = await axios.get(`http://localhost:3001/api/github/userData?accessToken=${accessToken}`, {
 		headers: {
 			"Content-Type": "application/json",
+			"Access-Control-Allow-Origin": "*"
 		},
 	})
 	return data
@@ -24,7 +25,7 @@ export const getUserDataGoogle = async (accessToken: string) => {
 	const { data } = await axios.get(`http://localhost:3001/api/google/userData?accessToken=${accessToken}`, {
 		headers: {
 			"Content-Type": "application/json",
-			
+			"Access-Control-Allow-Origin": "*"
 		},
 	})
 	console.log(accessToken);
