@@ -20,10 +20,13 @@ export const getUserDataGithub = async (accessToken: string) => {
 }
 
 export const getUserDataGoogle = async (accessToken: string) => {
+	console.log(accessToken);
 	const { data } = await axios.get(`http://localhost:3001/api/google/userData?accessToken=${accessToken}`, {
 		headers: {
 			"Content-Type": "application/json",
+			
 		},
 	})
+	console.log(accessToken);
 	return data
 }
