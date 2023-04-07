@@ -6,7 +6,7 @@ import { getAccessTokenGithub, getUserDataGithub, getUserDataGoogle } from "./se
 
 import { LogOutIcon } from "../../assets/icons"
 
-const SERVER_ENDPOINT_URL='http://ec2-13-57-8-46.us-west-1.compute.amazonaws.com:3001';
+const SERVER_ENDPOINT_URL='http://ec2-13-57-220-94.us-west-1.compute.amazonaws.com:3001';
 
 interface UserDataGithub {
 	avatar_url: string

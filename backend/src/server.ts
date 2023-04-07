@@ -7,11 +7,13 @@ import dellApi from './controllers/dell-api';
 
 const PORT = process.env.PORT || 3001;
 
+const CLIENT_URL="http://ec2-54-151-84-190.us-west-1.compute.amazonaws.com:5173";
+
 const app = express();
 
 app.use(
   cors({
-    origin: ['http://ec2-13-57-8-46.us-west-1.compute.amazonaws.com:5173'],
+    origin: [CLIENT_URL],
     methods: 'GET,POST',
   }),
 );
