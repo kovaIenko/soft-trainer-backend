@@ -50,7 +50,7 @@ const response = await axios.post('https://api.openai.com/v1/images/generations'
 });
 
 const imageUrl = response.data.data[0].url;
-//console.log(imageUrl)
+console.log(imageUrl)
 // Download the PNG image
 const imageResponse = await axios.get(imageUrl, {
   responseType: 'arraybuffer',

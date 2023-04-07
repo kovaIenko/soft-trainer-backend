@@ -81,7 +81,8 @@ const Home = () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-		'Authorization': `Bearer ${localStorage.getItem("accessToken")}`
+		'Authorization': `Bearer ${localStorage.getItem("accessToken")}`,
+		"Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({prompt})
     });
