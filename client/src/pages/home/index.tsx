@@ -6,6 +6,8 @@ import { getAccessTokenGithub, getUserDataGithub, getUserDataGoogle } from "./se
 
 import { LogOutIcon } from "../../assets/icons"
 
+const SERVER_ENDPOINT_URL='http://ec2-13-57-8-46.us-west-1.compute.amazonaws.com:3001';
+
 interface UserDataGithub {
 	avatar_url: string
 	login: string
@@ -75,7 +77,7 @@ const Home = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const response = await fetch('http://ec2-3-101-132-173.us-west-1.compute.amazonaws.com:3001/api/txt2img', {
+    const response = await fetch(`${SERVER_ENDPOINT_URL}/api/txt2img`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

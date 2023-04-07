@@ -11,7 +11,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: ['http://ec2-3-101-132-173.us-west-1.compute.amazonaws.com:5173'],
+    origin: ['http://ec2-13-57-8-46.us-west-1.compute.amazonaws.com:5173'],
     methods: 'GET,POST',
   }),
 );
