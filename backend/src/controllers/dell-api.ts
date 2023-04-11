@@ -43,19 +43,19 @@ const router: Router = express.Router();
 //   }
 // };
 
-async function getBase64ImageFromURL(url: string) {
-  try {
-    const imageResponse = await axios.get(url, {
-      responseType: 'arraybuffer',
-    });
+// async function getBase64ImageFromURL(url: string) {
+//   try {
+//     const imageResponse = await axios.get(url, {
+//       responseType: 'arraybuffer',
+//     });
 
-    const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
-    return base64Image;
-  } catch (error: any) {
-    console.error(error);
-    return null;
-  }
-}
+//     const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
+//     return base64Image;
+//   } catch (error: any) {
+//     console.error(error);
+//     return null;
+//   }
+// }
 
 router.post('/txt2img', async (req: Request, res: Response) => {
   console.log("Sent request to txt/img")
@@ -67,7 +67,12 @@ router.post('/txt2img', async (req: Request, res: Response) => {
 const imageUrl = response.data.data[0].url;
 console.log(imageUrl)
 
-const base64Image = getBase64ImageFromURL(imageUrl);
+const imageResponse = await axios.get(imageUrl, {
+  responseType: 'arraybuffer',
+});
+
+const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
+
 // Send the base64 image as a response  
 res.send({ image: base64Image });
 
@@ -113,13 +118,19 @@ if(image){
     const imageUrl = response.data.data[0].url;
     console.log(imageUrl)
 
-    const base64Image = getBase64ImageFromURL(imageUrl);
+    //const base64Image = getBase64ImageFromURL(imageUrl);
+
+    const imageResponse = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+    });
+
+    const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
 
     // Set the response headers
-    res.set({
-      'Content-Type': 'image/png', // change the MIME type as needed
-      //'Content-Length': resizedImageBuffer.length,
-    });
+    // res.set({
+    //   'Content-Type': 'image/png', // change the MIME type as needed
+    //   //'Content-Length': resizedImageBuffer.length,
+    // });
 
     // Send the base64 image as a response
     res.send({ image: base64Image });
