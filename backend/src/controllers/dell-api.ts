@@ -1,4 +1,5 @@
 const express = require('express');
+import { Request, Response, Router } from 'express';
 const axios = require('axios');
 const multer  = require('multer')
 
@@ -6,15 +7,15 @@ const upload = multer({ dest: 'uploads/' })
 const fs = require('fs');
 const sharp = require('sharp');
 
+
+//const { OAuth2Client } = require('google-auth-library');
+
 const { Configuration, OpenAIApi } = require("openai");
+
 const configuration = new Configuration({
   apiKey: process.env.DELL_API_TOKEN,
 });
 const openai = new OpenAIApi(configuration);
-
-
-//const { OAuth2Client } = require('google-auth-library');
-import { Request, Response, Router } from 'express';
 
 const router: Router = express.Router();
 
@@ -25,37 +26,30 @@ const router: Router = express.Router();
 //   if (!authTokenHeader) {
 //     return res.status(401).send('Missing authorization token');
 //   }
-//   const authToken = authTokenHeader.split(' ')[1];
-//   console.log(authToken)
+
+//   const authTokenSegments = authTokenHeader.split(' ');
+//   if (authTokenSegments.length !== 2) {
+//     return res.status(401).send('Invalid authorization token');
+//   }
+//   const idToken = authTokenSegments[1];;
+//   console.log(idToken)
 //   try {
 //     const ticket = await client.verifyIdToken({
-//       idToken: authToken,
+//       idToken: idToken,
 //       audience: process.env.VITE_GOOGLE_CLIENT_ID
 //     });
+
+//     console.log(ticket)
 //     const payload = ticket.getPayload();
 //     console.log(payload);
 //     const userId = payload['sub'];
 //     console.log(userId);
 //     return next();
-//   } catch (err) {
+//   } catch (err: any) {
 //     console.error(err);
 //     return res.status(401).send('Invalid authorization token');
 //   }
 // };
-
-// async function getBase64ImageFromURL(url: string) {
-//   try {
-//     const imageResponse = await axios.get(url, {
-//       responseType: 'arraybuffer',
-//     });
-
-//     const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
-//     return base64Image;
-//   } catch (error: any) {
-//     console.error(error);
-//     return null;
-//   }
-// }
 
 router.post('/txt2img', async (req: Request, res: Response) => {
   console.log("Sent request to txt/img")
@@ -125,12 +119,6 @@ if(image){
     });
 
     const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
-
-    // Set the response headers
-    // res.set({
-    //   'Content-Type': 'image/png', // change the MIME type as needed
-    //   //'Content-Length': resizedImageBuffer.length,
-    // });
 
     // Send the base64 image as a response
     res.send({ image: base64Image });

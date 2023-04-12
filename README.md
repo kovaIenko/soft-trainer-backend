@@ -5,7 +5,6 @@ Login app whit GitHub and Google
 ### Front-end
 * React js
 * [Next UI](https://nextui.org/)
-* @octokit/auth
 * @react-oauth/google
 * react-router-dom
 

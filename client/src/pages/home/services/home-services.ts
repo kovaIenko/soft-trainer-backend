@@ -1,7 +1,7 @@
 import axios from "axios"
 
-//const SERVER_ENDPOINT_URL='http://ec2-13-57-220-94.us-west-1.compute.amazonaws.com:3001';
-const SERVER_ENDPOINT_URL="http://localhost:3001";
+const SERVER_ENDPOINT_URL='http://ec2-13-57-220-94.us-west-1.compute.amazonaws.com:3001';
+//const SERVER_ENDPOINT_URL="http://localhost:3001";
 export const getAccessTokenGithub = async (code: string): Promise<any> => {
 	const { data } = await axios.get(`http://localhost:3001/api/github/accessToken?code=${code}`, {
 		headers: {
@@ -24,10 +24,11 @@ export const getUserDataGithub = async (accessToken: string) => {
 
 export const getUserDataGoogle = async (accessToken: string) => {
 	console.log(accessToken);
-	const { data } = await axios.get(`${SERVER_ENDPOINT_URL}/api/google/userData?accessToken=${accessToken}`, {
+	const { data } = await axios.get(`${SERVER_ENDPOINT_URL}/api/google/userData`, {
 		headers: {
 			"Content-Type": "application/json",
-			"Access-Control-Allow-Origin": "*"
+			"Access-Control-Allow-Origin": "*",
+			"Authorization": `Bearer ${accessToken}`
 		},
 	})
 	//console.log(accessToken);

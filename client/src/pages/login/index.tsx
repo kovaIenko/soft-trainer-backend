@@ -37,13 +37,13 @@ const Login = () => {
 				>
 					Login with
 				</Text>
-				<Spacer y={1} />
+				{/* <Spacer y={1} />
 				<Button color='gradient' auto ghost onPress={() => loginToGithub()}>
 					<IconGitHub />
 					<Spacer x={0.5} />
 					GitHub
 				</Button>
-				<Spacer y={1} />
+				<Spacer y={1} /> */}
 
 				<Button color='gradient' auto ghost onPress={() => loginToGoogle()}>
 					<IconGoogle />

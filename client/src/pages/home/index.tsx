@@ -6,14 +6,13 @@ import axios from "axios"
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Navbar, Button, Spinner} from 'react-bootstrap';
-// import { LogOutIcon } from '@primer/octicons-react';
 
 import { getAccessTokenGithub, getUserDataGithub, getUserDataGoogle } from "./services/home-services"
 
 import { LogOutIcon } from "../../assets/icons"
 
-//const SERVER_ENDPOINT_URL='http://ec2-13-57-220-94.us-west-1.compute.amazonaws.com:3001';
-const SERVER_ENDPOINT_URL="http://localhost:3001";
+const SERVER_ENDPOINT_URL='http://ec2-13-57-220-94.us-west-1.compute.amazonaws.com:3001';
+//const SERVER_ENDPOINT_URL="http://localhost:3001";
 
 interface UserDataGithub {
 	avatar_url: string
@@ -181,8 +180,8 @@ const Home = () => {
         </div>
         <button type="submit" className="btn btn-primary mb-3">Generate image</button>
       </form>
-	  {loading && <Spinner animation="border" variant="dark" />}
 	  <h2>Result Image Generation</h2>
+	  {loading && <Spinner animation="border" variant="dark" />}
       <div className="d-flex flex-wrap justify-content-center">
         { images && (
           <img key={images} className="mr-3 mb-3" width={450} height={450} src={images} style={{ maxWidth: "100%" }} />
