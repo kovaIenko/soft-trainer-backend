@@ -1,6 +1,6 @@
 import axios from "axios"
 
-const SERVER_ENDPOINT_URL='http://ec2-13-57-220-94.us-west-1.compute.amazonaws.com:3001';
+const SERVER_ENDPOINT_URL='http://ec2-54-193-47-189.us-west-1.compute.amazonaws.com:3001';
 //const SERVER_ENDPOINT_URL="http://localhost:3001";
 export const getAccessTokenGithub = async (code: string): Promise<any> => {
 	const { data } = await axios.get(`http://localhost:3001/api/github/accessToken?code=${code}`, {
