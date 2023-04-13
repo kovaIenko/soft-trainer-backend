@@ -11,7 +11,7 @@ import { getAccessTokenGithub, getUserDataGithub, getUserDataGoogle } from "./se
 
 import { LogOutIcon } from "../../assets/icons"
 
-const SERVER_ENDPOINT_URL='http://ec2-54-193-47-189.us-west-1.compute.amazonaws.com:3001';
+const SERVER_ENDPOINT_URL='http://ec2-13-57-59-155.us-west-1.compute.amazonaws.com:3001';
 //const SERVER_ENDPOINT_URL="http://localhost:3001";
 
 interface UserDataGithub {
