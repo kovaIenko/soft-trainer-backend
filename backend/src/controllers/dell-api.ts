@@ -7,6 +7,7 @@ const upload = multer({ dest: 'uploads/' })
 const fs = require('fs');
 const sharp = require('sharp');
 
+const { v4: uuidv4 } = require('uuid');
 
 //const { OAuth2Client } = require('google-auth-library');
 
@@ -19,8 +20,16 @@ const openai = new OpenAIApi(configuration);
 
 const router: Router = express.Router();
 
-//const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
+const AWS = require('aws-sdk');
 
+// Set the region where your DynamoDB table is located
+AWS.config.update({ region: 'us-west-1' });
+
+// Create a new DynamoDB client
+const dynamodb = new AWS.DynamoDB.DocumentClient();
+
+
+//const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 // const verifyGoogleAuthToken = async (req: Request, res: Response, next: NextFunction) => {
 //   const authTokenHeader = req.headers.authorization;
 //   if (!authTokenHeader) {
@@ -52,8 +61,9 @@ const router: Router = express.Router();
 // };
 
 router.post('/txt2img', async (req: Request, res: Response) => {
-  console.log("Sent request to txt/img")
-  const { prompt } = req.body;
+
+console.log("Sent request to txt/img")
+const { prompt } = req.body;
   try {
     const response = await openai.createImage({
       prompt: prompt});
@@ -66,6 +76,21 @@ const imageResponse = await axios.get(imageUrl, {
 });
 
 const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
+
+ // Save the user request to DynamoDB
+ const params = {
+  TableName: 'requests',
+  Item: {
+    requestId: uuidv4(), 
+    userid: "1",
+    requestTime: new Date().toISOString(),
+    prompt: prompt,
+    type: 'txt2img'
+  },
+};
+
+console.log("save request data")
+dynamodb.put(params).promise();
 
 // Send the base64 image as a response  
 res.send({ image: base64Image });
@@ -108,6 +133,20 @@ if(image){
       );
 
     console.log(response.data);
+
+    const params = {
+      TableName: 'requests',
+      Item: {
+        requestId: uuidv4(), 
+        userid: "1",
+        requestTime: new Date().toISOString(),
+        prompt: prompt,
+        type: 'img2img'
+      },
+    };
+
+    console.log("save request data")
+    dynamodb.put(params).promise();
 
     const imageUrl = response.data.data[0].url;
     console.log(imageUrl)
