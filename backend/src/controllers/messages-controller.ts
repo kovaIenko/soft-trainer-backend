@@ -10,12 +10,11 @@ AWS.config.update({ region: 'us-west-1' });
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
 router.get('/get', async (req: Request, res: Response) => {
-  console.log("get request")
+  console.log("get request messages")
   const { chatId } = req.query;
   if(!chatId) {
     res.send({ messages: [] });
   }
-  console.log(chatId)
   const params = {
     TableName: 'messages',
     FilterExpression: 'chatId = :chatId',
@@ -24,11 +23,12 @@ router.get('/get', async (req: Request, res: Response) => {
     }
   };
 
+  console.log(params)
 try{
-const messages = dynamodb.scan(params).promise();
-// Send the base64 image as a response  
-res.send({ messages: messages.Items?? [] });
+const messages = await dynamodb.scan(params).promise();
 
+console.log(messages.Items)
+res.send({ messages: messages.Items?? [] });
   } catch (error: any) {
     console.error(error);
     console.log(error.response.data)
@@ -36,9 +36,8 @@ res.send({ messages: messages.Items?? [] });
 });
 
 router.post('/save', async (req: Request, res: Response) => {
-  // const { chatId } = req.query;
-
-  console.log("save request")
+  
+  console.log("save messages request")
   const message = req.body.message;
   
   console.log(message)
