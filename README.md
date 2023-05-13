@@ -25,14 +25,10 @@ pnpm run install
 ### Env
 backed/.env
 ```
-VITE_GITHUB_CLIENT_ID=
 VITE_GOOGLE_CLIENT_ID=
 ```
 client/.env
-```
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
-```
+
 
 ### Running app
 backend/

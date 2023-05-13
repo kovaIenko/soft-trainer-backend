@@ -1,4 +1,10 @@
-import axios from 'axios';
+
+// const {OAuth2Client} = require('google-auth-library');
+
+import verifyToken from "../auth";
+
+// const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID
+// const client = new OAuth2Client();
 
 const AWS = require('aws-sdk');
 
@@ -8,29 +14,33 @@ AWS.config.update({ region: 'us-west-1' });
 // Create a new DynamoDB client
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
-
 export const getUserData = async (auth: string) => {
   try {
+
+    console.log("try to auth user")
     const token = auth.split(' ')[1];
-    const { data } = await axios.get(
-      'https://www.googleapis.com/oauth2/v3/userinfo',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+    
+    //console.log("token : " + token)
+    const ticket = await verifyToken(token);
+
+  if(!ticket) {
+    console.log("якогось хуя пустий auth від гугла")
+  }
+  const email = ticket?.email;
+  const userId = ticket?.sub;
+  console.log(email);
 
   console.log("logging")
   const params = {
       TableName: 'users',
       Key: {
-        email: data.email
+        email: email
       }
     };
 
   const dbData = await dynamodb.get(params).promise();
 
+  console.log("dbData")
   console.log(dbData)
 
   if (!dbData) {
@@ -38,9 +48,8 @@ export const getUserData = async (auth: string) => {
     const saveParams = {
       TableName: 'users',
       Key: {
-        email: data.email,
-        name: data.name,
-        sub: data.sub, 
+        email: email,
+        userId: userId, 
         last_activity: new Date().toISOString(),
         auth: "google"
       }
@@ -51,7 +60,7 @@ export const getUserData = async (auth: string) => {
     const updateParams = {
       TableName: 'users',
       Key: {
-        email: data.email
+        email: email
       },
       UpdateExpression: 'set #attrName = :attrValue',
       ExpressionAttributeNames: {
@@ -66,8 +75,8 @@ export const getUserData = async (auth: string) => {
     await dynamodb.update(updateParams).promise();
   }
 
-    console.log(data)
-    return data;
+    // console.log(ticket)
+    return ticket;
   } catch (error: any) {
     console.log(error)
     return null;
