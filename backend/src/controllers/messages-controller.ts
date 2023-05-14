@@ -13,11 +13,12 @@ AWS.config.update({region: 'us-west-1'});
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
 router.get('/get', async (req: Request, res: Response) => {
-    console.log("get request")
-    const {chatId} = req.query;
-    if (!chatId) {
-        res.send({messages: []});
-    }
+
+  console.log("get request messages")
+  const { chatId } = req.query;
+  if(!chatId) {
+    res.send({ messages: [] });
+  }
     console.log(chatId)
     const params = {
         TableName: 'messages',
@@ -56,10 +57,9 @@ function getUserId(chatIt: string): String {
 }
 
 router.post('/save', async (req: Request, res: Response) => {
-    // const { chatId } = req.query;
-
-    console.log("save request")
-    const message = req.body.message;
+  
+  console.log("save messages request")
+  const message = req.body.message;
 
     console.log(message)
 

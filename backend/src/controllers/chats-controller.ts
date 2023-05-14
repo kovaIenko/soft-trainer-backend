@@ -31,9 +31,10 @@ router.get('/getall', async (req: Request, res: Response) => {
 
  const params = {
   TableName: 'chats', 
-  FilterExpression: 'email = :email',
+  FilterExpression: "email = :email AND isVisible = :visible",
   ExpressionAttributeValues: {
-    ':email': email
+    ':email': email, 
+    ':visible': true
   }
 
 };
