@@ -38,5 +38,7 @@ gradlew.bat
 settings.gradle
 gradlew
 
+.env
+
 ### VS Code ###
 .vscode/

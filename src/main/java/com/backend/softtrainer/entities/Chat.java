@@ -1,6 +1,7 @@
 package com.backend.softtrainer.entities;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
@@ -20,7 +21,7 @@ public class Chat {
   @Id
   private String id;
 
-  @OneToMany
+  @OneToMany(mappedBy = "chatId", fetch = FetchType.LAZY)
   private Set<Message> messages;
 
   private String ownerId;

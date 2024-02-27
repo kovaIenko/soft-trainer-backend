@@ -3,15 +3,19 @@ package com.backend.softtrainer.controllers;
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
 import com.backend.softtrainer.services.ChatService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController("/chats")
+@RestController
+@RequestMapping("/chats")
+@AllArgsConstructor
 public class ChatController {
 
-  private ChatService chatService;
+  private final ChatService chatService;
 
   @PutMapping("/create")
   public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {

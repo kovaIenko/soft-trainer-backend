@@ -1,7 +1,9 @@
 package com.backend.softtrainer.entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +23,7 @@ public class Message {
 
   private LocalDateTime timestamp;
 
+  @Column
   private String content;
 
   private String chatId;
