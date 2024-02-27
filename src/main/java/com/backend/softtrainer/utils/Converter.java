@@ -33,4 +33,5 @@ public class Converter {
   public static ChatDto convert(final Chat chat) {
     return new ChatDto(chat.getMessages().stream().map(a->new MessageDto(a.getContent())).collect(Collectors.toSet()));
   }
+
 }

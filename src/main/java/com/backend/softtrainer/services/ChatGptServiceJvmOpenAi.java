@@ -39,6 +39,8 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
         if (!chatCompletion.choices().isEmpty()) {
           return new MessageDto(chatCompletion.choices().get(0).message().content());
         }
+
+        //todo better handling for that
         return new MessageDto("empty");
       });
   }
