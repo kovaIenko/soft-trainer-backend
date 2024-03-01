@@ -18,8 +18,13 @@ import com.backend.softtrainer.repositories.FlowRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -97,8 +102,33 @@ public class FlowService {
     return flowRepository.findFlowTaskByPreviousOrderNumberAndName(0L, name);
   }
 
+  public List<FlowQuestion> getFirstFlowQuestionsUntilActionable(final String name) {
+
+    var actionableMessageTypes = MessageType.getActionableMessageTypes();
+
+    List<FlowQuestion> questions = flowRepository.findFirst10QuestionsByName(name)
+      .stream().
+      sorted(Comparator.comparing(FlowQuestion::getOrderNumber))
+      .toList();
+
+    List<FlowQuestion> result = new ArrayList<>();
+
+    for (FlowQuestion question : questions) {
+      result.add(question); // Always add the current question
+
+      if (actionableMessageTypes.contains(question.getMessageType().name())) {
+        break; // Stop the loop as we've included the first actionable question
+      }
+    }
+    return result;
+  }
+
   public boolean existsByName(final String name) {
     return flowRepository.existsByName(name);
+  }
+
+  public Set<String> getAllNameFlows() {
+    return flowRepository.findAllNameFlows();
   }
 
 }

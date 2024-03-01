@@ -5,17 +5,20 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
 @AllArgsConstructor
 public enum MessageType {
 
-  TEXT("text"),
-  SINGLE_CHOICE_QUESTION("singleChoiceQuestion"),
-  MULTI_CHOICE_QUESTION("multiChoiceTask"),
-  CONTENT_QUESTION("contentQuestion"),
-  ENTER_TEXT_QUESTION("enterTextQuestion");
+  TEXT("text", false),
+  SINGLE_CHOICE_QUESTION("singleChoiceQuestion", true),
+  MULTI_CHOICE_QUESTION("multiChoiceTask", true),
+  CONTENT_QUESTION("contentQuestion", false),
+  ENTER_TEXT_QUESTION("enterTextQuestion", true);
 
   private final String value;
+  private final boolean actionable;
 
   @JsonValue
   public String getValue() {
@@ -30,6 +33,14 @@ public enum MessageType {
       }
     }
     throw new IllegalArgumentException("Unknown enum type " + value + ", Allowed values are " + Arrays.toString(MessageType.values()));
+  }
+
+  public static List<String> getActionableMessageTypes() {
+    return Stream.of(values())
+      .filter(a -> a.actionable)
+      .map(Enum::name)
+      .map(String::toUpperCase)
+      .toList();
   }
 
 }

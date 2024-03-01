@@ -4,6 +4,7 @@ import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
+import com.backend.softtrainer.services.MessageService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,17 +21,22 @@ public class ChatController {
 
   private final FlowService flowService;
 
+  private final MessageService messageService;
+
   @PutMapping("/create")
   public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {
-    var rootFlowTaskOptional = flowService.getRootFlowTask(chatRequestDto.getFlowName());
+    var flowTillActions = flowService.getFirstFlowQuestionsUntilActionable(chatRequestDto.getFlowName());
 
-    if (rootFlowTaskOptional.isPresent()) {
+    if (!flowTillActions.isEmpty()) {
       var createdChat = chatService.store(chatRequestDto);
+
+      var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId());
+
       return ResponseEntity.ok(new ChatResponseDto(
         createdChat.getId(),
         true,
         "success",
-        rootFlowTaskOptional.get()
+        messages
       ));
     } else {
       return ResponseEntity.ok(new ChatResponseDto(

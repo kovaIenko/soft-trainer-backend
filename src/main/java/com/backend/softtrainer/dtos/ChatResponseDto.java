@@ -1,7 +1,10 @@
 package com.backend.softtrainer.dtos;
 
 
-import com.backend.softtrainer.entities.flow.FlowQuestion;
+import com.backend.softtrainer.entities.messages.Message;
 
-public record ChatResponseDto(String chatId, boolean success, String errorMessage, FlowQuestion rootFlowTask) {
+import java.util.List;
+
+//todo messages are here is so stupid approach but it is temporary
+public record ChatResponseDto(String chatId, boolean success, String errorMessage, List<Message> messages) {
 }

@@ -7,8 +7,6 @@ import lombok.Data;
 @Data
 public class MultiChoiceAnswerMessage extends Message {
 
-  private String question;
-
-  private String options;
+  private String answer;
 
 }

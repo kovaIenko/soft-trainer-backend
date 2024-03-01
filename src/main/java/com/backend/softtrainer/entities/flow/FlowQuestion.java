@@ -3,12 +3,15 @@ package com.backend.softtrainer.entities.flow;
 import com.backend.softtrainer.entities.MessageType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.springframework.core.annotation.Order;
 
 @Entity(name = "flows")
 @Data
@@ -20,6 +23,7 @@ public class FlowQuestion {
   @GeneratedValue(strategy = GenerationType.AUTO)
   private Long id;
 
+  @Order
   @Column(name = "order_number", nullable = false)
   private long orderNumber;
 
@@ -28,6 +32,7 @@ public class FlowQuestion {
   private long previousOrderNumber = 0L;
 
   @Column(name="message_type", nullable = false)
+  @Enumerated(EnumType.STRING)
   private MessageType messageType;
 
   //for example 'giving feedback'

@@ -2,10 +2,12 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.FlowRequestDto;
 import com.backend.softtrainer.dtos.FlowResponseDto;
+import com.backend.softtrainer.dtos.flow.AllFlowsResponseDto;
 import com.backend.softtrainer.services.FlowService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +39,12 @@ public class FlowController {
     var statusMessage = String.format("Successful stored flow with name %s", flowRequestDto.getName());
     log.info(statusMessage);
     return ResponseEntity.ok(new FlowResponseDto(flowRequestDto.getName(), true, statusMessage));
+  }
+
+  @GetMapping("/names")
+  public ResponseEntity<AllFlowsResponseDto> getAllFlowNames() {
+    var names = flowService.getAllNameFlows();
+    return ResponseEntity.ok(new AllFlowsResponseDto(names, true));
   }
 
 }
