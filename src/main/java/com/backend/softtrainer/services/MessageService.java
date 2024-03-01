@@ -2,7 +2,10 @@ package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.MessageRequestDto;
 import com.backend.softtrainer.entities.Chat;
-import com.backend.softtrainer.entities.Message;
+import com.backend.softtrainer.entities.flow.EnterTextQuestion;
+import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
+import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
+import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.utils.Converter;
@@ -29,12 +32,11 @@ public class MessageService {
    * @param messageRequestDto
    * @return
    */
-  public CompletableFuture<Message> getResponse(final MessageRequestDto messageRequestDto) {
+  public CompletableFuture<EnterTextQuestionMessage> getResponse(final MessageRequestDto messageRequestDto) {
 
     //store user's message
     var messageEntity = Converter.convert(messageRequestDto);
     messageRepository.save(messageEntity);
-
 
     var optionalChat = chatRepository.findByIdWithMessages(messageRequestDto.getChatId());
 
@@ -45,12 +47,13 @@ public class MessageService {
 
     //get response from chatgpt, store it and return to front
     return chatGptService.completeChat(Converter.convert(chat))
-      .thenApply(messageDto -> Message.builder()
-         .id(UUID.randomUUID().toString())
-         .content(messageDto.content())
-         .timestamp(LocalDateTime.now())
-         .chatId(messageRequestDto.getChatId())
-         .build())
+      .thenApply(messageDto -> EnterTextQuestionMessage.builder()
+        .chatId(messageRequestDto.getChatId())
+        .content(messageDto.content())
+        .id(UUID.randomUUID().toString())
+        .timestamp(LocalDateTime.now())
+        .build()
+      )
       .thenApply(messageRepository::save);
   }
 

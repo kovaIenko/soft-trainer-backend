@@ -1,19 +1,20 @@
-package com.backend.softtrainer.entities;
+package com.backend.softtrainer.entities.messages;
 
-import jakarta.persistence.Column;
+import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.Role;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "messages")
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Message {
@@ -23,9 +24,12 @@ public class Message {
 
   private LocalDateTime timestamp;
 
-  @Column
-  private String content;
-
   private String chatId;
+
+  private String previousMessageId;
+
+  private MessageType messageType;
+
+  private Role role;
 
 }

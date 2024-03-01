@@ -22,7 +22,16 @@ public class MessageController {
   @PutMapping("/send")
   public CompletableFuture<ResponseEntity<MessageResponseDto>> create(@RequestBody final MessageRequestDto messageRequestDto) {
     return messageService.getResponse(messageRequestDto)
-      .thenApply(message -> ResponseEntity.ok(new MessageResponseDto(message.getId(), message.getContent(), true)));
+      .thenApply(message -> ResponseEntity.ok(new MessageResponseDto(message.getId(), "message.getContent()", true)));
+  }
+
+  @PutMapping("/hello")
+  public CompletableFuture<ResponseEntity<MessageResponseDto>> hello(@RequestBody final MessageRequestDto messageRequestDto) {
+
+    //1 store message
+    //2.
+    return messageService.getResponse(messageRequestDto)
+      .thenApply(message -> ResponseEntity.ok(new MessageResponseDto(message.getId(), "message.getContent()", true)));
   }
 
 }

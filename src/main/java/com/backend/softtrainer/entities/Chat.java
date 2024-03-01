@@ -1,5 +1,6 @@
 package com.backend.softtrainer.entities;
 
+import com.backend.softtrainer.entities.messages.Message;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -25,5 +26,7 @@ public class Chat {
   private Set<Message> messages;
 
   private String ownerId;
+
+  private String flowName;
 
 }

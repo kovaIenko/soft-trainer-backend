@@ -9,4 +9,6 @@ public class ChatRequestDto {
 
   private String ownerId;
 
+  private String flowName;
+
 }
