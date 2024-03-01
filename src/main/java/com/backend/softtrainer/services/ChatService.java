@@ -18,4 +18,8 @@ public class ChatService {
     return chatRepository.save(chat);
   }
 
+  public boolean existsBy(final String ownerId, final String flowName) {
+    return chatRepository.existsByOwnerIdAndFlowName(ownerId, flowName);
+  }
+
 }

@@ -14,4 +14,6 @@ public interface ChatRepository extends JpaRepository<Chat, String> {
   @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.id = :chatId")
   Optional<Chat> findByIdWithMessages(@Param("chatId") String chatId);
 
+  boolean existsByOwnerIdAndFlowName(final String ownerId, final String flowName);
+
 }

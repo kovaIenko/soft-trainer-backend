@@ -25,6 +25,19 @@ public class ChatController {
 
   @PutMapping("/create")
   public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {
+
+    if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getFlowName())) {
+      return ResponseEntity.ok(new ChatResponseDto(
+        chatRequestDto.getId(),
+        false,
+        String.format(
+          "Chat already exists for user %s and for training %s",
+          chatRequestDto.getOwnerId(),
+          chatRequestDto.getFlowName()
+        ),
+        null
+      ));
+    }
     var flowTillActions = flowService.getFirstFlowQuestionsUntilActionable(chatRequestDto.getFlowName());
 
     if (!flowTillActions.isEmpty()) {
