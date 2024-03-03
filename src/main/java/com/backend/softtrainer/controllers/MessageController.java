@@ -1,7 +1,7 @@
 package com.backend.softtrainer.controllers;
 
-import com.backend.softtrainer.dtos.MessageRequestDto;
-import com.backend.softtrainer.dtos.MessageResponseDto;
+import com.backend.softtrainer.dtos.ChatResponseDto;
+import com.backend.softtrainer.dtos.messages.MessageRequestDto;
 import com.backend.softtrainer.services.MessageService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,18 +20,9 @@ public class MessageController {
   private final MessageService messageService;
 
   @PutMapping("/send")
-  public CompletableFuture<ResponseEntity<MessageResponseDto>> create(@RequestBody final MessageRequestDto messageRequestDto) {
-    return messageService.getResponse(messageRequestDto)
-      .thenApply(message -> ResponseEntity.ok(new MessageResponseDto(message.getId(), "message.getContent()", true)));
-  }
-
-  @PutMapping("/hello")
-  public CompletableFuture<ResponseEntity<MessageResponseDto>> hello(@RequestBody final MessageRequestDto messageRequestDto) {
-
-    //1 store message
-    //2.
-    return messageService.getResponse(messageRequestDto)
-      .thenApply(message -> ResponseEntity.ok(new MessageResponseDto(message.getId(), "message.getContent()", true)));
+  public CompletableFuture<ResponseEntity<ChatResponseDto>> create(@RequestBody final MessageRequestDto messageRequestDto) {
+    return messageService.buildResponse(messageRequestDto)
+      .thenApply(messages -> ResponseEntity.ok(new ChatResponseDto(messageRequestDto.getChatId(), true, "success", messages)));
   }
 
 }

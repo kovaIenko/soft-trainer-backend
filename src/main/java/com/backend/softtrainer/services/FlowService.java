@@ -131,4 +131,8 @@ public class FlowService {
     return flowRepository.findAllNameFlows();
   }
 
+  public List<FlowQuestion> findAllByPreviousOrderNumber(final long previousOrderNumber){
+    return flowRepository.findAllByPreviousOrderNumber(previousOrderNumber);
+  }
+
 }

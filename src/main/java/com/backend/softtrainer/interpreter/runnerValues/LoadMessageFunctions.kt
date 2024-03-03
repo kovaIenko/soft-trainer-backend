@@ -12,7 +12,10 @@ fun interface MessageProvider {
     fun getMessages(): List<PredicateMessage>
 }
 
-class LoadMessageFunctions(provider: MessageProvider) {
+class LoadMessageFunctions(
+    provider: MessageProvider
+) {
+
     val functions = listOf(
         TokenType.Where.expression!! to FunctionalType3 { variable: ValuePath, fieldName: String, value: Any ->
             val message = provider.getMessages().firstOrNull {

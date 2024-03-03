@@ -2,11 +2,13 @@ package com.backend.softtrainer.entities.messages;
 
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.Role;
+import com.backend.softtrainer.entities.flow.FlowQuestion;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,7 +32,8 @@ public class Message {
   private String chatId;
 
   @JsonIgnore
-  private String previousMessageId;
+  @OneToOne
+  private FlowQuestion flowQuestion;
 
   @Enumerated(EnumType.STRING)
   private MessageType messageType;

@@ -13,9 +13,13 @@ public enum MessageType {
 
   TEXT("text", false),
   SINGLE_CHOICE_QUESTION("singleChoiceQuestion", true),
-  MULTI_CHOICE_QUESTION("multiChoiceTask", true),
+  MULTI_CHOICE_QUESTION("multiChoiceQuestion", true),
   CONTENT_QUESTION("contentQuestion", false),
-  ENTER_TEXT_QUESTION("enterTextQuestion", true);
+  ENTER_TEXT_QUESTION("enterTextQuestion", true),
+
+  ENTER_TEXT_ANSWER("enterTextAnswer", false),
+  SINGLE_CHOICE_ANSWER("singleChoiceAnswer", false),
+  MULTI_CHOICE_ANSWER("multiChoiceAnswer", false);
 
   private final String value;
   private final boolean actionable;
