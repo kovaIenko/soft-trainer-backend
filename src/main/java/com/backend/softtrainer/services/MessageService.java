@@ -19,8 +19,6 @@ import com.backend.softtrainer.entities.messages.MultiChoiceQuestionMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
-import com.backend.softtrainer.interpreter.Runner;
-import com.backend.softtrainer.interpreter.engine.ConditionScriptEngine;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.utils.Converter;
@@ -127,11 +125,11 @@ public class MessageService {
       throw new RuntimeException("Flow is ended!!!");
     }
 
-    ///todo Mih please take a look at this
-    var interpreter = new Runner(new ConditionScriptEngine());
-
-    return flowQuestions.stream()
-      .filter(question -> interpreter.runCode(question.getShowPredicate())).findFirst().orElse(flowQuestions.get(0));
+//    ///todo Mih please take a look at this
+//    var interpreter = new Runner(new ConditionScriptEngine());
+//
+//    return flowQuestions.stream()
+//      .filter(question -> interpreter.runCode(question.getShowPredicate())).findFirst().orElse(flowQuestions.get(0));
 
     ///todo this as well
     return null;
@@ -161,7 +159,6 @@ public class MessageService {
                  }
       );
   }
-
 
   public List<Message> getAndStoreMessageByFlow(final List<FlowQuestion> flowQuestions, final String chatId) {
     List<Message> messages = flowQuestions.stream()
