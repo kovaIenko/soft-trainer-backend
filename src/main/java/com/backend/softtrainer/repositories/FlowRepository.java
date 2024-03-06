@@ -25,4 +25,6 @@ public interface FlowRepository extends JpaRepository<FlowQuestion, Long> {
 
   List<FlowQuestion> findAllByPreviousOrderNumber(@Param("previousOrderNumber") final long previousOrderNumber);
 
+  List<FlowQuestion> findAllByOrderNumber(@Param("orderNumber") final long orderNumber);
+
 }

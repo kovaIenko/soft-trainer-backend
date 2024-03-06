@@ -1,8 +1,8 @@
 package mock
 
-import MessageInfo
-import SingleChoiceAnswer
-import User
+import com.backend.softtrainer.interpreter.MessageInfo
+import com.backend.softtrainer.interpreter.SingleChoiceAnswer
+import com.backend.softtrainer.interpreter.User
 
 val correctMessage = SingleChoiceAnswer(
     messageInfo = MessageInfo(

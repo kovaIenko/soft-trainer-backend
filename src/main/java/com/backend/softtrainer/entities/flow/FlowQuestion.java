@@ -25,11 +25,11 @@ public class FlowQuestion {
 
   @Order
   @Column(name = "order_number", nullable = false)
-  private long orderNumber;
+  private Long orderNumber;
 
   //pointer to the parent orderNumber
   @Column(name = "previous_order_number", nullable = false)
-  private long previousOrderNumber = 0L;
+  private Long previousOrderNumber = 0L;
 
   @Column(name="message_type", nullable = false)
   @Enumerated(EnumType.STRING)

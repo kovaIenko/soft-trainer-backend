@@ -20,7 +20,7 @@ public class ContentQuestionDto extends FlowQuestionDto {
 //               .url(url)
 //               .previousOrderNumber(prevMessageId)
 //               .name(getName())
-//               .messageType(MessageType.CONTENT_QUESTION)
+//               .messageType(com.backend.softtrainer.interpreter.MessageType.CONTENT_QUESTION)
 //               .build())
 //      .collect(Collectors.toList());
 //  }

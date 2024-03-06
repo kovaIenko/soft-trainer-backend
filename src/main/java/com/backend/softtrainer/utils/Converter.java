@@ -19,8 +19,8 @@ public class Converter {
       .build();
   }
 
-//  public static Message convert(final MessageRequestDto chatRequestDto) {
-//    return Message.builder()
+//  public static com.backend.softtrainer.interpreter.Message convert(final MessageRequestDto chatRequestDto) {
+//    return com.backend.softtrainer.interpreter.Message.builder()
 //      .id(chatRequestDto.getId())
 //      .chatId(chatRequestDto.getChatId())
 //      //.content(chatRequestDto.getContent())
