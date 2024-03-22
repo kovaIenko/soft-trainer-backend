@@ -20,12 +20,12 @@ import java.time.LocalDateTime;
 public class MessageRequestDto {
 
   @JsonProperty("owner_id")
-  private String ownerId;
+  private Long ownerId;
 
   private LocalDateTime timestamp;
 
   @JsonProperty("chat_id")
-  private String chatId;
+  private Long chatId;
 
   @JsonProperty("message_type")
   private MessageType type;

@@ -1,6 +1,7 @@
 package com.backend.softtrainer.entities.messages;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Entity;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,5 +17,8 @@ public class MultiChoiceQuestionMessage extends Message {
   private String correct;
 
   private String options;
+
+  @JsonProperty("is_voted")
+  private boolean isVoted;
 
 }

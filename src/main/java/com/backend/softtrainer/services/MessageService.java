@@ -75,6 +75,7 @@ public class MessageService {
           .timestamp(multiChoiceAnswerMessageDto.getTimestamp())
           .answer(multiChoiceAnswerMessageDto.getAnswer())
           .build();
+
         messageRepository.save(message);
 
         return figureOutNextMessages(messageRequestDto.getChatId(), flowQuestion.getOrderNumber());
@@ -102,7 +103,7 @@ public class MessageService {
   }
 
   @NotNull
-  private CompletableFuture<List<Message>> figureOutNextMessages(final String chatId,
+  private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
                                                                  final Long previousOrderNumber) {
 
     List<Message> messages = new ArrayList<>();
@@ -124,9 +125,8 @@ public class MessageService {
     return CompletableFuture.completedFuture(messages);
   }
 
-
   private FlowQuestion getNextFlowQuestion(
-    final String chatId,
+    final Long chatId,
     final Long previousOrderNumber
   ) {
     List<FlowQuestion> flowQuestions = flowService.findAllByPreviousOrderNumber(previousOrderNumber);
@@ -142,7 +142,7 @@ public class MessageService {
   }
 
   private FlowQuestion findFirstByPredicate(
-    final String chatId,
+    final Long chatId,
     final List<FlowQuestion> flowQuestions
   ) {
     var messageManagerLib = new MessageManagerLib(
@@ -195,15 +195,14 @@ public class MessageService {
       );
   }
 
-  public List<Message> getAndStoreMessageByFlow(final List<FlowQuestion> flowQuestions, final String chatId) {
+  public List<Message> getAndStoreMessageByFlow(final List<FlowQuestion> flowQuestions, final Long chatId) {
     List<Message> messages = flowQuestions.stream()
       .map(question -> convert(question, chatId))
       .collect(Collectors.toList());
     return messageRepository.saveAll(messages);
   }
 
-
-  private Message convert(final FlowQuestion flowQuestion, final String chatId) {
+  private Message convert(final FlowQuestion flowQuestion, final Long chatId) {
 
     if (flowQuestion instanceof Text text) {
       return TextMessage.builder()
@@ -242,8 +241,9 @@ public class MessageService {
     throw new RuntimeException("please add converting type of messages from the flow");
   }
 
+
   @NotNull
-  public Optional<Message> findUserMessageByOrderNumber(final String chatId, final long orderNumber) {
+  public Optional<Message> findUserMessageByOrderNumber(final Long chatId, final long orderNumber) {
     return messageRepository.findAllUserMessagesByOrderNumber(chatId, orderNumber);
   }
 

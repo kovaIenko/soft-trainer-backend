@@ -11,4 +11,8 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class SingleChoiceEnter extends FlowQuestion {
 
+  private String correct;
+
+  private String options;
+
 }

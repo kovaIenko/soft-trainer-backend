@@ -1,9 +1,12 @@
 package com.backend.softtrainer.entities.messages;
 
+import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.Role;
+import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.flow.FlowQuestion;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,7 +37,8 @@ public class Message {
 
   private LocalDateTime timestamp;
 
-  private String chatId;
+  @JsonIgnore
+  private Long chatId;
 
   @JsonIgnore
   @ManyToOne
@@ -46,5 +50,11 @@ public class Message {
   @JsonIgnore
   @Enumerated(EnumType.STRING)
   private Role role;
+
+  @ManyToOne
+  @JsonProperty("author")
+  private Character character;
+
+  //todo add field isCurrentUser
 
 }

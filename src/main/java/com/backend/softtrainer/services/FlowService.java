@@ -1,16 +1,36 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.CharacterDto;
 import com.backend.softtrainer.dtos.FlowRequestDto;
-import com.backend.softtrainer.dtos.flow.*;
+import com.backend.softtrainer.dtos.flow.ContentQuestionDto;
+import com.backend.softtrainer.dtos.flow.EnterTextQuestionDto;
+import com.backend.softtrainer.dtos.flow.FlowQuestionDto;
+import com.backend.softtrainer.dtos.flow.MultiChoiceQuestionDto;
+import com.backend.softtrainer.dtos.flow.SingleChoiceQuestionDto;
+import com.backend.softtrainer.dtos.flow.TextDto;
 import com.backend.softtrainer.entities.MessageType;
-import com.backend.softtrainer.entities.flow.*;
+import com.backend.softtrainer.entities.flow.ContentQuestion;
+import com.backend.softtrainer.entities.flow.EnterTextQuestion;
+import com.backend.softtrainer.entities.flow.FlowQuestion;
+import com.backend.softtrainer.entities.flow.MultipleChoiceQuestion;
+import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
+import com.backend.softtrainer.entities.flow.Text;
+import com.backend.softtrainer.repositories.CharacterRepository;
 import com.backend.softtrainer.repositories.FlowRepository;
 import lombok.AllArgsConstructor;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import com.backend.softtrainer.entities.Character;
 
 @Service
 @AllArgsConstructor
@@ -18,9 +38,28 @@ public class FlowService {
 
   private FlowRepository flowRepository;
 
+  private CharacterRepository characterRepository;
+
   public void uploadFlow(final FlowRequestDto flowRequestDto) {
+
+    Map<Long, Character> characterMap = flowRequestDto.getCharacters().stream()
+      .collect(Collectors.toMap(
+        CharacterDto::id, // Key extractor
+        characterDto -> Character.builder()
+          .name(characterDto.name())
+          .avatar(characterDto.avatar())
+          .flowCharacterId(characterDto.id())
+          .build(), // Value function
+        (existing, replacement) -> existing, // Merge function, in case of duplicate keys
+        HashMap::new // Map supplier
+      ));
+
+    characterRepository.saveAll(characterMap.values());
+
     var flowRecords =
-      flowRequestDto.getFlow().stream().flatMap(this::convert)
+      flowRequestDto.getFlow()
+        .stream()
+        .flatMap(flowQuestionDto -> this.convert(flowQuestionDto, characterMap.get(flowQuestionDto.getAuthor())))
         .map(a -> {
           a.setName(flowRequestDto.getName());
           return a;
@@ -29,7 +68,7 @@ public class FlowService {
   }
 
   //todo stupid violation of second SOLID
-  private Stream<FlowQuestion> convert(final FlowQuestionDto flowRecordDto) {
+  private Stream<FlowQuestion> convert(final FlowQuestionDto flowRecordDto, final Character authorEntity) {
     return flowRecordDto.getPreviousOrderNumber()
       .stream()
       .map(prevMessageId -> convertFlow(flowRecordDto, prevMessageId));
@@ -116,16 +155,8 @@ public class FlowService {
     return flowRepository.findAllNameFlows();
   }
 
-  public List<FlowQuestion> findAllByPreviousOrderNumber(final long previousOrderNumber) {
+  public List<FlowQuestion> findAllByPreviousOrderNumber(final long previousOrderNumber){
     return flowRepository.findAllByPreviousOrderNumber(previousOrderNumber);
   }
 
-  @NotNull
-  public List<FlowQuestion> findByOrderNumber(final long orderNumber) {
-    return flowRepository.findAllByOrderNumber(orderNumber);
-  }
-
-  public FlowQuestion save(final FlowQuestion flowQuestion){
-    return flowRepository.save(flowQuestion);
-  }
 }

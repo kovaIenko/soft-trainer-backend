@@ -41,6 +41,9 @@ dependencies {
   implementation("io.github.stefanbratanov:jvm-openai:0.6.1")
   implementation group: 'org.springdoc', name: 'springdoc-openapi-starter-webmvc-ui', version: '2.3.0'
   testImplementation "io.mockk:mockk:1.13.10"
+//  implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+//  implementation 'org.springframework.boot:spring-boot-starter-security'
+  testImplementation "io.mockk:mockk:1.13.10"
 
 }
 

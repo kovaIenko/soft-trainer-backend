@@ -1,5 +1,6 @@
 package com.backend.softtrainer.entities.flow;
 
+import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.MessageType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +9,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -40,5 +44,8 @@ public class FlowQuestion {
 
   @Column(name = "show_predicate", nullable = false)
   private String showPredicate;
+
+  @ManyToOne
+  private Character character;
 
 }
