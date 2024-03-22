@@ -4,20 +4,22 @@ import com.backend.softtrainer.interpreter.astBuilder.buildAST
 import com.backend.softtrainer.interpreter.astBuilder.shuntingYard
 import com.backend.softtrainer.interpreter.astBuilder.tokenize
 import com.backend.softtrainer.interpreter.engine.ConditionScriptEngine
-import com.backend.softtrainer.interpreter.engine.ValuePath
 
 class Runner(
-    private val engine: ConditionScriptEngine,
+    private val engine: ConditionScriptEngine = ConditionScriptEngine(),
 ) {
 
-    fun loadValue(valuePath: String, value: Any) {
-        engine.saveValue(ValuePath(valuePath), value)
-    }
+    fun reset() = engine.reset()
 
-    fun runCode(code: String) = code
+    fun loadLib(library: List<Pair<String, Any>>) = engine.loadLib(library)
+
+    fun runPredicate(code: String): Boolean = runCode(code) as Boolean
+
+    private fun runCode(code: String) = code
         .tokenize()
         .toList()
         .let(::shuntingYard)
         .let(::buildAST)
         .let(engine::execute)
+
 }

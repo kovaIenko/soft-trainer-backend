@@ -1,6 +1,5 @@
-package com.backend.softtrainer.interpreter.runnerValues
+package com.backend.softtrainer.interpreter.libs
 
-import MessageNotFoundException
 import NotImplementedException
 import com.backend.softtrainer.interpreter.engine.ValuePath
 import com.backend.softtrainer.interpreter.entity.FunctionalType3
@@ -12,22 +11,19 @@ fun interface MessageProvider {
     fun getMessages(): List<PredicateMessage>
 }
 
-class LoadMessageFunctions(
-    provider: MessageProvider
+class MessageManagerLib(
+    messageProvider: (Long) -> PredicateMessage?,
 ) {
 
-    val functions = listOf(
+    val lib = listOf(
         TokenType.Where.expression!! to FunctionalType3 { variable: ValuePath, fieldName: String, value: Any ->
-            val message = provider.getMessages().firstOrNull {
-                when (fieldName) {
-                    "id" -> it.id == value
-                    else -> throw NotImplementedException("Find by $fieldName not implemented")
-                }
-            } ?: throw MessageNotFoundException()
+            val message = when (fieldName) {
+                "id" -> messageProvider(value.toString().toLong())
+                else -> throw NotImplementedException("Find by $fieldName not implemented")
+            } ?: return@FunctionalType3 false
 
             saveValue(variable, message)
             true
         },
     )
-
 }

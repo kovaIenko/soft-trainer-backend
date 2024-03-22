@@ -1,3 +1,5 @@
+package com.backend.softtrainer.interpreter
+
 enum class MessageType {
     Text, SingleChoiceTask, MultiChoiceTask, SingleChoiceAnswer, Images, Videos, EnterText
 }
@@ -12,7 +14,7 @@ data class MessageInfo(
 )
 
 data class Option(
-    val id: String,
+//    val id: String,
     val text: String,
     val isCorrected: Boolean,
     val isSelected: Boolean,

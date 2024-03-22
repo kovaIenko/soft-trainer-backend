@@ -19,6 +19,9 @@ import com.backend.softtrainer.entities.messages.MultiChoiceQuestionMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
+import com.backend.softtrainer.interpreter.Runner;
+import com.backend.softtrainer.interpreter.entity.PredicateMessage;
+import com.backend.softtrainer.interpreter.libs.MessageManagerLib;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.utils.Converter;
@@ -27,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -38,11 +42,11 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class MessageService {
 
-  private ChatGptService chatGptService;
-
   private final ChatRepository chatRepository;
   private final MessageRepository messageRepository;
   private final FlowService flowService;
+  private final Runner runner = new Runner();
+  private ChatGptService chatGptService;
 
   public CompletableFuture<List<Message>> buildResponse(final MessageRequestDto messageRequestDto) {
 
@@ -58,41 +62,42 @@ public class MessageService {
         message = SingleChoiceAnswerMessage.builder()
           .messageType(MessageType.SINGLE_CHOICE_ANSWER)
           .role(Role.USER)
+          .id(UUID.randomUUID().toString())
           .chatId(singleChoiceAnswerMessageDto.getChatId())
           .flowQuestion(flowQuestion)
           .timestamp(singleChoiceAnswerMessageDto.getTimestamp())
           .answer(singleChoiceAnswerMessageDto.getAnswer())
           .build();
-
         messageRepository.save(message);
 
-        return figureOutNextMessages(messageRequestDto, flowQuestion);
+        return figureOutNextMessages(messageRequestDto.getChatId(), flowQuestion.getOrderNumber());
 
       } else if (messageRequestDto instanceof MultiChoiceAnswerMessageDto multiChoiceAnswerMessageDto) {
         message = MultiChoiceAnswerMessage.builder()
           .messageType(MessageType.SINGLE_CHOICE_ANSWER)
           .role(Role.USER)
+          .id(UUID.randomUUID().toString())
           .chatId(multiChoiceAnswerMessageDto.getChatId())
           .flowQuestion(flowQuestion)
           .timestamp(multiChoiceAnswerMessageDto.getTimestamp())
           .answer(multiChoiceAnswerMessageDto.getAnswer())
           .build();
-
         messageRepository.save(message);
 
-        return figureOutNextMessages(messageRequestDto, flowQuestion);
+        return figureOutNextMessages(messageRequestDto.getChatId(), flowQuestion.getOrderNumber());
+
 
       } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
         message = EnterTextAnswerMessage.builder()
           .messageType(MessageType.SINGLE_CHOICE_ANSWER)
           .role(Role.USER)
+          .id(UUID.randomUUID().toString())
           .chatId(enterTextAnswerMessageDto.getChatId())
           .timestamp(enterTextAnswerMessageDto.getTimestamp())
           .flowQuestion(flowQuestion)
           .content(enterTextAnswerMessageDto.getContent())
           .build();
         messageRepository.save(message);
-
         //chat gpt
         return chatGptResponse(message);
       }
@@ -104,35 +109,71 @@ public class MessageService {
   }
 
   @NotNull
-  private CompletableFuture<List<Message>> figureOutNextMessages(final MessageRequestDto messageRequestDto,
-                                                                 final FlowQuestion flowQuestion) {
+  private CompletableFuture<List<Message>> figureOutNextMessages(final String chatId,
+                                                                 final Long previousOrderNumber) {
 
-    var nextFlowQuestion = getNextFlowQuestion(flowQuestion);
+    List<Message> messages = new ArrayList<>();
+    var nextFlowQuestion = getNextFlowQuestion(chatId, previousOrderNumber);
 
-    //todo find out all questions after nextFlowQuestiin
-    var nextMessage = convert(nextFlowQuestion, messageRequestDto.getChatId());
+    var nextMessage = convert(nextFlowQuestion, chatId);
+    messages.add(nextMessage);
     messageRepository.save(nextMessage);
 
-    return CompletableFuture.completedFuture(List.of(nextMessage));
+    while (!MessageType.getActionableMessageTypes().contains(nextFlowQuestion.getMessageType().name())) {
+
+      nextFlowQuestion = getNextFlowQuestion(chatId, nextFlowQuestion.getOrderNumber());
+
+      nextMessage = convert(nextFlowQuestion, chatId);
+      messageRepository.save(nextMessage);
+      messages.add(nextMessage);
+    }
+
+    return CompletableFuture.completedFuture(messages);
   }
 
 
-  private FlowQuestion getNextFlowQuestion(final FlowQuestion previousFlowQuestion) {
-    List<FlowQuestion> flowQuestions = flowService.findAllByPreviousOrderNumber(previousFlowQuestion.getOrderNumber());
+  private FlowQuestion getNextFlowQuestion(
+    final String chatId,
+    final Long previousOrderNumber
+  ) {
+    List<FlowQuestion> flowQuestions = flowService.findAllByPreviousOrderNumber(previousOrderNumber);
 
+    if (flowQuestions.size() == 1) {
+      return flowQuestions.get(0);
+    }
     if (flowQuestions.isEmpty()) {
       //todo handle the case we don't find the next flow node
       throw new RuntimeException("Flow is ended!!!");
     }
+    return findFirstByPredicate(chatId, flowQuestions);
+  }
 
-//    ///todo Mih please take a look at this
-//    var interpreter = new Runner(new ConditionScriptEngine());
-//
-//    return flowQuestions.stream()
-//      .filter(question -> interpreter.runCode(question.getShowPredicate())).findFirst().orElse(flowQuestions.get(0));
+  private FlowQuestion findFirstByPredicate(
+    final String chatId,
+    final List<FlowQuestion> flowQuestions
+  ) {
+    var messageManagerLib = new MessageManagerLib(
+      (Long orderNumber) -> {
+        Optional<Message> message = findUserMessageByOrderNumber(chatId, orderNumber);
+        if (message.isPresent()) {
+          return new PredicateMessage(message.get());
+        } else {
+          return null;
+        }
+      }
+    );
 
-    ///todo this as well
-    return null;
+    var nextFlowQuestions = flowQuestions
+      .stream()
+      .filter(
+        flowQuestion -> {
+          runner.reset();
+          runner.loadLib(messageManagerLib.getLib());
+          return runner.runPredicate(flowQuestion.getShowPredicate());
+        }
+      )
+      .findFirst();
+    return nextFlowQuestions.orElse(null);
   }
 
   private CompletableFuture<List<Message>> chatGptResponse(final Message messageEntity) {
@@ -205,6 +246,11 @@ public class MessageService {
     }
 
     throw new RuntimeException("please add converting type of messages from the flow");
+  }
+
+  @NotNull
+  public Optional<Message> findUserMessageByOrderNumber(final String chatId, final long orderNumber) {
+    return messageRepository.findAllUserMessagesByOrderNumber(chatId, orderNumber);
   }
 
 }
