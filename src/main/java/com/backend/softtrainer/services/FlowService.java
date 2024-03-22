@@ -71,16 +71,17 @@ public class FlowService {
   private Stream<FlowQuestion> convert(final FlowQuestionDto flowRecordDto, final Character authorEntity) {
     return flowRecordDto.getPreviousOrderNumber()
       .stream()
-      .map(prevMessageId -> convertFlow(flowRecordDto, prevMessageId));
+      .map(prevMessageId -> convertFlow(flowRecordDto, prevMessageId, authorEntity));
   }
 
-  private FlowQuestion convertFlow(final FlowQuestionDto flowRecordDto, final long previousMessageId) {
+  private FlowQuestion convertFlow(final FlowQuestionDto flowRecordDto, final long previousMessageId,  final Character authorEntity) {
 
     if (flowRecordDto instanceof ContentQuestionDto contentQuestionDto) {
       return ContentQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .url(contentQuestionDto.getUrl())
+        .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.CONTENT_QUESTION)
         .build();
@@ -89,6 +90,7 @@ public class FlowService {
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .prompt(enterTextQuestionDto.getPrompt())
+        .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .build();
@@ -97,6 +99,7 @@ public class FlowService {
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .text(textDto.getText())
+        .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.TEXT)
         .build();
@@ -104,6 +107,7 @@ public class FlowService {
       return SingleChoiceQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
+        .character(authorEntity)
         .correct(singleChoiceQuestionDto.getCorrect())
         .options(String.join(" || ", singleChoiceQuestionDto.getOptions()))
         .previousOrderNumber(previousMessageId)
@@ -113,6 +117,7 @@ public class FlowService {
       return MultipleChoiceQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
+        .character(authorEntity)
         .correct(String.join(" || ", multipleChoiceQuestionDto.getCorrect()))
         .options(String.join(" || ", multipleChoiceQuestionDto.getOptions()))
         .previousOrderNumber(previousMessageId)

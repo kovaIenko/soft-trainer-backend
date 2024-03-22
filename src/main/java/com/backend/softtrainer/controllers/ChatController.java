@@ -2,6 +2,7 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
+import com.backend.softtrainer.entities.Role;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
@@ -43,7 +44,8 @@ public class ChatController {
 
     if (!flowTillActions.isEmpty()) {
       var createdChat = chatService.store(chatRequestDto);
-      var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId());
+
+      var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
       return ResponseEntity.ok(new ChatResponseDto(
         createdChat.getId(),
         true,
@@ -65,6 +67,7 @@ public class ChatController {
   public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "ownerId") Long ownerId,
                                              @RequestParam(name = "flowName") String flowName) {
     var chatOptional = chatService.findChatWithMessages(ownerId, flowName);
+
     if (chatOptional.isEmpty()) {
       return ResponseEntity.ok(new ChatResponseDto(
         null,
@@ -79,11 +82,19 @@ public class ChatController {
     }
 
     var chat = chatOptional.get();
+
+    var messages = chat.getMessages().stream().map(message -> {
+      if (message.getRole().equals(Role.USER)) {
+        message.setCurrentUser(true);
+      }
+      return message;
+    }).toList();
+
     return ResponseEntity.ok(new ChatResponseDto(
       chat.getId(),
       true,
       "success",
-      chat.getMessages()
+      messages
     ));
   }
 
