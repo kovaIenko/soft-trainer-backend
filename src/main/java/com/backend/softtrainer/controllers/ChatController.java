@@ -7,9 +7,11 @@ import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,10 +27,9 @@ public class ChatController {
 
   @PutMapping("/create")
   public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {
-
     if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getFlowName())) {
       return ResponseEntity.ok(new ChatResponseDto(
-        chatRequestDto.getId(),
+        null,
         false,
         String.format(
           "Chat already exists for user %s and for training %s",
@@ -42,24 +43,48 @@ public class ChatController {
 
     if (!flowTillActions.isEmpty()) {
       var createdChat = chatService.store(chatRequestDto);
-
       var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId());
-
       return ResponseEntity.ok(new ChatResponseDto(
         createdChat.getId(),
         true,
         "success",
         messages
       ));
+
     } else {
       return ResponseEntity.ok(new ChatResponseDto(
-        chatRequestDto.getId(),
+        null,
         false,
         String.format("No flow with name %s", chatRequestDto.getFlowName()),
         null
       ));
     }
+  }
 
+  @GetMapping("/get")
+  public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "ownerId") Long ownerId,
+                                             @RequestParam(name = "flowName") String flowName) {
+    var chatOptional = chatService.findChatWithMessages(ownerId, flowName);
+    if (chatOptional.isEmpty()) {
+      return ResponseEntity.ok(new ChatResponseDto(
+        null,
+        false,
+        String.format(
+          "Chat doesn't exists for user %s and for training %s",
+          ownerId,
+          flowName
+        ),
+        null
+      ));
+    }
+
+    var chat = chatOptional.get();
+    return ResponseEntity.ok(new ChatResponseDto(
+      chat.getId(),
+      true,
+      "success",
+      chat.getMessages()
+    ));
   }
 
 }

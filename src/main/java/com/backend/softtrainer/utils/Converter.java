@@ -13,7 +13,6 @@ public class Converter {
 
   public static Chat convert(final ChatRequestDto chatRequestDto) {
     return Chat.builder()
-      .id(chatRequestDto.getId())
       .ownerId(chatRequestDto.getOwnerId())
       .flowName(chatRequestDto.getFlowName())
       .build();

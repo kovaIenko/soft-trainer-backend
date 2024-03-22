@@ -5,9 +5,7 @@ import lombok.Data;
 @Data
 public class ChatRequestDto {
 
-  private String id;
-
-  private String ownerId;
+  private Long ownerId;
 
   private String flowName;
 

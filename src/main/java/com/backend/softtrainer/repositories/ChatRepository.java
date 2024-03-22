@@ -9,11 +9,14 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ChatRepository extends JpaRepository<Chat, String> {
+public interface ChatRepository extends JpaRepository<Chat, Long> {
 
   @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.id = :chatId")
-  Optional<Chat> findByIdWithMessages(@Param("chatId") String chatId);
+  Optional<Chat> findByIdWithMessages(@Param("chatId") Long chatId);
 
-  boolean existsByOwnerIdAndFlowName(final String ownerId, final String flowName);
+  boolean existsByOwnerIdAndFlowName(final Long ownerId, final String flowName);
+
+  @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.ownerId = :ownerId AND c.flowName = :flowName")
+  Optional<Chat> findByOwnerIdAndFlowNameWithMessages(@Param("ownerId") final Long ownerId, @Param("flowName") final String flowName);
 
 }

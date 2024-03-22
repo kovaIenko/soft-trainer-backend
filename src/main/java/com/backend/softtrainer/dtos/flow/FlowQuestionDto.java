@@ -41,8 +41,7 @@ public abstract class FlowQuestionDto {
   private String showPredicate;
 
   @NotNull
-  private String author;
-
-//  public abstract List<FlowRecord> getFlowRecords();
+  @JsonProperty("character_id")
+  private long author;
 
 }

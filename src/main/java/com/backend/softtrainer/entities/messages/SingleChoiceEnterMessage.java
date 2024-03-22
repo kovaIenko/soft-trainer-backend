@@ -5,13 +5,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-
 @Entity
 @Data
-@NoArgsConstructor
 @SuperBuilder
-public class MultiChoiceAnswerMessage extends Message{
-
-  private String answer;
+@NoArgsConstructor
+public class SingleChoiceEnterMessage extends Message {
 
 }
