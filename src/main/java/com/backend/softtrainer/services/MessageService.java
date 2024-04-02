@@ -1,29 +1,11 @@
 package com.backend.softtrainer.services;
 
-import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
-import com.backend.softtrainer.dtos.messages.MessageRequestDto;
-import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
-import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
-import com.backend.softtrainer.dtos.messages.SingleChoiceTaskAnswerMessageDto;
+import com.backend.softtrainer.dtos.messages.*;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.Role;
-import com.backend.softtrainer.entities.flow.EnterTextQuestion;
-import com.backend.softtrainer.entities.flow.FlowNode;
-import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
-import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
-import com.backend.softtrainer.entities.flow.SingleChoiceTask;
-import com.backend.softtrainer.entities.flow.Text;
-import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
-import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
-import com.backend.softtrainer.entities.messages.Message;
-import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
-import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
-import com.backend.softtrainer.entities.messages.TextMessage;
+import com.backend.softtrainer.entities.flow.*;
+import com.backend.softtrainer.entities.messages.*;
 import com.backend.softtrainer.interpreter.Runner;
 import com.backend.softtrainer.interpreter.entity.PredicateMessage;
 import com.backend.softtrainer.interpreter.libs.MessageManagerLib;
@@ -31,19 +13,17 @@ import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.utils.Converter;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @AllArgsConstructor
 public class MessageService {
 
@@ -191,7 +171,14 @@ public class MessageService {
         flowNode -> {
           runner.reset();
           runner.loadLib(messageManagerLib.getLib());
-          return runner.runPredicate(flowNode.getShowPredicate());
+
+          var predicate = flowNode.getShowPredicate();
+          if (predicate == null || predicate.isEmpty()) {
+            return true;
+          } else {
+            log.info("runPredicate: " + predicate);
+            return runner.runPredicate(predicate);
+          }
         }
       )
       .findFirst();

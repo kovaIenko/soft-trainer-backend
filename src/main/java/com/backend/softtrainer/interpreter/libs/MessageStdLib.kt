@@ -19,4 +19,13 @@ val messageStdLib = listOf(
     "message\\w*.anyIncorrect" to FunctionalType1 { message: PredicateMessage ->
         message.options?.any { it.isCorrected == it.isSelected }?.not() ?: false
     },
+    "message\\w*.selected" to FunctionalType1 { message: PredicateMessage ->
+        val indexes: List<Int> = message.options
+            ?.withIndex()
+            ?.filter { it.value.isSelected }
+            ?.map { it.index + 1 }
+            ?: listOf()
+
+        indexes
+    },
 )

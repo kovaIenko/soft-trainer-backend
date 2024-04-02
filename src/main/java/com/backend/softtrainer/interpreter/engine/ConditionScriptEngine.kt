@@ -7,8 +7,8 @@ import com.backend.softtrainer.interpreter.entity.FType3
 import com.backend.softtrainer.interpreter.entity.TokenType
 import com.backend.softtrainer.interpreter.libs.messageStdLib
 import com.backend.softtrainer.interpreter.libs.tokenLib
-import utils.isPrimitive
-import utils.toPrimitive
+import com.backend.softtrainer.interpreter.utils.isPrimitive
+import com.backend.softtrainer.interpreter.utils.toPrimitive
 
 class ConditionScriptEngine(
     initValues: List<Pair<String, Any>> = listOf()
@@ -36,8 +36,20 @@ class ConditionScriptEngine(
 
     override fun ValueNode.processingValueNode(): Any = when {
         type == TokenType.ConstString -> token.value.trim('"')
+        type == TokenType.ConstList -> token.value
+            .trim('[', ']')
+            .split(",")
+            .map(::convertCodeToPrimitive)
+
         token.value.isPrimitive() -> token.value.toPrimitive()
         else -> ValuePath(token.value)
+    }
+
+    private fun convertCodeToPrimitive(code: String): Any = code.trim().let {
+        when {
+            TokenType.ConstString.regex?.toRegex()?.matches(it) == true -> it.trim('"')
+            else -> it.toPrimitive()
+        }
     }
 
     private fun CommandNode.processingWhereOperator() = run {

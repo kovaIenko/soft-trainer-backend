@@ -7,10 +7,6 @@ import com.backend.softtrainer.interpreter.entity.PredicateMessage
 import com.backend.softtrainer.interpreter.entity.TokenType
 import org.hibernate.internal.util.collections.CollectionHelper.listOf
 
-fun interface MessageProvider {
-    fun getMessages(): List<PredicateMessage>
-}
-
 class MessageManagerLib(
     messageProvider: (Long) -> PredicateMessage?,
 ) {

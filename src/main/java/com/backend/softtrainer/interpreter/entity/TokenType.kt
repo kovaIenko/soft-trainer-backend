@@ -18,6 +18,7 @@ sealed class TokenType(
     object Where : TokenType("where", "where(\\w*)", precedence = 4)
 
     object ConstString : TokenType(null, "\".*?\"", 0, precedence = 0)
+    object ConstList : TokenType(null, "\\[.*?\\]", 0, precedence = 0)
     object Value : TokenType(null, "\\w+", 0, precedence = 0)
 
     object OpeningBrackets : TokenType("(", null, 0, precedence = 0)
@@ -25,7 +26,7 @@ sealed class TokenType(
     ;
 
     companion object {
-        val entries get() = listOf(Equal, More, Less, And, Or, Access, Invoke, Where, ConstString, Value)
+        val entries get() = listOf(Equal, More, Less, And, Or, Access, Invoke, Where, ConstString, ConstList, Value)
 
         fun entriesToRegex() = entries.joinToString(separator = "|") { it.regex ?: it.expression.orEmpty() }
 

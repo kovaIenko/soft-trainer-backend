@@ -15,11 +15,14 @@ class Runner(
 
     fun runPredicate(code: String): Boolean = runCode(code) as Boolean
 
-    private fun runCode(code: String) = code
+    fun runCode(code: String) = code
+        .let(::compile)
+        .let(engine::execute)
+
+    fun compile(code: String) = code
         .tokenize()
         .toList()
         .let(::shuntingYard)
         .let(::buildAST)
-        .let(engine::execute)
 
 }

@@ -1,4 +1,4 @@
-package utils
+package com.backend.softtrainer.interpreter.utils
 
 fun String.isPrimitive() = (
         null
