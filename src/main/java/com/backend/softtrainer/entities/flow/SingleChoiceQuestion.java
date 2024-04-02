@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class SingleChoiceQuestion extends FlowQuestion {
+public class SingleChoiceQuestion extends FlowNode {
 
   private String correct;
 

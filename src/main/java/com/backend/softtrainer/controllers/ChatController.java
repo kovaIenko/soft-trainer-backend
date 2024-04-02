@@ -40,7 +40,7 @@ public class ChatController {
         null
       ));
     }
-    var flowTillActions = flowService.getFirstFlowQuestionsUntilActionable(chatRequestDto.getFlowName());
+    var flowTillActions = flowService.getFirstflowNodesUntilActionable(chatRequestDto.getFlowName());
 
     if (!flowTillActions.isEmpty()) {
       var createdChat = chatService.store(chatRequestDto);
@@ -83,12 +83,7 @@ public class ChatController {
 
     var chat = chatOptional.get();
 
-    var messages = chat.getMessages().stream().map(message -> {
-      if (message.getRole().equals(Role.USER)) {
-        message.setCurrentUser(true);
-      }
-      return message;
-    }).toList();
+    var messages = chat.getMessages().stream().toList();
 
     return ResponseEntity.ok(new ChatResponseDto(
       chat.getId(),

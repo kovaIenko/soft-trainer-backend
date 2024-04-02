@@ -1,7 +1,6 @@
 package com.backend.softtrainer.entities.messages;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Entity;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,14 +10,12 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class MultiChoiceQuestionMessage extends Message {
+public class SingleChoiceTaskQuestionMessage extends Message {
 
   @JsonIgnore
   private String correct;
 
+  //todo split it into list
   private String options;
-
-  @JsonProperty("is_voted")
-  private boolean isVoted;
 
 }

@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TextDto extends FlowQuestionDto {
+public class TextDto extends FlowNodeDto {
 
   private String text;
 

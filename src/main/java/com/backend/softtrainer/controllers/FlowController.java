@@ -2,7 +2,7 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.FlowRequestDto;
 import com.backend.softtrainer.dtos.FlowResponseDto;
-import com.backend.softtrainer.dtos.flow.AllFlowsResponseDto;
+import com.backend.softtrainer.dtos.AllFlowsResponseDto;
 import com.backend.softtrainer.services.FlowService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

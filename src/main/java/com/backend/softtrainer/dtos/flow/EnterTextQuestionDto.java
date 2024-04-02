@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class EnterTextQuestionDto extends FlowQuestionDto {
+public class EnterTextQuestionDto extends FlowNodeDto {
 
   //use %s to exchange data inside of the prompt
   private String prompt;

@@ -23,9 +23,9 @@ class MessageServiceTest {
 
         val singleMessage1 = MultiChoiceAnswerMessage()
         singleMessage1.answer = "q1"
-        singleMessage1.flowQuestion = SingleChoiceQuestion()
-        (singleMessage1.flowQuestion as SingleChoiceQuestion).options = "q||q1||q2"
-        (singleMessage1.flowQuestion as SingleChoiceQuestion).correct = "2"
+        singleMessage1.flowNode = SingleChoiceQuestion()
+        (singleMessage1.flowNode as SingleChoiceQuestion).options = "q||q1||q2"
+        (singleMessage1.flowNode as SingleChoiceQuestion).correct = "2"
 
 
         every { messageService.findUserMessageByOrderNumber(any(), any()) } returns Optional.of(singleMessage1)

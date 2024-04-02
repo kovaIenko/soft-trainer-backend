@@ -1,11 +1,10 @@
 package com.backend.softtrainer.dtos;
 
-import com.backend.softtrainer.dtos.flow.FlowQuestionDto;
+import com.backend.softtrainer.dtos.flow.FlowNodeDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.security.auth.callback.CallbackHandler;
 import java.util.List;
 
 @Data
@@ -13,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 public class FlowRequestDto {
 
-  private List<FlowQuestionDto> flow;
+  private List<FlowNodeDto> flow;
 
   //todo extract name of flow there
   private String name;

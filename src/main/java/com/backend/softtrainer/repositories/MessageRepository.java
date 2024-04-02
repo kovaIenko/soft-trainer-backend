@@ -13,10 +13,10 @@ public interface MessageRepository extends JpaRepository<Message, String> {
 
   Optional<Message> getFirstByChatIdOrderByTimestampDesc(final Long chatId);
 
-  @Query("SELECT m FROM messages m JOIN FETCH m.flowQuestion f WHERE m.role = 'USER' and f.orderNumber = :orderNumber and m.chatId = :chatId")
+  @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.role = 'USER' and f.orderNumber = :orderNumber and m.chatId = :chatId")
   Optional<Message> findAllUserMessagesByOrderNumber(@Param("chatId") final Long chatId, @Param("orderNumber") final long orderNumber);
 
-  @Query("SELECT m FROM messages m JOIN FETCH m.flowQuestion f WHERE m.role = 'USER' and f.orderNumber = :orderNumber and m.chatId = :chatId")
+  @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.role = 'USER' and f.orderNumber = :orderNumber and m.chatId = :chatId")
   Optional<Message> findAllUserMessagesByOrderNumber(@Param("chatId") final String chatId, @Param("orderNumber") final long orderNumber);
 
 }

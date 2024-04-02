@@ -13,15 +13,17 @@ import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "message_type")
 @JsonSubTypes({
-  @JsonSubTypes.Type(value = EnterTextQuestionDto.class, name = "enterTextQuestion"),
-  @JsonSubTypes.Type(value = SingleChoiceQuestionDto.class, name = "singleChoiceQuestion"),
-  @JsonSubTypes.Type(value = MultiChoiceQuestionDto.class, name = "multiChoiceTask"),
-  @JsonSubTypes.Type(value = ContentQuestionDto.class, name = "contentQuestion"),
-  @JsonSubTypes.Type(value = TextDto.class, name = "text")
+  @JsonSubTypes.Type(value = EnterTextQuestionDto.class, name = "EnterText"),
+  @JsonSubTypes.Type(value = SingleChoiceQuestionDto.class, name = "SingleChoiceQuestion"),
+  @JsonSubTypes.Type(value = SingleChoiceTaskDto.class, name = "SingleChoiceTask"),
+  @JsonSubTypes.Type(value = MultiChoiceTaskDto.class, name = "MultiChoiceTask"),
+  @JsonSubTypes.Type(value = ContentQuestionDto.class, name = "Images"),
+  @JsonSubTypes.Type(value = ContentQuestionDto.class, name = "Videos"),
+  @JsonSubTypes.Type(value = TextDto.class, name = "Text")
 })
 @Data
 @NoArgsConstructor
-public abstract class FlowQuestionDto {
+public abstract class FlowNodeDto {
 
   @JsonProperty("message_id")
   @NotNull

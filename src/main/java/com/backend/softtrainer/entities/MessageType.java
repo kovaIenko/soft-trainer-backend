@@ -11,14 +11,18 @@ import java.util.stream.Stream;
 @AllArgsConstructor
 public enum MessageType {
 
-  TEXT("text", false),
-  SINGLE_CHOICE_QUESTION("singleChoiceQuestion", true),
-  MULTI_CHOICE_QUESTION("multiChoiceQuestion", true),
-  CONTENT_QUESTION("contentQuestion", false),
-  ENTER_TEXT_QUESTION("enterTextQuestion", true),
+  TEXT("Text", false),
+  SINGLE_CHOICE_QUESTION("SingleChoiceQuestion", true),
+  SINGLE_CHOICE_TASK("SingleChoiceTask", true),
+  MULTI_CHOICE_TASK("MultiChoiceQuestion", true),
+  CONTENT_QUESTION("ContentQuestion", false),
+  ENTER_TEXT_QUESTION("EnterTextQuestion", true),
 
+  @Deprecated
   ENTER_TEXT_ANSWER("enterTextAnswer", false),
+  @Deprecated
   SINGLE_CHOICE_ANSWER("singleChoiceAnswer", false),
+  @Deprecated
   MULTI_CHOICE_ANSWER("multiChoiceAnswer", false);
 
   private final String value;

@@ -1,4 +1,4 @@
-package com.backend.softtrainer.entities.flow;
+package com.backend.softtrainer.entities.messages;
 
 import jakarta.persistence.Entity;
 import lombok.Data;
@@ -7,12 +7,14 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Data
-@SuperBuilder
 @NoArgsConstructor
-public class SingleChoiceEnter extends FlowQuestion {
+@SuperBuilder
+public class MultiChoiceTaskAnswerMessage extends Message{
 
-  private String correct;
+  private String answer;
 
   private String options;
+
+  private String correct;
 
 }

@@ -1,4 +1,4 @@
-package com.backend.softtrainer.dtos.flow;
+package com.backend.softtrainer.dtos;
 
 import java.util.Set;
 

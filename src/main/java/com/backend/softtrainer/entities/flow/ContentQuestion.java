@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class ContentQuestion extends FlowQuestion {
+public class ContentQuestion extends FlowNode {
 
   private String url;
 

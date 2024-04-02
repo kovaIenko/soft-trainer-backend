@@ -4,16 +4,18 @@ import com.backend.softtrainer.dtos.CharacterDto;
 import com.backend.softtrainer.dtos.FlowRequestDto;
 import com.backend.softtrainer.dtos.flow.ContentQuestionDto;
 import com.backend.softtrainer.dtos.flow.EnterTextQuestionDto;
-import com.backend.softtrainer.dtos.flow.FlowQuestionDto;
-import com.backend.softtrainer.dtos.flow.MultiChoiceQuestionDto;
+import com.backend.softtrainer.dtos.flow.FlowNodeDto;
+import com.backend.softtrainer.dtos.flow.MultiChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.SingleChoiceQuestionDto;
+import com.backend.softtrainer.dtos.flow.SingleChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.TextDto;
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
-import com.backend.softtrainer.entities.flow.FlowQuestion;
-import com.backend.softtrainer.entities.flow.MultipleChoiceQuestion;
+import com.backend.softtrainer.entities.flow.FlowNode;
+import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
 import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
+import com.backend.softtrainer.entities.flow.SingleChoiceTask;
 import com.backend.softtrainer.entities.flow.Text;
 import com.backend.softtrainer.repositories.CharacterRepository;
 import com.backend.softtrainer.repositories.FlowRepository;
@@ -59,7 +61,7 @@ public class FlowService {
     var flowRecords =
       flowRequestDto.getFlow()
         .stream()
-        .flatMap(flowQuestionDto -> this.convert(flowQuestionDto, characterMap.get(flowQuestionDto.getAuthor())))
+        .flatMap(flowNodeDto -> this.convert(flowNodeDto, characterMap.get(flowNodeDto.getAuthor())))
         .map(a -> {
           a.setName(flowRequestDto.getName());
           return a;
@@ -68,13 +70,13 @@ public class FlowService {
   }
 
   //todo stupid violation of second SOLID
-  private Stream<FlowQuestion> convert(final FlowQuestionDto flowRecordDto, final Character authorEntity) {
+  private Stream<FlowNode> convert(final FlowNodeDto flowRecordDto, final Character authorEntity) {
     return flowRecordDto.getPreviousOrderNumber()
       .stream()
       .map(prevMessageId -> convertFlow(flowRecordDto, prevMessageId, authorEntity));
   }
 
-  private FlowQuestion convertFlow(final FlowQuestionDto flowRecordDto, final long previousMessageId,  final Character authorEntity) {
+  private FlowNode convertFlow(final FlowNodeDto flowRecordDto, final long previousMessageId, final Character authorEntity) {
 
     if (flowRecordDto instanceof ContentQuestionDto contentQuestionDto) {
       return ContentQuestion.builder()
@@ -103,7 +105,19 @@ public class FlowService {
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.TEXT)
         .build();
-    } else if (flowRecordDto instanceof SingleChoiceQuestionDto singleChoiceQuestionDto) {
+    }
+    else if (flowRecordDto instanceof SingleChoiceTaskDto singleChoiceTaskDto) {
+      return SingleChoiceTask.builder()
+        .orderNumber(flowRecordDto.getMessageId())
+        .showPredicate(flowRecordDto.getShowPredicate())
+        .character(authorEntity)
+        .correct(singleChoiceTaskDto.getCorrect())
+        .options(String.join(" || ", singleChoiceTaskDto.getOptions()))
+        .previousOrderNumber(previousMessageId)
+        .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .build();
+    }
+    else if (flowRecordDto instanceof SingleChoiceQuestionDto singleChoiceQuestionDto) {
       return SingleChoiceQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
@@ -113,36 +127,36 @@ public class FlowService {
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .build();
-    } else if (flowRecordDto instanceof MultiChoiceQuestionDto multipleChoiceQuestionDto) {
-      return MultipleChoiceQuestion.builder()
+    } else if (flowRecordDto instanceof MultiChoiceTaskDto multipleChoiceQuestionDto) {
+      return MultipleChoiceTask.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .character(authorEntity)
         .correct(String.join(" || ", multipleChoiceQuestionDto.getCorrect()))
         .options(String.join(" || ", multipleChoiceQuestionDto.getOptions()))
         .previousOrderNumber(previousMessageId)
-        .messageType(MessageType.MULTI_CHOICE_QUESTION)
+        .messageType(MessageType.MULTI_CHOICE_TASK)
         .build();
     }
     throw new NoSuchElementException();
   }
 
-  public Optional<FlowQuestion> getRootFlowTask(final String name) {
+  public Optional<FlowNode> getRootFlowTask(final String name) {
     return flowRepository.findFlowTaskByPreviousOrderNumberAndName(0L, name);
   }
 
-  public List<FlowQuestion> getFirstFlowQuestionsUntilActionable(final String name) {
+  public List<FlowNode> getFirstflowNodesUntilActionable(final String name) {
 
     var actionableMessageTypes = MessageType.getActionableMessageTypes();
 
-    List<FlowQuestion> questions = flowRepository.findFirst10QuestionsByName(name)
+    List<FlowNode> questions = flowRepository.findFirst10QuestionsByName(name)
       .stream().
-      sorted(Comparator.comparing(FlowQuestion::getOrderNumber))
+      sorted(Comparator.comparing(FlowNode::getOrderNumber))
       .toList();
 
-    List<FlowQuestion> result = new ArrayList<>();
+    List<FlowNode> result = new ArrayList<>();
 
-    for (FlowQuestion question : questions) {
+    for (FlowNode question : questions) {
       result.add(question); // Always add the current question
 
       if (actionableMessageTypes.contains(question.getMessageType().name())) {
@@ -160,7 +174,7 @@ public class FlowService {
     return flowRepository.findAllNameFlows();
   }
 
-  public List<FlowQuestion> findAllByPreviousOrderNumber(final long previousOrderNumber){
+  public List<FlowNode> findAllByPreviousOrderNumber(final long previousOrderNumber){
     return flowRepository.findAllByPreviousOrderNumber(previousOrderNumber);
   }
 

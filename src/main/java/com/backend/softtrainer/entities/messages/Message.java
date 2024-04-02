@@ -3,16 +3,14 @@ package com.backend.softtrainer.entities.messages;
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.Role;
-import com.backend.softtrainer.entities.flow.FlowQuestion;
+import com.backend.softtrainer.entities.flow.FlowNode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -38,7 +36,7 @@ public class Message {
 
   @JsonIgnore
   @ManyToOne
-  private FlowQuestion flowQuestion;
+  private FlowNode flowNode;
 
   @Enumerated(EnumType.STRING)
   @JsonProperty("message_type")
@@ -50,11 +48,6 @@ public class Message {
 
   @ManyToOne
   @JsonProperty("author")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Character character;
-
-  @Transient
-  @JsonProperty("is_current_user")
-  private boolean isCurrentUser;
 
 }

@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SingleChoiceQuestionDto extends FlowNodeDto {
+public class SingleChoiceTaskDto extends FlowNodeDto {
 
   @JsonProperty("correct_answer_position")
   private String correct;

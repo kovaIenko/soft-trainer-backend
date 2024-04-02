@@ -7,22 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ContentQuestionDto extends FlowQuestionDto {
+public class ContentQuestionDto extends FlowNodeDto {
 
   private String url;
-//
-//  public List<FlowRecord> getFlowRecords() {
-//    return getPreviousOrderNumber().stream()
-//      .map(prevMessageId ->
-//             ContentQuestion.builder()
-//               .orderNumber(getMessageId())
-//               .showPredicate(getShowPredicate())
-//               .url(url)
-//               .previousOrderNumber(prevMessageId)
-//               .name(getName())
-//               .messageType(com.backend.softtrainer.interpreter.MessageType.CONTENT_QUESTION)
-//               .build())
-//      .collect(Collectors.toList());
-//  }
 
 }

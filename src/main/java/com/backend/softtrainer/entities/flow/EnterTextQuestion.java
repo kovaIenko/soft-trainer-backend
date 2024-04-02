@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class EnterTextQuestion extends FlowQuestion {
+public class EnterTextQuestion extends FlowNode {
 
   //use %s to exchange data inside of the prompt
   @Column

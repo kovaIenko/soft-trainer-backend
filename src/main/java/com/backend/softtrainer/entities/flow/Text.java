@@ -9,6 +9,8 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class Text extends FlowQuestion {
+public class Text extends FlowNode {
+
   private String text;
+
 }

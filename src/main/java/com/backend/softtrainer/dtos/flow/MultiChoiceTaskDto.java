@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class MultiChoiceQuestionDto extends FlowQuestionDto {
+public class MultiChoiceTaskDto extends FlowNodeDto {
 
   @JsonProperty("correct_answer_positions")
   @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
