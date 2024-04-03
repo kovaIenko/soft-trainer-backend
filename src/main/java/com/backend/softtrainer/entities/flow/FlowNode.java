@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.core.annotation.Order;
 
+
 @Entity(name = "flows")
 @Data
 @SuperBuilder
@@ -33,7 +34,7 @@ public class FlowNode {
   @Column(name = "previous_order_number", nullable = false)
   private Long previousOrderNumber = 0L;
 
-  @Column(name="message_type", nullable = false)
+  @Column(name = "message_type", nullable = false)
   @Enumerated(EnumType.STRING)
   private MessageType messageType;
 

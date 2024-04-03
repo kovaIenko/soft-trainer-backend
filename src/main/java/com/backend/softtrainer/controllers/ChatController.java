@@ -2,7 +2,6 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
-import com.backend.softtrainer.entities.Role;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
@@ -40,7 +39,7 @@ public class ChatController {
         null
       ));
     }
-    var flowTillActions = flowService.getFirstflowNodesUntilActionable(chatRequestDto.getFlowName());
+    var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getFlowName());
 
     if (!flowTillActions.isEmpty()) {
       var createdChat = chatService.store(chatRequestDto);

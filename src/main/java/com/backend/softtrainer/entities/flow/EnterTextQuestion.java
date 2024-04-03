@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 public class EnterTextQuestion extends FlowNode {
 
   //use %s to exchange data inside of the prompt
-  @Column
+  @Column(length = 1500)
   private String prompt;
 
 }

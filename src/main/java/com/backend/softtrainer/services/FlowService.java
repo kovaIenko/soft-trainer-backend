@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import com.backend.softtrainer.entities.Character;
 
 @Service
@@ -71,9 +72,14 @@ public class FlowService {
 
   //todo stupid violation of second SOLID
   private Stream<FlowNode> convert(final FlowNodeDto flowRecordDto, final Character authorEntity) {
+
+    if (flowRecordDto.getPreviousOrderNumber().isEmpty()) {
+      return Stream.of(convertFlow(flowRecordDto, -1, authorEntity));
+    }
+
     return flowRecordDto.getPreviousOrderNumber()
       .stream()
-      .map(prevMessageId -> convertFlow(flowRecordDto, prevMessageId, authorEntity));
+      .map(prevOrderNumber -> convertFlow(flowRecordDto, prevOrderNumber, authorEntity));
   }
 
   private FlowNode convertFlow(final FlowNodeDto flowRecordDto, final long previousMessageId, final Character authorEntity) {
@@ -105,8 +111,7 @@ public class FlowService {
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.TEXT)
         .build();
-    }
-    else if (flowRecordDto instanceof SingleChoiceTaskDto singleChoiceTaskDto) {
+    } else if (flowRecordDto instanceof SingleChoiceTaskDto singleChoiceTaskDto) {
       return SingleChoiceTask.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
@@ -116,8 +121,7 @@ public class FlowService {
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .build();
-    }
-    else if (flowRecordDto instanceof SingleChoiceQuestionDto singleChoiceQuestionDto) {
+    } else if (flowRecordDto instanceof SingleChoiceQuestionDto singleChoiceQuestionDto) {
       return SingleChoiceQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
@@ -145,7 +149,7 @@ public class FlowService {
     return flowRepository.findFlowTaskByPreviousOrderNumberAndName(0L, name);
   }
 
-  public List<FlowNode> getFirstflowNodesUntilActionable(final String name) {
+  public List<FlowNode> getFirstFlowNodesUntilActionable(final String name) {
 
     var actionableMessageTypes = MessageType.getActionableMessageTypes();
 
@@ -174,7 +178,7 @@ public class FlowService {
     return flowRepository.findAllNameFlows();
   }
 
-  public List<FlowNode> findAllByPreviousOrderNumber(final long previousOrderNumber){
+  public List<FlowNode> findAllByPreviousOrderNumber(final long previousOrderNumber) {
     return flowRepository.findAllByPreviousOrderNumber(previousOrderNumber);
   }
 

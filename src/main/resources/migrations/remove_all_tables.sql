@@ -9,3 +9,16 @@ drop table if exists users cascade;
 
 drop table if exists characters cascade;
 
+
+
+ALTER TABLE flows ALTER COLUMN dtype TYPE text;
+
+
+ALTER TABLE flows ALTER COLUMN text TYPE VARCHAR(1000);
+
+
+SELECT column_name, data_type, character_maximum_length
+FROM information_schema.columns
+WHERE table_name = 'flows' AND column_name = 'text';
+
+SELECT f FROM flows f WHERE f.name = 'Giving feedbacks by kovalenko' ORDER BY f.order_number LIMIT 10
