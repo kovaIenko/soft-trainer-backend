@@ -5,6 +5,7 @@ import com.backend.softtrainer.dtos.ChatResponseDto;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
+import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +25,8 @@ public class ChatController {
   private final FlowService flowService;
 
   private final MessageService messageService;
+
+  private final UserMessageService userMessageService;
 
   @PutMapping("/create")
   public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {
@@ -45,11 +48,12 @@ public class ChatController {
       var createdChat = chatService.store(chatRequestDto);
 
       var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
+      var combinedMessages = userMessageService.combineMessages(messages);
       return ResponseEntity.ok(new ChatResponseDto(
         createdChat.getId(),
         true,
         "success",
-        messages
+        combinedMessages
       ));
 
     } else {
@@ -84,11 +88,13 @@ public class ChatController {
 
     var messages = chat.getMessages().stream().toList();
 
+    var combinedMessages = userMessageService.combineMessages(messages);
+
     return ResponseEntity.ok(new ChatResponseDto(
       chat.getId(),
       true,
       "success",
-      messages
+      combinedMessages
     ));
   }
 

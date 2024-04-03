@@ -91,7 +91,7 @@ public class MessageService {
         return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
       }
       else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
-        message = EnterTextAnswerMessage.builder()
+        message = EnterTextMessage.builder()
           .messageType(MessageType.ENTER_TEXT_QUESTION)
           .role(Role.USER)
           .id(UUID.randomUUID().toString())
@@ -198,7 +198,7 @@ public class MessageService {
     return chatGptService.completeChat(Converter.convert(chat))
       .thenApply(messageDto -> {
                    var message =
-                     EnterTextQuestionMessage.builder()
+                     EnterTextMessage.builder()
                        .chatId(messageEntity.getChatId())
                        .content(messageDto.content())
                        .id(UUID.randomUUID().toString())
@@ -243,9 +243,8 @@ public class MessageService {
         .correct(singleChoiceQuestion.getCorrect())
         .build();
     }
-
     else if (flowNode instanceof EnterTextQuestion enterTextQuestion) {
-      return EnterTextQuestionMessage.builder()
+      return EnterTextMessage.builder()
         .id(UUID.randomUUID().toString())
         .chatId(chatId)
         .role(Role.APP)

@@ -6,9 +6,10 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 @Entity
+@Data
 @SuperBuilder
 @NoArgsConstructor
-public class EnterTextQuestionMessage extends Message {
+public class EnterTextMessage extends Message {
 
   private String content;
 
