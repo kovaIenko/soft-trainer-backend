@@ -11,7 +11,6 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
-
 /**
  * combined backend messages question and answers into one common dto
  */
@@ -20,6 +19,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class UserMessageDto {
 
+  @JsonProperty("timestamp")
   private LocalDateTime timestamp;
 
   @JsonIgnore

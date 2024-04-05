@@ -165,7 +165,7 @@ public class MessageService {
       }
     );
 
-    var nextflowNodes = flowNodes
+    var nextFlowNodes = flowNodes
       .stream()
       .filter(
         flowNode -> {
@@ -182,7 +182,7 @@ public class MessageService {
         }
       )
       .findFirst();
-    return nextflowNodes.orElse(null);
+    return nextFlowNodes.orElse(null);
   }
 
   private CompletableFuture<List<Message>> chatGptResponse(final Message messageEntity) {
@@ -284,7 +284,6 @@ public class MessageService {
 
     throw new RuntimeException("please add converting type of messages from the flow");
   }
-
 
   @NotNull
   public Optional<Message> findUserMessageByOrderNumber(final Long chatId, final long orderNumber) {

@@ -20,13 +20,19 @@ import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage
 import com.backend.softtrainer.entities.messages.TextMessage;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
 public class UserMessageService {
+
+  private static List<Class<? extends Message>> QUESTION_CLASSES = List.of(
+    SingleChoiceTaskQuestionMessage.class,
+    SingleChoiceQuestionMessage.class,
+    MultiChoiceTaskQuestionMessage.class
+  );
+
 
   public UserMessageDto combine(final Message question, final Message answer) {
 
@@ -65,8 +71,8 @@ public class UserMessageService {
     return messagesGroupedByFlowNodes.values().stream()
       .map(collection -> {
         if (collection.size() == 2) {
-          var sorted = collection.stream().sorted(Comparator.comparing(Message::getTimestamp)).toList();
-          return combine(sorted.get(0), sorted.get(1));
+          return QUESTION_CLASSES.contains(collection.get(0).getClass()) ?
+            combine(collection.get(0), collection.get(1)) : combine(collection.get(1), collection.get(0));
         } else if (collection.size() == 1) {
           return convert(collection.get(0));
         } else {

@@ -11,10 +11,10 @@ import java.time.LocalDateTime;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "message_type")
 @JsonSubTypes({
-  @JsonSubTypes.Type(value = EnterTextAnswerMessageDto.class, name = "EnterTextAnswer"),
-  @JsonSubTypes.Type(value = SingleChoiceAnswerMessageDto.class, name = "SingleChoiceAnswer"),
-  @JsonSubTypes.Type(value = SingleChoiceTaskAnswerMessageDto.class, name = "SingleChoiceTaskAnswer"),
-  @JsonSubTypes.Type(value = MultiChoiceTaskAnswerMessageDto.class, name = "MultiChoiceTaskAnswer"),
+  @JsonSubTypes.Type(value = EnterTextAnswerMessageDto.class, name = "EnterTextQuestion"),
+  @JsonSubTypes.Type(value = SingleChoiceAnswerMessageDto.class, name = "SingleChoiceQuestion"),
+  @JsonSubTypes.Type(value = SingleChoiceTaskAnswerMessageDto.class, name = "SingleChoiceTask"),
+  @JsonSubTypes.Type(value = MultiChoiceTaskAnswerMessageDto.class, name = "MultiChoiceQuestion"),
 })
 @Data
 @NoArgsConstructor

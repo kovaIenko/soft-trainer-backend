@@ -7,7 +7,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class UserMultiChoiceTaskMessageDto extends UserMessageDto{
+public class UserMultiChoiceTaskMessageDto extends UserMessageDto {
 
   private String answer;
 
