@@ -1,11 +1,28 @@
 package com.backend.softtrainer.services;
 
-import com.backend.softtrainer.dtos.messages.*;
+import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
+import com.backend.softtrainer.dtos.messages.MessageRequestDto;
+import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
+import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
+import com.backend.softtrainer.dtos.messages.SingleChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.Role;
-import com.backend.softtrainer.entities.flow.*;
-import com.backend.softtrainer.entities.messages.*;
+import com.backend.softtrainer.entities.flow.EnterTextQuestion;
+import com.backend.softtrainer.entities.flow.FlowNode;
+import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
+import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
+import com.backend.softtrainer.entities.flow.SingleChoiceTask;
+import com.backend.softtrainer.entities.flow.Text;
+import com.backend.softtrainer.entities.messages.EnterTextMessage;
+import com.backend.softtrainer.entities.messages.Message;
+import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
+import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
+import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage;
+import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
+import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
+import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
+import com.backend.softtrainer.entities.messages.TextMessage;
 import com.backend.softtrainer.interpreter.Runner;
 import com.backend.softtrainer.interpreter.entity.PredicateMessage;
 import com.backend.softtrainer.interpreter.libs.MessageManagerLib;
@@ -18,7 +35,11 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -55,8 +76,7 @@ public class MessageService {
           .build();
         messageRepository.save(message);
         return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
-      }
-      else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
+      } else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
         message = SingleChoiceTaskAnswerMessage.builder()
           .messageType(MessageType.SINGLE_CHOICE_TASK)
           .role(Role.USER)
@@ -72,8 +92,7 @@ public class MessageService {
 
         return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
 
-      }
-      else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
+      } else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
         message = MultiChoiceTaskAnswerMessage.builder()
           .messageType(MessageType.MULTI_CHOICE_TASK)
           .role(Role.USER)
@@ -89,8 +108,7 @@ public class MessageService {
         messageRepository.save(message);
 
         return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
-      }
-      else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
+      } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
         message = EnterTextMessage.builder()
           .messageType(MessageType.ENTER_TEXT_QUESTION)
           .role(Role.USER)
@@ -150,7 +168,7 @@ public class MessageService {
     return findFirstByPredicate(chatId, flowNodes);
   }
 
-  private FlowNode findFirstByPredicate(
+  private @NotNull FlowNode findFirstByPredicate(
     final Long chatId,
     final List<FlowNode> flowNodes
   ) {
@@ -176,13 +194,20 @@ public class MessageService {
           if (predicate == null || predicate.isEmpty()) {
             return true;
           } else {
-            log.info("runPredicate: " + predicate);
+            var logString = String.format("runPredicate: %s, flowNodeId: %s", predicate, flowNode.getOrderNumber());
+            log.info("runPredicate: " + logString);
             return runner.runPredicate(predicate);
           }
         }
       )
-      .findFirst();
-    return nextFlowNodes.orElse(null);
+      .findFirst()
+      .orElse(null);
+
+//    if (nextFlowNodes==null){
+//      return flowNodes.get(0);
+//    }else {
+    return nextFlowNodes;
+//    }
   }
 
   private CompletableFuture<List<Message>> chatGptResponse(final Message messageEntity) {
@@ -242,8 +267,7 @@ public class MessageService {
         .options(singleChoiceQuestion.getOptions())
         .correct(singleChoiceQuestion.getCorrect())
         .build();
-    }
-    else if (flowNode instanceof EnterTextQuestion enterTextQuestion) {
+    } else if (flowNode instanceof EnterTextQuestion enterTextQuestion) {
       return EnterTextMessage.builder()
         .id(UUID.randomUUID().toString())
         .chatId(chatId)
@@ -254,8 +278,7 @@ public class MessageService {
         .timestamp(LocalDateTime.now())
         .content(enterTextQuestion.getPrompt())
         .build();
-    }
-    else if (flowNode instanceof SingleChoiceTask singleChoiceTask) {
+    } else if (flowNode instanceof SingleChoiceTask singleChoiceTask) {
       return SingleChoiceTaskQuestionMessage.builder()
         .id(UUID.randomUUID().toString())
         .chatId(chatId)
@@ -267,8 +290,7 @@ public class MessageService {
         .options(singleChoiceTask.getOptions())
         .correct(singleChoiceTask.getCorrect())
         .build();
-    }
-    else if (flowNode instanceof MultipleChoiceTask multipleChoiceQuestion) {
+    } else if (flowNode instanceof MultipleChoiceTask multipleChoiceQuestion) {
       return MultiChoiceTaskQuestionMessage.builder()
         .id(UUID.randomUUID().toString())
         .chatId(chatId)

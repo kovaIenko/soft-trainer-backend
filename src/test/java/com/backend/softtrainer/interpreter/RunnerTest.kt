@@ -5,6 +5,7 @@ import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage
 import com.backend.softtrainer.interpreter.engine.ConditionScriptEngine
 import com.backend.softtrainer.interpreter.entity.PredicateMessage
 import com.backend.softtrainer.interpreter.libs.MessageManagerLib
+import com.backend.softtrainer.interpreter.utils.printTreeDetails
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -29,13 +30,17 @@ class RunnerTest {
 
     @Test
     fun compile() {
-        runner.compile("message whereId \"2\" and message.anyCorrect()")
+        val node = runner.compile("message whereId \"2\" and message.anyCorrect().not()")
+        printTreeDetails(node)
     }
 
     @Test
     fun runCode() {
         assert(
             runner.runPredicate("message whereId \"3\" and message.anyCorrect()")
+        )
+        assert(
+            runner.runPredicate("message whereId \"3\" and message.anyCorrect().not()").not()
         )
     }
 

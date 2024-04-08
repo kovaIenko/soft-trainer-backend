@@ -6,13 +6,14 @@ import com.backend.softtrainer.interpreter.astBuilder.ValueNode
 import com.backend.softtrainer.interpreter.entity.FType3
 import com.backend.softtrainer.interpreter.entity.TokenType
 import com.backend.softtrainer.interpreter.libs.messageStdLib
+import com.backend.softtrainer.interpreter.libs.stdLib
 import com.backend.softtrainer.interpreter.libs.tokenLib
 import com.backend.softtrainer.interpreter.utils.isPrimitive
 import com.backend.softtrainer.interpreter.utils.toPrimitive
 
 class ConditionScriptEngine(
     initValues: List<Pair<String, Any>> = listOf()
-) : AstEngine(tokenLib + messageStdLib + initValues) {
+) : AstEngine(tokenLib + stdLib + messageStdLib + initValues) {
 
     override fun CommandNode.processingCommandNode(): Any = when (type) {
         TokenType.Access -> ValuePath(left?.processing()?.path + "." + right?.processing()?.path)

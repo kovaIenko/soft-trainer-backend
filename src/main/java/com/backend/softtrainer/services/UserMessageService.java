@@ -62,7 +62,8 @@ public class UserMessageService {
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .build();
     }
-    throw new NoSuchElementException("The incorrect pair of question and answer");
+    throw new NoSuchElementException("The incorrect pair of question and answer. Question id: " + question.getId() + " , answer"
+                                       + " id: " + answer.getId());
   }
 
 
