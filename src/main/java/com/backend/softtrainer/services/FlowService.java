@@ -154,8 +154,8 @@ public class FlowService {
     var actionableMessageTypes = MessageType.getActionableMessageTypes();
 
     List<FlowNode> questions = flowRepository.findFirst10QuestionsByName(name)
-      .stream().
-      sorted(Comparator.comparing(FlowNode::getOrderNumber))
+      .stream()
+      .sorted(Comparator.comparing(FlowNode::getOrderNumber))
       .toList();
 
     List<FlowNode> result = new ArrayList<>();
