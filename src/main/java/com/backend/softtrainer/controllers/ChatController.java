@@ -2,6 +2,8 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
+import com.backend.softtrainer.dtos.ChatsResponseDto;
+import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
@@ -95,6 +97,17 @@ public class ChatController {
       true,
       "success",
       combinedMessages
+    ));
+  }
+
+  @GetMapping("/get/all")
+  public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId) {
+    var chats = chatService.getAll(ownerId);
+
+    return ResponseEntity.ok(new ChatsResponseDto(
+      chats.stream().map(Chat::getFlowName).toList(),
+      true,
+      "success"
     ));
   }
 
