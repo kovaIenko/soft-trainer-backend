@@ -19,6 +19,6 @@ ALTER TABLE flows ALTER COLUMN text TYPE VARCHAR(1000);
 
 SELECT column_name, data_type, character_maximum_length
 FROM information_schema.columns
-WHERE table_name = 'flows' AND column_name = 'text';
+WHERE table_name = 'messages' AND column_name = 'options';
 
 SELECT f FROM flows f WHERE f.name = 'Giving feedbacks by kovalenko' ORDER BY f.order_number LIMIT 10
