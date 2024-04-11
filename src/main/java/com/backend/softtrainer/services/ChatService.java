@@ -7,6 +7,7 @@ import com.backend.softtrainer.utils.Converter;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -26,6 +27,10 @@ public class ChatService {
 
   public Optional<Chat> findChatWithMessages(final Long ownerId, final String flowName) {
     return chatRepository.findByOwnerIdAndFlowNameWithMessages(ownerId, flowName);
+  }
+
+  public List<Chat> getAll(final Long ownerId) {
+    return chatRepository.findAllByOwnerId(ownerId);
   }
 
 }
