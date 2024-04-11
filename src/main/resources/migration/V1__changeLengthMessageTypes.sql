@@ -1,0 +1,11 @@
+ALTER TABLE messages
+    ALTER COLUMN content TYPE VARCHAR(700);
+
+ALTER TABLE messages
+    ALTER COLUMN correct TYPE VARCHAR(700);
+
+ALTER TABLE messages
+    ALTER COLUMN answer TYPE VARCHAR(700);
+
+ALTER TABLE messages
+    ALTER COLUMN options TYPE VARCHAR(700);

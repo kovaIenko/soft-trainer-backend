@@ -6,6 +6,7 @@ import com.backend.softtrainer.entities.MessageType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@Data
 public class UserMessageDto {
 
   @JsonProperty("timestamp")

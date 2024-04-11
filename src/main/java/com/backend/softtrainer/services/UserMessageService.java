@@ -8,6 +8,7 @@ import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
 import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.flow.FlowNode;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextMessage;
 import com.backend.softtrainer.entities.messages.Message;
@@ -20,6 +21,7 @@ import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage
 import com.backend.softtrainer.entities.messages.TextMessage;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -80,6 +82,7 @@ public class UserMessageService {
           throw new NoSuchElementException("message has not flow node");
         }
       })
+      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
       .toList();
   }
 
