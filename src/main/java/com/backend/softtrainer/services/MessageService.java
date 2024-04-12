@@ -146,7 +146,7 @@ public class MessageService {
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
                                                                  final Long previousOrderNumber,
-                                                                 final String flowName) {
+                                                                 final String flowName) throws SendMessageConditionException{
 
     List<Message> messages = new ArrayList<>();
     var nextFlowNode = getNextFlowNode(chatId, previousOrderNumber, flowName);
@@ -170,7 +170,7 @@ public class MessageService {
   private FlowNode getNextFlowNode(
     final Long chatId,
     final Long previousOrderNumber,
-    final String flowName) {
+    final String flowName) throws SendMessageConditionException {
     List<FlowNode> flowNodes = flowService.findAllByNameAndPreviousOrderNumber(flowName, previousOrderNumber);
 
     if (flowNodes.size() == 1) {
@@ -187,7 +187,7 @@ public class MessageService {
   FlowNode findFirstByPredicate(
     final Long chatId,
     final List<FlowNode> flowNodes
-  ) {
+  ) throws SendMessageConditionException {
     var messageManagerLib = new MessageManagerLib(
       (Long orderNumber) -> {
         Optional<Message> message = findUserMessageByOrderNumber(chatId, orderNumber);
@@ -219,7 +219,8 @@ public class MessageService {
         }
       )
       .findFirst()
-      .orElseThrow(()-> new SendMessageConditionException("Incorrect flow: there is a problem with flow. Not found next node ."));
+      .orElseThrow(() -> new SendMessageConditionException("Incorrect flow: there is a problem with flow. Not found next node " +
+                                                             "."));
 
 //    if (nextFlowNodes==null){
 //      return flowNodes.get(0);
