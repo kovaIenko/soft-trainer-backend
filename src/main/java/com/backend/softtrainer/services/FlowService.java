@@ -178,8 +178,8 @@ public class FlowService {
     return flowRepository.findAllNameFlows();
   }
 
-  public List<FlowNode> findAllByPreviousOrderNumber(final long previousOrderNumber) {
-    return flowRepository.findAllByPreviousOrderNumber(previousOrderNumber);
+  public List<FlowNode> findAllByNameAndPreviousOrderNumber(final String flowName, final long previousOrderNumber) {
+    return flowRepository.findAllByNameAndPreviousOrderNumber(flowName, previousOrderNumber);
   }
 
 }

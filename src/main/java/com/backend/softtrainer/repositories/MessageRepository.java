@@ -15,8 +15,8 @@ public interface MessageRepository extends JpaRepository<Message, String> {
   @Deprecated
   Optional<Message> getFirstByChatIdOrderByTimestampDesc(final Long chatId);
 
-  @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.messageType in :actionableMessageTypes ORDER BY m.timestamp DESC")
-  List<Message> getActionableMessage(final List<String> actionableMessageTypes);
+  @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.messageType in :actionableMessageTypes AND m.chatId = :chatId ORDER BY m.timestamp DESC")
+  List<Message> getActionableMessage(final List<String> actionableMessageTypes, @Param("chatId") final Long chatId);
 
   @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.role = 'USER' and f.orderNumber = :orderNumber and m.chatId = :chatId")
   Optional<Message> findAllUserMessagesByOrderNumber(@Param("chatId") final Long chatId, @Param("orderNumber") final long orderNumber);

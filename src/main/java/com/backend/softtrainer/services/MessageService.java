@@ -69,7 +69,7 @@ public class MessageService {
   public CompletableFuture<List<Message>> buildResponse(final MessageRequestDto messageRequestDto) throws
                                                                                                    SendMessageConditionException {
     var actionableMessageTypes = MessageType.getActionableMessageTypes();
-    var actionableMessages = messageRepository.getActionableMessage(actionableMessageTypes);
+    var actionableMessages = messageRepository.getActionableMessage(actionableMessageTypes, messageRequestDto.getChatId());
 
     verifySendMessageConditions(actionableMessages);
 
@@ -90,7 +90,7 @@ public class MessageService {
         .answer(singleChoiceAnswerMessageDto.getAnswer())
         .build();
       messageRepository.save(message);
-      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getName());
     } else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
       message = SingleChoiceTaskAnswerMessage.builder()
         .messageType(MessageType.SINGLE_CHOICE_TASK)
@@ -105,7 +105,7 @@ public class MessageService {
         .build();
       messageRepository.save(message);
 
-      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getName());
 
     } else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
       message = MultiChoiceTaskAnswerMessage.builder()
@@ -121,7 +121,7 @@ public class MessageService {
         .build();
 
       messageRepository.save(message);
-      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getName());
 
     } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
       message = EnterTextMessage.builder()
@@ -145,10 +145,11 @@ public class MessageService {
 
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
-                                                                 final Long previousOrderNumber) {
+                                                                 final Long previousOrderNumber,
+                                                                 final String flowName) {
 
     List<Message> messages = new ArrayList<>();
-    var nextFlowNode = getNextFlowNode(chatId, previousOrderNumber);
+    var nextFlowNode = getNextFlowNode(chatId, previousOrderNumber, flowName);
 
     var nextMessage = convert(nextFlowNode, chatId);
     messages.add(nextMessage);
@@ -156,7 +157,7 @@ public class MessageService {
 
     while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
 
-      nextFlowNode = getNextFlowNode(chatId, nextFlowNode.getOrderNumber());
+      nextFlowNode = getNextFlowNode(chatId, nextFlowNode.getOrderNumber(), flowName);
 
       nextMessage = convert(nextFlowNode, chatId);
       messageRepository.save(nextMessage);
@@ -168,9 +169,9 @@ public class MessageService {
 
   private FlowNode getNextFlowNode(
     final Long chatId,
-    final Long previousOrderNumber
-  ) {
-    List<FlowNode> flowNodes = flowService.findAllByPreviousOrderNumber(previousOrderNumber);
+    final Long previousOrderNumber,
+    final String flowName) {
+    List<FlowNode> flowNodes = flowService.findAllByNameAndPreviousOrderNumber(flowName, previousOrderNumber);
 
     if (flowNodes.size() == 1) {
       return flowNodes.get(0);
@@ -211,12 +212,14 @@ public class MessageService {
           } else {
             var logString = String.format("runPredicate: %s, flowNodeId: %s", predicate, flowNode.getOrderNumber());
             log.info("runPredicate: " + logString);
-            return runner.runPredicate(predicate);
+            var res = runner.runPredicate(predicate);
+            log.info("Response of interpretator: " + res);
+            return res;
           }
         }
       )
       .findFirst()
-      .orElse(null);
+      .orElseThrow(()-> new SendMessageConditionException("Incorrect flow: there is a problem with flow. Not found next node ."));
 
 //    if (nextFlowNodes==null){
 //      return flowNodes.get(0);

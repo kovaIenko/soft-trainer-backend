@@ -6,6 +6,7 @@ import com.backend.softtrainer.exceptions.SendMessageConditionException;
 import com.backend.softtrainer.services.MessageService;
 import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +19,7 @@ import java.util.concurrent.CompletableFuture;
 @RestController
 @RequestMapping("/message")
 @AllArgsConstructor
+@Slf4j
 public class MessageController {
 
   private final MessageService messageService;
@@ -38,6 +40,7 @@ public class MessageController {
 
     } catch (SendMessageConditionException e) {
 
+      log.error(e.getMessage());
       return CompletableFuture.completedFuture(
         ResponseEntity.ok(new ChatResponseDto(
           messageRequestDto.getChatId(),

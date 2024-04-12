@@ -23,7 +23,7 @@ public interface FlowRepository extends JpaRepository<FlowNode, Long> {
   @Query("SELECT f FROM flows f WHERE f.name = :name ORDER BY f.orderNumber LIMIT 10")
   List<FlowNode> findFirst10QuestionsByName(@Param("name") final String name);
 
-  List<FlowNode> findAllByPreviousOrderNumber(@Param("previousOrderNumber") final long previousOrderNumber);
+  List<FlowNode> findAllByNameAndPreviousOrderNumber(@Param("name") final String name, @Param("previousOrderNumber") final long previousOrderNumber);
 
   List<FlowNode> findAllByOrderNumber(@Param("orderNumber") final long orderNumber);
 
