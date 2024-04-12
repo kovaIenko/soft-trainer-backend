@@ -8,6 +8,7 @@ import com.backend.softtrainer.dtos.messages.SingleChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.Role;
+<<<<<<< HEAD
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
@@ -23,6 +24,11 @@ import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
+=======
+import com.backend.softtrainer.entities.flow.*;
+import com.backend.softtrainer.entities.messages.*;
+import com.backend.softtrainer.exceptions.SendMessageConditionException;
+>>>>>>> f5e8635987a076180985a54be608332bcc37c095
 import com.backend.softtrainer.interpreter.Runner;
 import com.backend.softtrainer.interpreter.entity.PredicateMessage;
 import com.backend.softtrainer.interpreter.libs.MessageManagerLib;
@@ -54,8 +60,9 @@ public class MessageService {
   private final Runner runner = new Runner();
   private ChatGptService chatGptService;
 
-  public CompletableFuture<List<Message>> buildResponse(final MessageRequestDto messageRequestDto) {
+  private void verifySendMessageConditions(final List<Message> actionableMessages) throws SendMessageConditionException {
 
+<<<<<<< HEAD
     Optional<Message> originMessageOptional =
       messageRepository.getFirstByChatIdOrderByTimestampDesc(messageRequestDto.getChatId());
 
@@ -124,17 +131,101 @@ public class MessageService {
       }
     } else {
       throw new NoSuchElementException("No origin interactive origin message");
+=======
+    if (actionableMessages.isEmpty()) {
+      throw new SendMessageConditionException("No messages should be answered");
+    }
+    //all questions are answered
+    if (actionableMessages.size() % 2 == 0) {
+      throw new SendMessageConditionException("All questions have been already answered");
+>>>>>>> f5e8635987a076180985a54be608332bcc37c095
     }
 
-    throw new NoSuchElementException("The incorrect interact type of message");
   }
+
+  public CompletableFuture<List<Message>> buildResponse(final MessageRequestDto messageRequestDto) throws
+                                                                                                   SendMessageConditionException {
+    var actionableMessageTypes = MessageType.getActionableMessageTypes();
+    var actionableMessages = messageRepository.getActionableMessage(actionableMessageTypes);
+
+    verifySendMessageConditions(actionableMessages);
+
+    var question = actionableMessages.get(0);
+
+    Message message;
+
+    var flowNode = question.getFlowNode();
+
+    if (messageRequestDto instanceof SingleChoiceAnswerMessageDto singleChoiceAnswerMessageDto) {
+      message = SingleChoiceAnswerMessage.builder()
+        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .role(Role.USER)
+        .id(UUID.randomUUID().toString())
+        .chatId(singleChoiceAnswerMessageDto.getChatId())
+        .flowNode(flowNode)
+        .timestamp(singleChoiceAnswerMessageDto.getTimestamp())
+        .answer(singleChoiceAnswerMessageDto.getAnswer())
+        .build();
+      messageRepository.save(message);
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
+    } else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
+      message = SingleChoiceTaskAnswerMessage.builder()
+        .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .role(Role.USER)
+        .id(UUID.randomUUID().toString())
+        .chatId(singleChoiceTaskAnswerMessageDto.getChatId())
+        .flowNode(flowNode)
+        .timestamp(singleChoiceTaskAnswerMessageDto.getTimestamp())
+        .answer(singleChoiceTaskAnswerMessageDto.getAnswer())
+        .correct(singleChoiceTaskAnswerMessageDto.getCorrect())
+        .options(singleChoiceTaskAnswerMessageDto.getOptions())
+        .build();
+      messageRepository.save(message);
+
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
+
+    } else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
+      message = MultiChoiceTaskAnswerMessage.builder()
+        .messageType(MessageType.MULTI_CHOICE_TASK)
+        .role(Role.USER)
+        .id(UUID.randomUUID().toString())
+        .chatId(multiChoiceAnswerMessageDto.getChatId())
+        .flowNode(flowNode)
+        .timestamp(multiChoiceAnswerMessageDto.getTimestamp())
+        .answer(multiChoiceAnswerMessageDto.getAnswer())
+        .options(multiChoiceAnswerMessageDto.getOptions())
+        .correct(multiChoiceAnswerMessageDto.getAnswer())
+        .build();
+
+      messageRepository.save(message);
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber());
+
+    } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
+      message = EnterTextMessage.builder()
+        .messageType(MessageType.ENTER_TEXT_QUESTION)
+        .role(Role.USER)
+        .id(UUID.randomUUID().toString())
+        .chatId(enterTextAnswerMessageDto.getChatId())
+        .timestamp(enterTextAnswerMessageDto.getTimestamp())
+        .flowNode(flowNode)
+        .content(enterTextAnswerMessageDto.getContent())
+        .build();
+      messageRepository.save(message);
+      //chat gpt
+      return chatGptResponse(message);
+    } else {
+      throw new SendMessageConditionException(
+        "Send message has incorrect message type. It should be one of the actionable message type");
+    }
+  }
+
 
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
                                                                  final Long previousOrderNumber) {
 
     List<Message> messages = new ArrayList<>();
-    var nextFlowNode = getNextflowNode(chatId, previousOrderNumber);
+    var nextFlowNode = getNextFlowNode(chatId, previousOrderNumber);
 
     var nextMessage = convert(nextFlowNode, chatId);
     messages.add(nextMessage);
@@ -142,7 +233,7 @@ public class MessageService {
 
     while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
 
-      nextFlowNode = getNextflowNode(chatId, nextFlowNode.getOrderNumber());
+      nextFlowNode = getNextFlowNode(chatId, nextFlowNode.getOrderNumber());
 
       nextMessage = convert(nextFlowNode, chatId);
       messageRepository.save(nextMessage);
@@ -152,7 +243,7 @@ public class MessageService {
     return CompletableFuture.completedFuture(messages);
   }
 
-  private FlowNode getNextflowNode(
+  private FlowNode getNextFlowNode(
     final Long chatId,
     final Long previousOrderNumber
   ) {
@@ -237,6 +328,7 @@ public class MessageService {
 
   public List<Message> getAndStoreMessageByFlow(final List<FlowNode> flowNodes, final Long chatId) {
     List<Message> messages = flowNodes.stream()
+//      .filter(Objects::nonNull)
       .map(question -> convert(question, chatId))
       .collect(Collectors.toList());
     return messageRepository.saveAll(messages);
