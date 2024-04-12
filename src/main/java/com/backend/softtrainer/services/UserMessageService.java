@@ -8,7 +8,6 @@ import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
 import com.backend.softtrainer.entities.MessageType;
-import com.backend.softtrainer.entities.flow.FlowNode;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextMessage;
 import com.backend.softtrainer.entities.messages.Message;
@@ -19,6 +18,7 @@ import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -27,6 +27,7 @@ import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class UserMessageService {
 
   private static List<Class<? extends Message>> QUESTION_CLASSES = List.of(
@@ -79,6 +80,12 @@ public class UserMessageService {
         } else if (collection.size() == 1) {
           return convert(collection.get(0));
         } else {
+
+          log.info(String.format(
+            "Collection size while combining messages by flow node is %s, the collection is %s",
+            collection.size(),
+            collection
+          ));
           throw new NoSuchElementException("message has not flow node");
         }
       })

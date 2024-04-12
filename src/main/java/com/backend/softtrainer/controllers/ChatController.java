@@ -9,6 +9,7 @@ import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
 import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/chats")
 @AllArgsConstructor
+@Slf4j
 public class ChatController {
 
   private final ChatService chatService;
@@ -72,6 +74,7 @@ public class ChatController {
   public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "ownerId") Long ownerId,
                                              @RequestParam(name = "flowName") String flowName) {
     var chatOptional = chatService.findChatWithMessages(ownerId, flowName);
+
 
     if (chatOptional.isEmpty()) {
       return ResponseEntity.ok(new ChatResponseDto(
