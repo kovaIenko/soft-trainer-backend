@@ -45,7 +45,7 @@ public class UserMessageService {
       return UserSingleChoiceTaskMessageDto.builder()
         .answer(singleChoiceTaskAnswerMessage.getAnswer())
         .options(singleChoiceTaskQuestionMessage.getOptions())
-        .timestamp(singleChoiceTaskAnswerMessage.getTimestamp())
+        .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .build();
     } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
@@ -53,7 +53,7 @@ public class UserMessageService {
       return UserSingleChoiceMessageDto.builder()
         .answer(singleChoiceAnswerMessage.getAnswer())
         .options(singleChoiceQuestionMessage.getOptions())
-        .timestamp(singleChoiceAnswerMessage.getTimestamp())
+        .timestamp(singleChoiceQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .build();
     } else if (question instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage
@@ -61,7 +61,7 @@ public class UserMessageService {
       return UserMultiChoiceTaskMessageDto.builder()
         .answer(multiChoiceTaskAnswerMessage.getAnswer())
         .options(multiChoiceTaskQuestionMessage.getOptions())
-        .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
+        .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .build();
     }
