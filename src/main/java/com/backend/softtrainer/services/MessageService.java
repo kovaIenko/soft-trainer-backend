@@ -73,7 +73,13 @@ public class MessageService {
 
     verifySendMessageConditions(actionableMessages);
 
-    var question = actionableMessages.get(0);
+    var messagesGroupedByFlowNode = actionableMessages.stream()
+      .collect(Collectors.groupingBy(Message::getFlowNode));
+
+    var messagesWithoutAnswer  = messagesGroupedByFlowNode.values().stream().filter(collection -> collection.size() == 1)
+      .findFirst();
+
+    var question = messagesWithoutAnswer.get().get(0);
 
     Message message;
 
@@ -146,7 +152,7 @@ public class MessageService {
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
                                                                  final Long previousOrderNumber,
-                                                                 final String flowName) throws SendMessageConditionException{
+                                                                 final String flowName) throws SendMessageConditionException {
 
     List<Message> messages = new ArrayList<>();
     var nextFlowNode = getNextFlowNode(chatId, previousOrderNumber, flowName);
@@ -190,9 +196,9 @@ public class MessageService {
   ) throws SendMessageConditionException {
     var messageManagerLib = new MessageManagerLib(
       (Long orderNumber) -> {
-        Optional<Message> message = findUserMessageByOrderNumber(chatId, orderNumber);
-        if (message.isPresent()) {
-          return new PredicateMessage(message.get());
+        List<Message> messages = findUserMessageByOrderNumber(chatId, orderNumber);
+        if (!messages.isEmpty()) {
+          return new PredicateMessage(messages.get(0));
         } else {
           return null;
         }
@@ -328,7 +334,7 @@ public class MessageService {
   }
 
   @NotNull
-  public Optional<Message> findUserMessageByOrderNumber(final Long chatId, final long orderNumber) {
+  public List<Message> findUserMessageByOrderNumber(final Long chatId, final long orderNumber) {
     return messageRepository.findAllUserMessagesByOrderNumber(chatId, orderNumber);
   }
 
