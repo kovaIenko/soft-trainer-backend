@@ -76,7 +76,7 @@ public class MessageService {
     var messagesGroupedByFlowNode = actionableMessages.stream()
       .collect(Collectors.groupingBy(Message::getFlowNode));
 
-    var messagesWithoutAnswer  = messagesGroupedByFlowNode.values().stream().filter(collection -> collection.size() == 1)
+    var messagesWithoutAnswer = messagesGroupedByFlowNode.values().stream().filter(collection -> collection.size() == 1)
       .findFirst();
 
     var question = messagesWithoutAnswer.get().get(0);
@@ -153,40 +153,43 @@ public class MessageService {
   private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
                                                                  final Long previousOrderNumber,
                                                                  final String flowName) throws SendMessageConditionException {
-
     List<Message> messages = new ArrayList<>();
-    var nextFlowNode = getNextFlowNode(chatId, previousOrderNumber, flowName);
+    var nextFlowNodeOptional = getNextFlowNode(chatId, previousOrderNumber, flowName);
 
-    var nextMessage = convert(nextFlowNode, chatId);
-    messages.add(nextMessage);
-    messageRepository.save(nextMessage);
-
-    while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
-
-      nextFlowNode = getNextFlowNode(chatId, nextFlowNode.getOrderNumber(), flowName);
-
-      nextMessage = convert(nextFlowNode, chatId);
-      messageRepository.save(nextMessage);
+    if (nextFlowNodeOptional.isPresent()) {
+      var nextFlowNode = nextFlowNodeOptional.get();
+      var nextMessage = convert(nextFlowNode, chatId);
       messages.add(nextMessage);
-    }
+      messageRepository.save(nextMessage);
 
+      while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
+        nextFlowNodeOptional = getNextFlowNode(chatId, nextFlowNode.getOrderNumber(), flowName);
+        if (nextFlowNodeOptional.isPresent()) {
+          nextFlowNode = nextFlowNodeOptional.get();
+          nextMessage = convert(nextFlowNode, chatId);
+          messageRepository.save(nextMessage);
+          messages.add(nextMessage);
+        } else {
+          break;
+        }
+      }
+    }
     return CompletableFuture.completedFuture(messages);
   }
 
-  private FlowNode getNextFlowNode(
+  private Optional<FlowNode> getNextFlowNode(
     final Long chatId,
     final Long previousOrderNumber,
     final String flowName) throws SendMessageConditionException {
+
     List<FlowNode> flowNodes = flowService.findAllByNameAndPreviousOrderNumber(flowName, previousOrderNumber);
 
     if (flowNodes.size() == 1) {
-      return flowNodes.get(0);
+      return Optional.of(flowNodes.get(0));
+    } else if (flowNodes.isEmpty()) {
+      return Optional.empty();
     }
-    if (flowNodes.isEmpty()) {
-      //todo handle the case we don't find the next flow node
-      throw new RuntimeException("Flow is ended!!!");
-    }
-    return findFirstByPredicate(chatId, flowNodes);
+    return Optional.of(findFirstByPredicate(chatId, flowNodes));
   }
 
   private @NotNull
@@ -211,28 +214,33 @@ public class MessageService {
         flowNode -> {
           runner.reset();
           runner.loadLib(messageManagerLib.getLib());
-
           var predicate = flowNode.getShowPredicate();
           if (predicate == null || predicate.isEmpty()) {
             return true;
           } else {
-            var logString = String.format("runPredicate: %s, flowNodeId: %s", predicate, flowNode.getOrderNumber());
-            log.info("runPredicate: " + logString);
             var res = runner.runPredicate(predicate);
-            log.info("Response of interpretator: " + res);
+            var logString = String.format(
+              "runPredicate: %s, flowNodeId: %s, result: %s",
+              predicate,
+              flowNode.getOrderNumber(),
+              res
+            );
+            log.info("RunPredicate: " + logString);
             return res;
           }
         }
       )
       .findFirst()
-      .orElseThrow(() -> new SendMessageConditionException("Incorrect flow: there is a problem with flow. Not found next node " +
-                                                             "."));
-
-//    if (nextFlowNodes==null){
-//      return flowNodes.get(0);
-//    }else {
+      .orElseThrow(() -> {
+        var errorMessage = String.format(
+          "The interpretator cannot choose the next flow node from the list of %s with chatId: %s",
+          flowNodes,
+          chatId
+        );
+        log.error(errorMessage);
+        return new SendMessageConditionException("Incorrect flow: there is a problem with flow. Not found next node.");
+      });
     return nextFlowNodes;
-//    }
   }
 
   private CompletableFuture<List<Message>> chatGptResponse(final Message messageEntity) {
