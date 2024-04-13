@@ -35,7 +35,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -55,7 +54,8 @@ public class MessageService {
   private final Runner runner = new Runner();
   private ChatGptService chatGptService;
 
-  private void verifySendMessageConditions(final List<Message> actionableMessages) throws SendMessageConditionException {
+  private void verifyWhetherQuestionIsAlreadyAnswered(final List<Message> actionableMessages) throws
+                                                                                              SendMessageConditionException {
 
     if (actionableMessages.isEmpty()) {
       throw new SendMessageConditionException("No messages should be answered");
@@ -71,7 +71,7 @@ public class MessageService {
     var actionableMessageTypes = MessageType.getActionableMessageTypes();
     var actionableMessages = messageRepository.getActionableMessage(actionableMessageTypes, messageRequestDto.getChatId());
 
-    verifySendMessageConditions(actionableMessages);
+    verifyWhetherQuestionIsAlreadyAnswered(actionableMessages);
 
     var messagesGroupedByFlowNode = actionableMessages.stream()
       .collect(Collectors.groupingBy(Message::getFlowNode));
@@ -80,6 +80,8 @@ public class MessageService {
       .findFirst();
 
     var question = messagesWithoutAnswer.get().get(0);
+
+    verifyAnswerHasSameMessageTypeWithQuestion(question, messageRequestDto);
 
     Message message;
 
@@ -148,6 +150,17 @@ public class MessageService {
     }
   }
 
+  private void verifyAnswerHasSameMessageTypeWithQuestion(final Message question, final MessageRequestDto messageRequestDto) throws
+                                                                                                                             SendMessageConditionException {
+    if (!question.getMessageType().equals(messageRequestDto.getMessageType())) {
+      throw new SendMessageConditionException(String.format(
+        "Answer should have the same message_type with question but answer type: %s and question type: %s",
+        messageRequestDto.getMessageType(),
+        question.getMessageType()
+      ));
+    }
+  }
+
 
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
@@ -160,21 +173,22 @@ public class MessageService {
       var nextFlowNode = nextFlowNodeOptional.get();
       var nextMessage = convert(nextFlowNode, chatId);
       messages.add(nextMessage);
-      messageRepository.save(nextMessage);
 
       while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
         nextFlowNodeOptional = getNextFlowNode(chatId, nextFlowNode.getOrderNumber(), flowName);
         if (nextFlowNodeOptional.isPresent()) {
           nextFlowNode = nextFlowNodeOptional.get();
           nextMessage = convert(nextFlowNode, chatId);
-          messageRepository.save(nextMessage);
           messages.add(nextMessage);
         } else {
           break;
         }
       }
     }
-    return CompletableFuture.completedFuture(messages);
+
+    var storedMessages = messageRepository.saveAll(messages);
+
+    return CompletableFuture.completedFuture(storedMessages);
   }
 
   private Optional<FlowNode> getNextFlowNode(
@@ -286,7 +300,7 @@ public class MessageService {
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .role(Role.APP)
-       // .timestamp(LocalDateTime.now())
+        // .timestamp(LocalDateTime.now())
         .content(text.getText())
         .build();
     } else if (flowNode instanceof SingleChoiceQuestion singleChoiceQuestion) {
@@ -297,7 +311,7 @@ public class MessageService {
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .flowNode(flowNode)
         //.character(flowNode.getCharacter())
-       // .timestamp(LocalDateTime.now())
+        // .timestamp(LocalDateTime.now())
         .options(singleChoiceQuestion.getOptions())
         .correct(singleChoiceQuestion.getCorrect())
         .build();

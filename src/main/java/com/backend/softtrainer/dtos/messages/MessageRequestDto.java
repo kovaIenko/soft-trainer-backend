@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "message_type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "message_type", visible = true)
 @JsonSubTypes({
   @JsonSubTypes.Type(value = EnterTextAnswerMessageDto.class, name = "EnterTextQuestion"),
   @JsonSubTypes.Type(value = SingleChoiceAnswerMessageDto.class, name = "SingleChoiceQuestion"),
@@ -30,6 +30,6 @@ public class MessageRequestDto {
   private Long chatId;
 
   @JsonProperty("message_type")
-  private MessageType type;
+  private MessageType messageType;
 
 }
