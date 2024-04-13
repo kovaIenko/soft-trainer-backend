@@ -39,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -195,9 +196,9 @@ public class MessageService {
   ) throws SendMessageConditionException {
     var messageManagerLib = new MessageManagerLib(
       (Long orderNumber) -> {
-        List<Message> messages = findUserMessageByOrderNumber(chatId, orderNumber);
-        if (!messages.isEmpty()) {
-          return new PredicateMessage(messages.get(0));
+        Optional<Message> messages = findQuestionUserMessageByOrderNumber(chatId, orderNumber);
+        if (messages.isPresent()) {
+          return new PredicateMessage(messages.get());
         } else {
           return null;
         }
@@ -333,8 +334,8 @@ public class MessageService {
   }
 
   @NotNull
-  public List<Message> findUserMessageByOrderNumber(final Long chatId, final long orderNumber) {
-    return messageRepository.findAllUserMessagesByOrderNumber(chatId, orderNumber);
+  public Optional<Message> findQuestionUserMessageByOrderNumber(final Long chatId, final long orderNumber) {
+    return messageRepository.findQuestionUserMessagesByOrderNumber(chatId, orderNumber);
   }
 
 }
