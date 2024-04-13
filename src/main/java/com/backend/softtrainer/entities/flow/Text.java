@@ -12,8 +12,6 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-//todo remove that
-@DiscriminatorValue("2")
 @EqualsAndHashCode(callSuper = true)
 public class Text extends FlowNode {
 

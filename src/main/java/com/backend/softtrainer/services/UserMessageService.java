@@ -44,7 +44,7 @@ public class UserMessageService {
       return UserSingleChoiceTaskMessageDto.builder()
         .answer(singleChoiceTaskAnswerMessage.getAnswer())
         .options(singleChoiceTaskQuestionMessage.getOptions())
-        .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
+        .timestamp(singleChoiceTaskAnswerMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .build();
     } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
@@ -52,7 +52,7 @@ public class UserMessageService {
       return UserSingleChoiceMessageDto.builder()
         .answer(singleChoiceAnswerMessage.getAnswer())
         .options(singleChoiceQuestionMessage.getOptions())
-        .timestamp(singleChoiceQuestionMessage.getTimestamp())
+        .timestamp(singleChoiceAnswerMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .build();
     } else if (question instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage
@@ -60,7 +60,7 @@ public class UserMessageService {
       return UserMultiChoiceTaskMessageDto.builder()
         .answer(multiChoiceTaskAnswerMessage.getAnswer())
         .options(multiChoiceTaskQuestionMessage.getOptions())
-        .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
+        .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .build();
     }
@@ -123,13 +123,13 @@ public class UserMessageService {
     } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
       return UserSingleChoiceTaskMessageDto.builder()
         .options(singleChoiceTaskQuestionMessage.getOptions())
-        .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
+        //.timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .build();
     } else if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage) {
       return UserMultiChoiceTaskMessageDto.builder()
         .options(multiChoiceTaskQuestionMessage.getOptions())
-        .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
+        //.timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .build();
     }

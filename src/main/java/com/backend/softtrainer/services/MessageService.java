@@ -92,7 +92,7 @@ public class MessageService {
         .id(UUID.randomUUID().toString())
         .chatId(singleChoiceAnswerMessageDto.getChatId())
         .flowNode(flowNode)
-        .timestamp(singleChoiceAnswerMessageDto.getTimestamp())
+        //.timestamp(singleChoiceAnswerMessageDto.getTimestamp())
         .answer(singleChoiceAnswerMessageDto.getAnswer())
         .build();
       messageRepository.save(message);
@@ -104,7 +104,7 @@ public class MessageService {
         .id(UUID.randomUUID().toString())
         .chatId(singleChoiceTaskAnswerMessageDto.getChatId())
         .flowNode(flowNode)
-        .timestamp(singleChoiceTaskAnswerMessageDto.getTimestamp())
+        //.timestamp(singleChoiceTaskAnswerMessageDto.getTimestamp())
         .answer(singleChoiceTaskAnswerMessageDto.getAnswer())
         .correct(singleChoiceTaskAnswerMessageDto.getCorrect())
         .options(singleChoiceTaskAnswerMessageDto.getOptions())
@@ -120,7 +120,7 @@ public class MessageService {
         .id(UUID.randomUUID().toString())
         .chatId(multiChoiceAnswerMessageDto.getChatId())
         .flowNode(flowNode)
-        .timestamp(multiChoiceAnswerMessageDto.getTimestamp())
+        //.timestamp(multiChoiceAnswerMessageDto.getTimestamp())
         .answer(multiChoiceAnswerMessageDto.getAnswer())
         .options(multiChoiceAnswerMessageDto.getOptions())
         .correct(multiChoiceAnswerMessageDto.getAnswer())
@@ -135,7 +135,7 @@ public class MessageService {
         .role(Role.USER)
         .id(UUID.randomUUID().toString())
         .chatId(enterTextAnswerMessageDto.getChatId())
-        .timestamp(enterTextAnswerMessageDto.getTimestamp())
+        //.timestamp(enterTextAnswerMessageDto.getTimestamp())
         .flowNode(flowNode)
         .content(enterTextAnswerMessageDto.getContent())
         .build();
@@ -260,7 +260,7 @@ public class MessageService {
                        .chatId(messageEntity.getChatId())
                        .content(messageDto.content())
                        .id(UUID.randomUUID().toString())
-                       .timestamp(LocalDateTime.now())
+                       //.timestamp(LocalDateTime.now())
                        .build();
                    messageRepository.save(message);
                    return List.of(message);
@@ -286,7 +286,7 @@ public class MessageService {
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .role(Role.APP)
-        .timestamp(LocalDateTime.now())
+       // .timestamp(LocalDateTime.now())
         .content(text.getText())
         .build();
     } else if (flowNode instanceof SingleChoiceQuestion singleChoiceQuestion) {
@@ -297,7 +297,7 @@ public class MessageService {
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .flowNode(flowNode)
         //.character(flowNode.getCharacter())
-        .timestamp(LocalDateTime.now())
+       // .timestamp(LocalDateTime.now())
         .options(singleChoiceQuestion.getOptions())
         .correct(singleChoiceQuestion.getCorrect())
         .build();
@@ -309,7 +309,7 @@ public class MessageService {
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
-        .timestamp(LocalDateTime.now())
+        //.timestamp(LocalDateTime.now())
         .content(enterTextQuestion.getPrompt())
         .build();
     } else if (flowNode instanceof SingleChoiceTask singleChoiceTask) {
@@ -320,7 +320,7 @@ public class MessageService {
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .flowNode(flowNode)
         //.character(flowNode.getCharacter())
-        .timestamp(LocalDateTime.now())
+        //.timestamp(LocalDateTime.now())
         .options(singleChoiceTask.getOptions())
         .correct(singleChoiceTask.getCorrect())
         .build();
@@ -332,7 +332,7 @@ public class MessageService {
         .flowNode(flowNode)
         //.character(flowNode.getCharacter())
         .role(Role.APP)
-        .timestamp(LocalDateTime.now())
+        //.timestamp(LocalDateTime.now())
         .options(multipleChoiceQuestion.getOptions())
         .correct(multipleChoiceQuestion.getCorrect())
         .build();

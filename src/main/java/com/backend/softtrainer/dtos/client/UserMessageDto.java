@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 public class UserMessageDto {
 
   @JsonProperty("timestamp")
+  @JsonIgnore
   private LocalDateTime timestamp;
 
   @JsonIgnore

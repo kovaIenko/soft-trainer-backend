@@ -6,6 +6,7 @@ import com.backend.softtrainer.entities.Role;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,6 +17,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SourceType;
 
 import java.time.LocalDateTime;
 
@@ -30,6 +33,8 @@ public class Message {
   @JsonIgnore
   private String id;
 
+  @Column(name = "timestamp", insertable = false, updatable = false)
+  @CreationTimestamp(source = SourceType.DB)
   private LocalDateTime timestamp;
 
   @JsonIgnore

@@ -13,8 +13,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @Data
-//todo remove that
-@DiscriminatorValue("4")
 @EqualsAndHashCode(callSuper = true)
 public class MultipleChoiceTask extends FlowNode {
 

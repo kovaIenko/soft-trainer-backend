@@ -23,6 +23,7 @@ public class MessageRequestDto {
   @JsonProperty("owner_id")
   private Long ownerId;
 
+  @Deprecated
   private LocalDateTime timestamp;
 
   @JsonProperty("chat_id")
