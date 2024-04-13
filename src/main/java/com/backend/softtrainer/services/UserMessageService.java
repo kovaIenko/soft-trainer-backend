@@ -123,13 +123,13 @@ public class UserMessageService {
     } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
       return UserSingleChoiceTaskMessageDto.builder()
         .options(singleChoiceTaskQuestionMessage.getOptions())
-        //.timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
+        .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .build();
     } else if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage) {
       return UserMultiChoiceTaskMessageDto.builder()
         .options(multiChoiceTaskQuestionMessage.getOptions())
-        //.timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
+        .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .build();
     }
