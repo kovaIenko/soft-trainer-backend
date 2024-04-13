@@ -5,6 +5,7 @@ import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
@@ -12,7 +13,9 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @Data
+//todo remove that
 @DiscriminatorValue("4")
+@EqualsAndHashCode(callSuper = true)
 public class MultipleChoiceTask extends FlowNode {
 
   @Column

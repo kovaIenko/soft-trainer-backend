@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.core.annotation.Order;
@@ -20,6 +21,7 @@ import org.springframework.core.annotation.Order;
 @Data
 @SuperBuilder
 @NoArgsConstructor
+@EqualsAndHashCode(exclude = {"character", "showPredicate", "name"})
 public class FlowNode {
 
   @Id

@@ -36,7 +36,6 @@ public class UserMessageService {
     MultiChoiceTaskQuestionMessage.class
   );
 
-
   public UserMessageDto combine(final Message question, final Message answer) {
 
     if (question instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage
