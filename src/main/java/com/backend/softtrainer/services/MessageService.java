@@ -172,23 +172,24 @@ public class MessageService {
     if (nextFlowNodeOptional.isPresent()) {
       var nextFlowNode = nextFlowNodeOptional.get();
       var nextMessage = convert(nextFlowNode, chatId);
+
+      nextMessage = messageRepository.save(nextMessage);
       messages.add(nextMessage);
+
 
       while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
         nextFlowNodeOptional = getNextFlowNode(chatId, nextFlowNode.getOrderNumber(), flowName);
         if (nextFlowNodeOptional.isPresent()) {
           nextFlowNode = nextFlowNodeOptional.get();
           nextMessage = convert(nextFlowNode, chatId);
+          nextMessage = messageRepository.save(nextMessage);
           messages.add(nextMessage);
         } else {
           break;
         }
       }
     }
-
-    var storedMessages = messageRepository.saveAll(messages);
-
-    return CompletableFuture.completedFuture(storedMessages);
+    return CompletableFuture.completedFuture(messages);
   }
 
   private Optional<FlowNode> getNextFlowNode(
