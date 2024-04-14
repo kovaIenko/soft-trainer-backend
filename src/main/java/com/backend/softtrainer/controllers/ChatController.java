@@ -4,6 +4,9 @@ import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
 import com.backend.softtrainer.dtos.ChatsResponseDto;
 import com.backend.softtrainer.entities.Chat;
+import com.backend.softtrainer.entities.UserHyperParameter;
+import com.backend.softtrainer.repositories.HyperParameterRepository;
+import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
@@ -32,6 +35,10 @@ public class ChatController {
 
   private final UserMessageService userMessageService;
 
+  private final UserHyperParameterRepository userHyperParameterRepository;
+
+  private final HyperParameterRepository hyperParameterRepository;
+
   @PutMapping("/create")
   public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {
     if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getFlowName())) {
@@ -53,6 +60,19 @@ public class ChatController {
 
       var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
       var combinedMessages = userMessageService.combineMessages(messages);
+
+      var hyperparams  = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getFlowName())
+        .stream()
+        .map(hpKey-> UserHyperParameter.builder()
+          .key(hpKey)
+          .chatId(createdChat.getId())
+          .ownerId(chatRequestDto.getOwnerId())
+          .value((double) 0)
+          .build())
+        .toList();
+
+      userHyperParameterRepository.saveAll(hyperparams);
+
       return ResponseEntity.ok(new ChatResponseDto(
         createdChat.getId(),
         true,

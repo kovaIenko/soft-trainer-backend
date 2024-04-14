@@ -38,6 +38,9 @@ public class User {
 
   private String password;
 
+  //todo add org entity
+  private String company;
+
 //  public void setPassword(String password) {
 //    this.password = new BCryptPasswordEncoder().encode(password);
 //  }

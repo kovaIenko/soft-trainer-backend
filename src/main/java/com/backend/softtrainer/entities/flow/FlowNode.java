@@ -16,7 +16,6 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.core.annotation.Order;
 
-
 @Entity(name = "flows")
 @Data
 @SuperBuilder

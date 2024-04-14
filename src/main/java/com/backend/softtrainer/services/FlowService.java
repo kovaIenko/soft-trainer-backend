@@ -9,6 +9,8 @@ import com.backend.softtrainer.dtos.flow.MultiChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.SingleChoiceQuestionDto;
 import com.backend.softtrainer.dtos.flow.SingleChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.TextDto;
+import com.backend.softtrainer.entities.Character;
+import com.backend.softtrainer.entities.HyperParameter;
 import com.backend.softtrainer.entities.MessageType;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
@@ -19,6 +21,7 @@ import com.backend.softtrainer.entities.flow.SingleChoiceTask;
 import com.backend.softtrainer.entities.flow.Text;
 import com.backend.softtrainer.repositories.CharacterRepository;
 import com.backend.softtrainer.repositories.FlowRepository;
+import com.backend.softtrainer.repositories.HyperParameterRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -28,12 +31,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.backend.softtrainer.entities.Character;
 
 @Service
 @AllArgsConstructor
@@ -42,6 +44,8 @@ public class FlowService {
   private FlowRepository flowRepository;
 
   private CharacterRepository characterRepository;
+
+  private HyperParameterRepository hyperParameterRepository;
 
   public void uploadFlow(final FlowRequestDto flowRequestDto) {
 
@@ -59,6 +63,15 @@ public class FlowService {
 
     characterRepository.saveAll(characterMap.values());
 
+    if (Objects.nonNull(flowRequestDto.getHyperparameters())) {
+      List<HyperParameter> hyperParameters = flowRequestDto.getHyperparameters()
+        .stream()
+        .map(param -> new HyperParameter(param.key(), flowRequestDto.getName()))
+        .toList();
+
+      hyperParameterRepository.saveAll(hyperParameters);
+    }
+
     var flowRecords =
       flowRequestDto.getFlow()
         .stream()
@@ -67,6 +80,7 @@ public class FlowService {
           a.setName(flowRequestDto.getName());
           return a;
         }).toList();
+
     flowRepository.saveAll(flowRecords);
   }
 
