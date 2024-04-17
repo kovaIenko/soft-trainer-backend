@@ -1,0 +1,3 @@
+
+
+ALTER TABLE characters ALTER COLUMN avatar TYPE VARCHAR(1000);
