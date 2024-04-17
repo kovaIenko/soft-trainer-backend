@@ -1,5 +1,6 @@
 package com.backend.softtrainer.configs;
 
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,8 +15,8 @@ public class CorsConfig {
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("*").allowedOrigins("https://test-web-flutter-427fd.web.app/");
+            public void addCorsMappings(@NonNull CorsRegistry registry) {
+                registry.addMapping("chats/create").allowedOrigins("https://test-web-flutter-427fd.web.app/");
             }
         };
     }
