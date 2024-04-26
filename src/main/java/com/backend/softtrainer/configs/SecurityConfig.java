@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.JWTParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -23,9 +24,13 @@ import org.springframework.security.config.annotation.web.configurers.oauth2.ser
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.text.ParseException;
 
 @Configuration
 @EnableMethodSecurity
@@ -89,6 +94,26 @@ public class SecurityConfig {
         .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
     }
     return http.build();
+  }
+
+  @Bean
+  public JwtDecoder jwtDecoder() {
+    return token -> {
+      try {
+        if (JWTParser.parse(token).getJWTClaimsSet().getIssuer().equals("self")) {
+          System.err.println("Self!");
+          JwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaKeys.publicKey()).build();
+          return jwtDecoder.decode(token);
+        } else if (JWTParser.parse(token).getJWTClaimsSet().getIssuer().equals("accounts.google.com")) {
+          System.err.println("Google");
+          JwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+          return jwtDecoder.decode(token);
+        }
+      } catch (ParseException e) {
+        e.printStackTrace();
+      }
+      return null;
+    };
   }
 
 }
