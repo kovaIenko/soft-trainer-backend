@@ -6,15 +6,17 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@EnableWebMvc
-public class WebConfig implements WebMvcConfigurer {
+//@EnableWebMvc
+public class WebConfig {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
+  //WebMvcConfigurer
+
+  //  @Override
+  public void addCorsMappings(CorsRegistry registry) {
 //        registry.addMapping("/**");
 //          .allowedHeaders("Access-Control-Allow-Headers",
 //                          "Origin, X-Requested-With, Content-Type, Accept")
- //         .allowedOrigins("https://test-web-flutter-427fd.web.app/");
-    }
+    //         .allowedOrigins("https://test-web-flutter-427fd.web.app/");
+  }
 
 }

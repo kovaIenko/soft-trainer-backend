@@ -14,6 +14,8 @@ import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,6 +41,7 @@ public class ChatController {
 
   private final HyperParameterRepository hyperParameterRepository;
 
+  //@PreAuthorize("#chatRequestDto.ownerId == authentication.principal.id")
   @PutMapping("/create")
   public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {
     if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getFlowName())) {
@@ -53,6 +56,8 @@ public class ChatController {
         null
       ));
     }
+
+    //todo check if flows available for this user
     var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getFlowName());
 
     if (!flowTillActions.isEmpty()) {
@@ -90,11 +95,11 @@ public class ChatController {
     }
   }
 
+  //@PreAuthorize("#ownerId == authentication.principal.id")
   @GetMapping("/get")
   public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "ownerId") Long ownerId,
                                              @RequestParam(name = "flowName") String flowName) {
     var chatOptional = chatService.findChatWithMessages(ownerId, flowName);
-
 
     if (chatOptional.isEmpty()) {
       return ResponseEntity.ok(new ChatResponseDto(
@@ -123,8 +128,9 @@ public class ChatController {
     ));
   }
 
+//  @PreAuthorize("#ownerId == authentication.principal.id")
   @GetMapping("/get/all")
-  public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId) {
+  public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId, final Authentication authentication) {
     var chats = chatService.getAll(ownerId);
 
     return ResponseEntity.ok(new ChatsResponseDto(

@@ -1,81 +1,98 @@
 package com.backend.softtrainer.configs;
 
-//import org.springframework.context.annotation.Bean;
+import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
+import com.backend.softtrainer.services.auth.TokenService;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.JWTParser;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-//import org.springframework.http.HttpHeaders;
-//import org.springframework.http.HttpStatus;
-//import org.springframework.security.config.Customizer;
-//import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-//import org.springframework.security.config.http.SessionCreationPolicy;
-//import org.springframework.security.web.SecurityFilterChain;
-//import org.springframework.web.cors.CorsConfigurationSource;
-//import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+import java.text.ParseException;
 
 @Configuration
+@EnableMethodSecurity
+@EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-//  @Bean
-//  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//    System.out.println("web security works");
-//    http
-//      .cors()
-//      .and()
-//      .authorizeRequests()
-////            .antMatchers(HttpMethod.GET, "/user/info", "/api/foos/**")
-////            .hasAuthority("SCOPE_read")
-////            .antMatchers(HttpMethod.POST, "/api/foos")
-////            .hasAuthority("SCOPE_write")
-//      .anyRequest()
-//      .authenticated()
-//      .and()
-//      //.cors(cors->cors.configurationSource(corsConfiguration()))
-//      .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-//
-//    return http.build();
-//  }
+  private final RsaProperties rsaKeys;
 
+  @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+  private String jwkSetUri;
 
-//  @Bean
-//  SecurityFilterChain resourceServerSecurityFilterChain(
-//    HttpSecurity http)
-//    throws Exception {
-//    http.oauth2ResourceServer(oauth2 -> oauth2.jwt());
-//   // http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//    //http.csrf(csrf -> csrf.disable());
-////    http.exceptionHandling(handeling -> handeling.authenticationEntryPoint((request, response, authException) -> {
-////      response.addHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"Restricted Content\"");
-////      response.sendError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase());
-////    }));
-//    http.authorizeHttpRequests().anyRequest().authenticated();
-////    http.cors(cors -> {
-////      if (true) {
-////        cors.disable();
-////      } else {
-////       // cors.configurationSource(corsConfig(allowedOrigins));
-////      }
-////    });
-//    return http.build();
-//  }
+  @Value("${security.enabled}")
+  private boolean isSecurityEnabled;
 
-//  CorsConfigurationSource corsConfig(List<String> allowedOrigins) {
-//    final var source = new UrlBasedCorsConfigurationSource();
-//
-//    final var configuration = new CorsConfiguration();
-//    configuration.setAllowedOrigins(allowedOrigins);
-//    configuration.setAllowedMethods(List.of("*"));
-//    configuration.setAllowedHeaders(List.of("*"));
-//    configuration.setExposedHeaders(List.of("*"));
-//
-//    source.registerCorsConfiguration("/**", configuration);
-//    return source;
-//  }
+  private final CustomUsrDetailsService customUsrDetailsService;
 
-//    private CorsConfigurationSource corsConfiguration() {
-//      var a = new UrlBasedCorsConfigurationSource();
-//        //  registry.addMapping("/**").allowedOrigins("https://test-web-flutter-427fd.web.app/");
-//        return a;
-//
-//    }
+  @Bean
+  public BCryptPasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
 
+  @Bean
+  public UserDetailsService customUserDetailsService() {
+    customUsrDetailsService.setPasswordEncoder(passwordEncoder());
+    return customUsrDetailsService;
+  }
 
+  @Bean
+  public AuthenticationManager authManager() {
+    var authProvider = new DaoAuthenticationProvider();
+    authProvider.setUserDetailsService(customUserDetailsService());
+    authProvider.setPasswordEncoder(passwordEncoder());
+    return new ProviderManager(authProvider);
+  }
+
+  @Bean
+  JwtEncoder jwtEncoder() {
+    JWK jwk = new RSAKey.Builder(rsaKeys.publicKey()).privateKey(rsaKeys.privateKey()).build();
+    JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(new JWKSet(jwk));
+    return new NimbusJwtEncoder(jwkSource);
+  }
+
+  @Bean
+  TokenService tokenService() {
+    return new TokenService(jwtEncoder());
+  }
+
+  @Bean
+  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    if (isSecurityEnabled) {
+      http
+        .csrf(AbstractHttpConfigurer::disable)
+        .authorizeHttpRequests(authorize -> authorize
+          .requestMatchers("/login").permitAll()
+          .requestMatchers("/signup").permitAll()
+          // .requestMatchers("/health").permitAll()
+          .requestMatchers("/token/refresh").permitAll()
+          .anyRequest().authenticated())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+    }
+    return http.build();
+  }
 }

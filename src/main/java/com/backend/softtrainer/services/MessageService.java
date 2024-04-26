@@ -7,7 +7,7 @@ import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.MessageType;
-import com.backend.softtrainer.entities.Role;
+import com.backend.softtrainer.entities.ChatRole;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
@@ -90,7 +90,7 @@ public class MessageService {
     if (messageRequestDto instanceof SingleChoiceAnswerMessageDto singleChoiceAnswerMessageDto) {
       message = SingleChoiceAnswerMessage.builder()
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
-        .role(Role.USER)
+        .role(ChatRole.USER)
         .id(UUID.randomUUID().toString())
         .chatId(singleChoiceAnswerMessageDto.getChatId())
         .flowNode(flowNode)
@@ -102,7 +102,7 @@ public class MessageService {
     } else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
       message = SingleChoiceTaskAnswerMessage.builder()
         .messageType(MessageType.SINGLE_CHOICE_TASK)
-        .role(Role.USER)
+        .role(ChatRole.USER)
         .id(UUID.randomUUID().toString())
         .chatId(singleChoiceTaskAnswerMessageDto.getChatId())
         .flowNode(flowNode)
@@ -118,7 +118,7 @@ public class MessageService {
     } else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
       message = MultiChoiceTaskAnswerMessage.builder()
         .messageType(MessageType.MULTI_CHOICE_TASK)
-        .role(Role.USER)
+        .role(ChatRole.USER)
         .id(UUID.randomUUID().toString())
         .chatId(multiChoiceAnswerMessageDto.getChatId())
         .flowNode(flowNode)
@@ -134,7 +134,7 @@ public class MessageService {
     } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
       message = EnterTextMessage.builder()
         .messageType(MessageType.ENTER_TEXT_QUESTION)
-        .role(Role.USER)
+        .role(ChatRole.USER)
         .id(UUID.randomUUID().toString())
         .chatId(enterTextAnswerMessageDto.getChatId())
         //.timestamp(enterTextAnswerMessageDto.getTimestamp())
@@ -300,7 +300,7 @@ public class MessageService {
         .messageType(MessageType.TEXT)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
-        .role(Role.APP)
+        .role(ChatRole.APP)
         // .timestamp(LocalDateTime.now())
         .content(text.getText())
         .build();
@@ -308,7 +308,7 @@ public class MessageService {
       return SingleChoiceQuestionMessage.builder()
         .id(UUID.randomUUID().toString())
         .chatId(chatId)
-        .role(Role.APP)
+        .role(ChatRole.APP)
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .flowNode(flowNode)
         //.character(flowNode.getCharacter())
@@ -320,7 +320,7 @@ public class MessageService {
       return EnterTextMessage.builder()
         .id(UUID.randomUUID().toString())
         .chatId(chatId)
-        .role(Role.APP)
+        .role(ChatRole.APP)
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
@@ -331,7 +331,7 @@ public class MessageService {
       return SingleChoiceTaskQuestionMessage.builder()
         .id(UUID.randomUUID().toString())
         .chatId(chatId)
-        .role(Role.APP)
+        .role(ChatRole.APP)
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .flowNode(flowNode)
         //.character(flowNode.getCharacter())
@@ -346,7 +346,7 @@ public class MessageService {
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .flowNode(flowNode)
         //.character(flowNode.getCharacter())
-        .role(Role.APP)
+        .role(ChatRole.APP)
         //.timestamp(LocalDateTime.now())
         .options(multipleChoiceQuestion.getOptions())
         .correct(multipleChoiceQuestion.getCorrect())

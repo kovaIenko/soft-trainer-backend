@@ -2,7 +2,7 @@ package com.backend.softtrainer.entities.messages;
 
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.MessageType;
-import com.backend.softtrainer.entities.Role;
+import com.backend.softtrainer.entities.ChatRole;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -49,7 +49,7 @@ public class Message {
 
   @JsonIgnore
   @Enumerated(EnumType.STRING)
-  private Role role;
+  private ChatRole role;
 
   @ManyToOne
   @JsonProperty("author")

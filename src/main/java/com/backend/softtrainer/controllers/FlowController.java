@@ -7,6 +7,7 @@ import com.backend.softtrainer.services.FlowService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +22,7 @@ public class FlowController {
 
   private final FlowService flowService;
 
+  @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
   @PutMapping("/upload")
   public ResponseEntity<FlowResponseDto> upload(@RequestBody final FlowRequestDto flowRequestDto) {
 
