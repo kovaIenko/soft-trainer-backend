@@ -8,6 +8,7 @@ import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +27,7 @@ public class MessageController {
 
   private final UserMessageService userMessageService;
 
+//  @PreAuthorize("#messageRequestDto.ownerId == authentication.principal.id")
   @PutMapping("/send")
   public CompletableFuture<ResponseEntity<ChatResponseDto>> create(@RequestBody final MessageRequestDto messageRequestDto) {
 

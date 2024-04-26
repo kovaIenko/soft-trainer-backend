@@ -9,8 +9,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
 
-//    @Override
-//    public void addCorsMappings(CorsRegistry registry) {
-//        registry.addMapping("/**").allowedOrigins("https://test-web-flutter-427fd.web.app/");
-//    }
+  @Override
+  public void addCorsMappings(CorsRegistry registry) {
+//        registry.addMapping("/**");
+//          .allowedHeaders("Access-Control-Allow-Headers",
+//                          "Origin, X-Requested-With, Content-Type, Accept")
+    //         .allowedOrigins("https://test-web-flutter-427fd.web.app/");
+  }
+
 }
