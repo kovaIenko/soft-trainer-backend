@@ -1,6 +1,5 @@
 package com.backend.softtrainer.configs;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -12,6 +11,10 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**").allowedOrigins("https://test-web-flutter-427fd.web.app/");
+//        registry.addMapping("/**");
+//          .allowedHeaders("Access-Control-Allow-Headers",
+//                          "Origin, X-Requested-With, Content-Type, Accept")
+ //         .allowedOrigins("https://test-web-flutter-427fd.web.app/");
     }
+
 }

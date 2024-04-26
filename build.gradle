@@ -32,7 +32,7 @@ repositories {
 dependencies {
   implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
   implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-  implementation 'org.springframework.boot:spring-boot-starter-websocket'
+//  implementation 'org.springframework.boot:spring-boot-starter-websocket'
   runtimeOnly 'org.postgresql:postgresql'
   implementation 'org.flywaydb:flyway-core'
   compileOnly 'org.projectlombok:lombok'
@@ -41,9 +41,15 @@ dependencies {
   implementation("io.github.stefanbratanov:jvm-openai:0.6.1")
   implementation group: 'org.springdoc', name: 'springdoc-openapi-starter-webmvc-ui', version: '2.3.0'
   testImplementation "io.mockk:mockk:1.13.10"
-//  implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-//  implementation 'org.springframework.boot:spring-boot-starter-security'
+  //implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+  //implementation 'org.springframework.boot:spring-boot-starter-security'
   testImplementation "io.mockk:mockk:1.13.10"
+  // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
+  implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '3.2.4'
+  // https://mvnrepository.com/artifact/org.springframework.security/spring-security-oauth2-resource-server
+  //implementation group: 'org.springframework.security', name: 'spring-security-oauth2-resource-server', version: '6.2.4'
+
+
 
 }
 

@@ -1,5 +1,2 @@
-package com.backend.softtrainer.entities;
-
-public enum Role {
-  USER, APP, CHAT_GPT
+package com.backend.softtrainer.entities;public class Role {
 }
