@@ -13,9 +13,9 @@ import com.backend.softtrainer.services.MessageService;
 import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -41,9 +41,9 @@ public class ChatController {
 
   private final HyperParameterRepository hyperParameterRepository;
 
-  //@PreAuthorize("#chatRequestDto.ownerId == authentication.principal.id")
   @PutMapping("/create")
-  public ResponseEntity<ChatResponseDto> create(@RequestBody final ChatRequestDto chatRequestDto) {
+  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #chatRequestDto.ownerId)")
+  public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto) {
     if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getFlowName())) {
       return ResponseEntity.ok(new ChatResponseDto(
         null,
@@ -66,9 +66,9 @@ public class ChatController {
       var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
       var combinedMessages = userMessageService.combineMessages(messages);
 
-      var hyperparams  = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getFlowName())
+      var hyperparams = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getFlowName())
         .stream()
-        .map(hpKey-> UserHyperParameter.builder()
+        .map(hpKey -> UserHyperParameter.builder()
           .key(hpKey)
           .chatId(createdChat.getId())
           .ownerId(chatRequestDto.getOwnerId())
@@ -95,8 +95,8 @@ public class ChatController {
     }
   }
 
-  //@PreAuthorize("#ownerId == authentication.principal.id")
   @GetMapping("/get")
+  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, ownerId)")
   public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "ownerId") Long ownerId,
                                              @RequestParam(name = "flowName") String flowName) {
     var chatOptional = chatService.findChatWithMessages(ownerId, flowName);
@@ -128,11 +128,10 @@ public class ChatController {
     ));
   }
 
-//  @PreAuthorize("#ownerId == authentication.principal.id")
   @GetMapping("/get/all")
-  public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId, final Authentication authentication) {
+  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, ownerId)")
+  public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId) {
     var chats = chatService.getAll(ownerId);
-
     return ResponseEntity.ok(new ChatsResponseDto(
       chats.stream().map(Chat::getFlowName).toList(),
       true,

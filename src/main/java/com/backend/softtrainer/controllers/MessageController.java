@@ -27,9 +27,9 @@ public class MessageController {
 
   private final UserMessageService userMessageService;
 
-//  @PreAuthorize("#messageRequestDto.ownerId == authentication.principal.id")
   @PutMapping("/send")
-  public CompletableFuture<ResponseEntity<ChatResponseDto>> create(@RequestBody final MessageRequestDto messageRequestDto) {
+  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #messageRequestDto?.ownerId)")
+  public CompletableFuture<ResponseEntity<ChatResponseDto>> create(@RequestBody MessageRequestDto messageRequestDto) {
 
     try {
       return messageService.buildResponse(messageRequestDto)

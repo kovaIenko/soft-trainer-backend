@@ -6,6 +6,7 @@ import com.backend.softtrainer.repositories.RoleRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +46,11 @@ public class CustomUsrDetailsService implements UserDetailsService {
     } else {
       throw new RuntimeException("There is no such role in the db");
     }
+  }
+
+  public boolean isResourceOwner(Authentication authentication, Long ownerId) {
+    Optional<User> optUser  = userRepository.findByEmail(authentication.getName());
+    return optUser.map(user -> user.getId().equals(ownerId)).orElse(false);
   }
 
 }

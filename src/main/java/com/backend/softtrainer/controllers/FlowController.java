@@ -36,7 +36,6 @@ public class FlowController {
         )
       ));
     }
-
     flowService.uploadFlow(flowRequestDto);
     var statusMessage = String.format("Successful stored flow with name %s", flowRequestDto.getName());
     log.info(statusMessage);
