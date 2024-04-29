@@ -54,7 +54,7 @@ public class SkillController {
     return ResponseEntity.ok(new AllSkillsResponseDto(convertSkills(skills), true, "success"));
   }
 
-  private Set<SkillResponseDto> convertSkills(final Set<Skill> skills){
+  private Set<SkillResponseDto> convertSkills(final Set<Skill> skills) {
     return skills.stream().map(skill -> new SkillResponseDto(skill.getId(), skill.getName(), skill.getAvatar())).collect(
       Collectors.toSet());
   }
@@ -62,12 +62,12 @@ public class SkillController {
   @GetMapping("/simulation/names")
   @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #skillId)")
   public ResponseEntity<AllSimulationsResponseDto> getAllSimulations(@RequestParam(name = "skillId") Long skillId,
-                                                                final Authentication authentication) {
+                                                                     final Authentication authentication) {
     var simulations = skillService.findSimulationsBySkill(skillId);
-    return ResponseEntity.ok(new AllSimulationsResponseDto(convertSimulations(simulations), true, "success"));
+    return ResponseEntity.ok(new AllSimulationsResponseDto(skillId, convertSimulations(simulations), true, "success"));
   }
 
-  private Set<SimulationResponseDto> convertSimulations(final Set<FlowNode> nodes){
+  private Set<SimulationResponseDto> convertSimulations(final Set<FlowNode> nodes) {
     return nodes.stream().map(node -> new SimulationResponseDto(node.getId(), node.getName())).collect(
       Collectors.toSet());
   }
