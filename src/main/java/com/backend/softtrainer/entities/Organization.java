@@ -1,11 +1,8 @@
 package com.backend.softtrainer.entities;
 
-import com.backend.softtrainer.entities.flow.FlowNode;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
@@ -27,7 +24,7 @@ import java.util.Set;
 public class Organization {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
+//  @GeneratedValue(strategy = GenerationType.AUTO)
   private Long id;
 
   private String avatar;
@@ -35,10 +32,11 @@ public class Organization {
   private String name;
 
   @ManyToMany(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
-  @JoinTable(name = "organizations_simulations",
+  @JoinTable(name = "organizations_skills",
     joinColumns = @JoinColumn(name = "organization_id"),
-    inverseJoinColumns = @JoinColumn(name = "flow_id"))
-  private Set<FlowNode> availableSimulations;
+    inverseJoinColumns = @JoinColumn(name = "skill_id"))
+  //todo make simulation names unique withing the skill
+  private Set<Skill> availableSkills;
 
   @OneToMany(fetch = FetchType.LAZY)
   private List<User> employees;

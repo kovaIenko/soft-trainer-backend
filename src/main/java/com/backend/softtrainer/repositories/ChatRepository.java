@@ -15,10 +15,13 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
   @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.id = :chatId")
   Optional<Chat> findByIdWithMessages(@Param("chatId") Long chatId);
 
-  boolean existsByOwnerIdAndFlowName(final Long ownerId, final String flowName);
+  boolean existsByOwnerIdAndSimulationNameAndSkillId(@Param("ownerId") final Long ownerId,
+                                                     @Param("simulationName") final String simulationName,
+                                                     @Param("skillId") final Long skillId);
 
-  @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.ownerId = :ownerId AND c.flowName = :flowName")
-  Optional<Chat> findByOwnerIdAndFlowNameWithMessages(@Param("ownerId") final Long ownerId, @Param("flowName") final String flowName);
+  @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.ownerId = :ownerId AND c.simulationName = :simulationName")
+  Optional<Chat> findByOwnerIdAndFlowNameWithMessages(@Param("ownerId") final Long ownerId,
+                                                      @Param("simulationName") final String simulationName);
 
   List<Chat> findAllByOwnerId(@Param("ownerId") final Long ownerId);
 

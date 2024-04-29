@@ -20,7 +20,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -28,6 +27,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.text.ParseException;
@@ -45,6 +45,8 @@ public class SecurityConfig {
 
   @Value("${security.enabled}")
   private boolean isSecurityEnabled;
+
+  private final JwtCustomAuthoritiesConverter jwtCustomAuthoritiesConverter;
 
   private final CustomUsrDetailsService customUsrDetailsService;
 
@@ -91,7 +93,7 @@ public class SecurityConfig {
           .requestMatchers("/token/refresh").permitAll()
           .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+        .oauth2ResourceServer((auth) -> auth.jwt((jwt) -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
     }
     return http.build();
   }
@@ -114,6 +116,13 @@ public class SecurityConfig {
       }
       return null;
     };
+  }
+
+  @Bean
+  JwtAuthenticationConverter jwtAuthenticationConverter() {
+    JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+    jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtCustomAuthoritiesConverter);
+    return jwtAuthenticationConverter;
   }
 
 }

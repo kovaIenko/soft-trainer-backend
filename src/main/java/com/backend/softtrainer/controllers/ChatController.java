@@ -13,7 +13,6 @@ import com.backend.softtrainer.services.MessageService;
 import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,21 +43,22 @@ public class ChatController {
   @PutMapping("/create")
   @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #chatRequestDto.ownerId)")
   public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto) {
-    if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getFlowName())) {
+    if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getSimulationName(), chatRequestDto.getSkillId())) {
       return ResponseEntity.ok(new ChatResponseDto(
+        null,
         null,
         false,
         String.format(
           "Chat already exists for user %s and for training %s",
           chatRequestDto.getOwnerId(),
-          chatRequestDto.getFlowName()
+          chatRequestDto.getSimulationName()
         ),
         null
       ));
     }
 
     //todo check if flows available for this user
-    var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getFlowName());
+    var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationName());
 
     if (!flowTillActions.isEmpty()) {
       var createdChat = chatService.store(chatRequestDto);
@@ -66,7 +66,7 @@ public class ChatController {
       var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
       var combinedMessages = userMessageService.combineMessages(messages);
 
-      var hyperparams = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getFlowName())
+      var hyperparams = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getSimulationName())
         .stream()
         .map(hpKey -> UserHyperParameter.builder()
           .key(hpKey)
@@ -80,6 +80,7 @@ public class ChatController {
 
       return ResponseEntity.ok(new ChatResponseDto(
         createdChat.getId(),
+        createdChat.getSkillId(),
         true,
         "success",
         combinedMessages
@@ -88,8 +89,9 @@ public class ChatController {
     } else {
       return ResponseEntity.ok(new ChatResponseDto(
         null,
+        null,
         false,
-        String.format("No flow with name %s", chatRequestDto.getFlowName()),
+        String.format("No flow with name %s", chatRequestDto.getSimulationName()),
         null
       ));
     }
@@ -103,6 +105,7 @@ public class ChatController {
 
     if (chatOptional.isEmpty()) {
       return ResponseEntity.ok(new ChatResponseDto(
+        null,
         null,
         false,
         String.format(
@@ -122,6 +125,7 @@ public class ChatController {
 
     return ResponseEntity.ok(new ChatResponseDto(
       chat.getId(),
+      chat.getSkillId(),
       true,
       "success",
       combinedMessages
@@ -133,7 +137,7 @@ public class ChatController {
   public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId) {
     var chats = chatService.getAll(ownerId);
     return ResponseEntity.ok(new ChatsResponseDto(
-      chats.stream().map(Chat::getFlowName).toList(),
+      chats.stream().map(Chat::getSimulationName).toList(),
       true,
       "success"
     ));

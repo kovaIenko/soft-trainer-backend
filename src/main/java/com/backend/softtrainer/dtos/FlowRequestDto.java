@@ -1,6 +1,7 @@
 package com.backend.softtrainer.dtos;
 
 import com.backend.softtrainer.dtos.flow.FlowNodeDto;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.stefanbratanov.jvm.openai.FineTuningJob;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,5 +22,7 @@ public class FlowRequestDto {
   private List<CharacterDto> characters;
 
   private List<HyperParameterDto> hyperparameters;
+
+  private SkillRequestDto skill;
 
 }

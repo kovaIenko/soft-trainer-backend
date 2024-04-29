@@ -2,6 +2,7 @@ package com.backend.softtrainer.entities.flow;
 
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.SimulationComplexity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,7 +15,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SourceType;
 import org.springframework.core.annotation.Order;
+
+import java.time.LocalDateTime;
 
 @Entity(name = "flows")
 @Data
@@ -47,5 +52,12 @@ public class FlowNode {
 
   @ManyToOne
   private Character character;
+
+  @Enumerated(EnumType.STRING)
+  private SimulationComplexity complexity;
+
+  @Column(name = "timestamp", insertable = false, updatable = false)
+  @CreationTimestamp(source = SourceType.DB)
+  private LocalDateTime timestamp;
 
 }

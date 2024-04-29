@@ -21,8 +21,8 @@ public class ChatService {
     return chatRepository.save(chat);
   }
 
-  public boolean existsBy(final Long ownerId, final String flowName) {
-    return chatRepository.existsByOwnerIdAndFlowName(ownerId, flowName);
+  public boolean existsBy(final Long ownerId, final String flowName, final Long skillId) {
+    return chatRepository.existsByOwnerIdAndSimulationNameAndSkillId(ownerId, flowName, skillId);
   }
 
   public Optional<Chat> findChatWithMessages(final Long ownerId, final String flowName) {

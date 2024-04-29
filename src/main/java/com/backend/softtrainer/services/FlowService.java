@@ -12,6 +12,7 @@ import com.backend.softtrainer.dtos.flow.TextDto;
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.HyperParameter;
 import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
@@ -22,7 +23,9 @@ import com.backend.softtrainer.entities.flow.Text;
 import com.backend.softtrainer.repositories.CharacterRepository;
 import com.backend.softtrainer.repositories.FlowRepository;
 import com.backend.softtrainer.repositories.HyperParameterRepository;
-import lombok.AllArgsConstructor;
+import com.backend.softtrainer.repositories.OrganizationRepository;
+import com.backend.softtrainer.repositories.SkillRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -33,21 +36,46 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class FlowService {
 
-  private FlowRepository flowRepository;
+  private final FlowRepository flowRepository;
 
-  private CharacterRepository characterRepository;
+  private final CharacterRepository characterRepository;
 
-  private HyperParameterRepository hyperParameterRepository;
+  private final HyperParameterRepository hyperParameterRepository;
+
+  private final OrganizationRepository organizationRepository;
+
+  private final SkillRepository skillRepository;
 
   public void uploadFlow(final FlowRequestDto flowRequestDto) {
+
+    var skillReq = flowRequestDto.getSkill();
+    Skill temp = null;
+    if (Objects.isNull(skillReq)) {
+      throw new NoSuchElementException("New skill should be specified");
+    }
+    if (Objects.nonNull(skillReq.skillId())) {
+      var optSkill = skillRepository.findById(skillReq.skillId());
+      if (optSkill.isEmpty()) {
+        throw new NoSuchElementException(String.format("There is no such skill with id %s", skillReq.skillId()));
+      } else {
+        temp = optSkill.get();
+      }
+    } else {
+      if (Objects.isNull(skillReq.name()) || skillReq.name().isEmpty()) {
+        throw new NoSuchElementException("New skill should contains of name");
+      }
+      temp = Skill.builder()
+        .avatar(skillReq.avatar())
+        .name(skillReq.name())
+        .build();
+    }
 
     Map<Long, Character> characterMap = flowRequestDto.getCharacters().stream()
       .collect(Collectors.toMap(
@@ -81,7 +109,16 @@ public class FlowService {
           return a;
         }).toList();
 
-    flowRepository.saveAll(flowRecords);
+    var nodes = flowRepository.saveAll(flowRecords);
+
+    if (!nodes.isEmpty()) {
+      if (Objects.isNull(temp.getSimulations())) {
+        temp.setSimulations(new HashMap<>());
+      }
+      temp.getSimulations().put(nodes.get(0), temp.getSimulations().keySet().size() + 1);
+      skillRepository.save(temp);
+    }
+
   }
 
   //todo stupid violation of second SOLID
@@ -188,9 +225,20 @@ public class FlowService {
     return flowRepository.existsByName(name);
   }
 
-  public Set<String> getAllNameFlows() {
-    return flowRepository.findAllNameFlows();
-  }
+//  public Set<String> getAllSimulationNames() {
+//    return flowRepository.findAllNameFlows();
+//  }
+//
+//  public Set<String> getAllSimulationNames(final Long skillId) {
+//    //todo mailformed string input
+//    var optOrg = organizationRepository.getFirstByName(organization);
+//    return optOrg.map(value ->
+//                        value.get()
+//                          .stream()
+//                          .map(FlowNode::getName)
+//                          .collect(Collectors.toSet()))
+//      .orElse(Collections.emptySet());
+//  }
 
   public List<FlowNode> findAllByNameAndPreviousOrderNumber(final String flowName, final long previousOrderNumber) {
     return flowRepository.findAllByNameAndPreviousOrderNumber(flowName, previousOrderNumber);

@@ -32,7 +32,7 @@ public class HomeController {
   private final CustomUsrDetailsService usrDetailsService;
 
   @GetMapping("/health")
-  @PreAuthorize("hasAnyRole('OWNER')")
+  @PreAuthorize("hasAnyRole('ROLE_OWNER')")
   public ResponseEntity<String> health() {
     return ResponseEntity.ok("Hello, Misha");
   }

@@ -14,21 +14,13 @@ public class Converter {
   public static Chat convert(final ChatRequestDto chatRequestDto) {
     return Chat.builder()
       .ownerId(chatRequestDto.getOwnerId())
-      .flowName(chatRequestDto.getFlowName())
+      .simulationName(chatRequestDto.getSimulationName())
+      .skillId(chatRequestDto.getSkillId())
       .build();
   }
 
-//  public static com.backend.softtrainer.interpreter.Message convert(final MessageRequestDto chatRequestDto) {
-//    return com.backend.softtrainer.interpreter.Message.builder()
-//      .id(chatRequestDto.getId())
-//      .chatId(chatRequestDto.getChatId())
-//      //.content(chatRequestDto.getContent())
-//      .timestamp(chatRequestDto.getTimestamp())
-//      .build();
-//  }
-
   public static ChatDto convert(final Chat chat) {
-    return new ChatDto(chat.getMessages().stream().map(a->new MessageDto("a.getContent()")).collect(Collectors.toSet()));
+    return new ChatDto(chat.getMessages().stream().map(a -> new MessageDto("a.getContent()")).collect(Collectors.toSet()));
   }
 
 }

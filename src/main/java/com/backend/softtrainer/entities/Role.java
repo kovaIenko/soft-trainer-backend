@@ -1,8 +1,11 @@
 
 package com.backend.softtrainer.entities;
 
+import com.backend.softtrainer.dtos.StaticRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +23,7 @@ public class Role {
   private Long id;
 
   @Column(name="name")
-  private String name;
+  @Enumerated(EnumType.STRING)
+  private StaticRole name;
 
 }

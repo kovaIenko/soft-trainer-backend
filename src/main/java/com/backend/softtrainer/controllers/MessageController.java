@@ -35,6 +35,7 @@ public class MessageController {
       return messageService.buildResponse(messageRequestDto)
         .thenApply(messages -> ResponseEntity.ok(new ChatResponseDto(
           messageRequestDto.getChatId(),
+          null,
           true,
           "success",
           userMessageService.combineMessages(messages)
@@ -46,6 +47,7 @@ public class MessageController {
       return CompletableFuture.completedFuture(
         ResponseEntity.ok(new ChatResponseDto(
           messageRequestDto.getChatId(),
+          null,
           false,
           e.getMessage(),
           Collections.emptyList()

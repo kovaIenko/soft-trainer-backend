@@ -31,6 +31,8 @@ public class Chat {
   //todo change it to the User Entity
   private Long ownerId;
 
-  private String flowName;
+  private String simulationName;
+
+  private Long skillId;
 
 }
