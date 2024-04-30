@@ -89,7 +89,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(authorize -> authorize
           .requestMatchers("/login").permitAll()
           .requestMatchers("/signup").permitAll()
-          // .requestMatchers("/health").permitAll()
+          .requestMatchers("/health").permitAll()
           .requestMatchers("/token/refresh").permitAll()
           .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
