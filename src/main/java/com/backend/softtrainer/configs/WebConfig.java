@@ -16,7 +16,7 @@ public class WebConfig implements WebMvcConfigurer {
 //        "Access-Control-Allow-Headers",
 //        "Origin, X-Requested-With, Content-Type, Accept"
 //      )
-      .allowedOrigins("https://test-web-flutter-427fd.web.app/");
+      .allowedOrigins("https://api.thesofttrainer.com");
   }
 
 }
