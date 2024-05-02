@@ -12,10 +12,10 @@ public class WebConfig implements WebMvcConfigurer {
   @Override
   public void addCorsMappings(CorsRegistry registry) {
     registry.addMapping("/**")
-//      .allowedHeaders(
-//        "Access-Control-Allow-Headers",
-//        "Origin, X-Requested-With, Content-Type, Accept"
-//      )
+      .allowedHeaders(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept"
+      )
       .allowedOrigins("https://api.thesofttrainer.com");
   }
 
