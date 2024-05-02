@@ -1,4 +1,6 @@
 package com.backend.softtrainer.dtos;
 
-public record SimulationUploadResponseDto(String name, boolean success, String errorMessage) {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record SimulationUploadResponseDto(String name, boolean success, @JsonProperty("error_message") String errorMessage) {
 }

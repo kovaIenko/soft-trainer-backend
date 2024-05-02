@@ -1,3 +1,10 @@
 package com.backend.softtrainer.dtos.auth;
 
-public record LoginResponse(String message, String access_jwt_token, String refresh_jwt_token) {};
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record LoginResponse(String message,
+                            @JsonProperty("access_jwt_token") String accessJwtToken,
+                            @JsonProperty("refresh_jwt_token") String refreshJwtToken,
+                            boolean success,
+                            @JsonProperty("error_message") String errorMessage) {
+};

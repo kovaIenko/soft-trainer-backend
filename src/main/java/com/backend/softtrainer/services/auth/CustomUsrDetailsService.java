@@ -13,6 +13,7 @@ import com.backend.softtrainer.repositories.RoleRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -29,6 +30,7 @@ import static com.backend.softtrainer.services.auth.AuthUtils.isOwnerApp;
 @Service
 @RequiredArgsConstructor
 @Data
+@Slf4j
 public class CustomUsrDetailsService implements UserDetailsService {
 
   private final UserRepository userRepository;
@@ -74,6 +76,7 @@ public class CustomUsrDetailsService implements UserDetailsService {
 
       authRepository.save(signUp);
     } else {
+      log.error(String.format("We have no %s role ", StaticRole.ROLE_USER));
       throw new RuntimeException("There is no such role in the db");
     }
   }

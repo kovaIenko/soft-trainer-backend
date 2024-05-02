@@ -84,9 +84,10 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
     if (isSecurityEnabled) {
       http
-        .csrf(AbstractHttpConfigurer::disable)
+//        .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(authorize -> authorize
           .requestMatchers("/login").permitAll()
           .requestMatchers("/signup").permitAll()
@@ -95,6 +96,10 @@ public class SecurityConfig {
           .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2ResourceServer((auth) -> auth.jwt((jwt) -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+    } else {
+      http
+        .cors().disable()
+        .csrf(AbstractHttpConfigurer::disable);
     }
     return http.build();
   }

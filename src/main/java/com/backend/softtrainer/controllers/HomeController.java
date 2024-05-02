@@ -51,7 +51,9 @@ public class HomeController {
     return ResponseEntity.ok(new LoginResponse(
       "User with email = " + request.email() + " successfully logined!",
       access_token,
-      refresh_token
+      refresh_token,
+      true,
+      "success"
     ));
   }
 
@@ -65,7 +67,12 @@ public class HomeController {
     String access_token = tokenService.generateAccessToken(user);
     String refresh_token = tokenService.generateRefreshToken(user);
 
-    return ResponseEntity.ok(new RefreshTokenResponse(access_token, refresh_token));
+    return ResponseEntity.ok(new RefreshTokenResponse(
+      access_token,
+      refresh_token,
+      true,
+      "success"
+    ));
   }
 
   @PostMapping("/signup")
