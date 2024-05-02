@@ -115,7 +115,7 @@ public class FlowService {
       if (Objects.isNull(temp.getSimulations())) {
         temp.setSimulations(new HashMap<>());
       }
-      temp.getSimulations().put(nodes.get(0), temp.getSimulations().keySet().size() + 1);
+      temp.getSimulations().put(nodes.get(0), temp.getSimulations().keySet().size() + 1L);
       skillRepository.save(temp);
     }
 

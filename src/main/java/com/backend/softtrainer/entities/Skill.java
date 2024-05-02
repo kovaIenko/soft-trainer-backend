@@ -34,7 +34,7 @@ public class Skill {
   //integer is an order of the simulation in that skill
   @ElementCollection(fetch = FetchType.EAGER)
   //reference to the first node of simulations
-  private Map<FlowNode, Integer> simulations = new HashMap<>();
+  private Map<FlowNode, Long> simulations = new HashMap<>();
 
   @Column(length = 1000)
   private String avatar;
