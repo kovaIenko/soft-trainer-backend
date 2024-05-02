@@ -87,6 +87,7 @@ public class SecurityConfig {
 
     if (isSecurityEnabled) {
       http
+        .cors().and()
 //        .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(authorize -> authorize
           .requestMatchers("/login").permitAll()
@@ -98,7 +99,7 @@ public class SecurityConfig {
         .oauth2ResourceServer((auth) -> auth.jwt((jwt) -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
     } else {
       http
-        //.cors().disable()
+        .cors().and()
         .csrf(AbstractHttpConfigurer::disable);
     }
     return http.build();
