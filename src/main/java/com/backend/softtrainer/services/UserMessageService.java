@@ -7,7 +7,7 @@ import com.backend.softtrainer.dtos.client.UserMultiChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
-import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextMessage;
 import com.backend.softtrainer.entities.messages.Message;

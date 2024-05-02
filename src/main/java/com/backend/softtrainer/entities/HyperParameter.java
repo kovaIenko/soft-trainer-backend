@@ -1,5 +1,6 @@
 package com.backend.softtrainer.entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
@@ -15,6 +16,7 @@ public class HyperParameter {
   @Id
   private String key;
 
-  private String flowName;
+  @Column(name = "simulation_name")
+  private String simulationName;
 
 }

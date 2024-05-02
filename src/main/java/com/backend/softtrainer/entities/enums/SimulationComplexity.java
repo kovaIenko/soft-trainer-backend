@@ -1,4 +1,4 @@
-package com.backend.softtrainer.entities;
+package com.backend.softtrainer.entities.enums;
 
 public enum SimulationComplexity {
   MEDIUM, HARD, EASY

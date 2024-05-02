@@ -11,7 +11,7 @@ import java.util.Set;
 @Repository
 public interface HyperParameterRepository extends JpaRepository<HyperParameter, String> {
 
-  @Query("SELECT hp.key FROM hyperparams hp WHERE hp.flowName = :flowName")
+  @Query("SELECT hp.key FROM hyperparams hp WHERE hp.simulationName = :flowName")
   Set<String> getAllKeysByFlowName(@Param("flowName") final String flowName);
 
 }

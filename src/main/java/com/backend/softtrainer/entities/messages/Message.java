@@ -1,8 +1,8 @@
 package com.backend.softtrainer.entities.messages;
 
 import com.backend.softtrainer.entities.Character;
-import com.backend.softtrainer.entities.MessageType;
-import com.backend.softtrainer.entities.ChatRole;
+import com.backend.softtrainer.entities.enums.MessageType;
+import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;

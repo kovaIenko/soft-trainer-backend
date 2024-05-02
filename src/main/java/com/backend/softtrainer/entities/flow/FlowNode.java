@@ -1,8 +1,8 @@
 package com.backend.softtrainer.entities.flow;
 
 import com.backend.softtrainer.entities.Character;
-import com.backend.softtrainer.entities.MessageType;
-import com.backend.softtrainer.entities.SimulationComplexity;
+import com.backend.softtrainer.entities.enums.MessageType;
+import com.backend.softtrainer.entities.enums.SimulationComplexity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

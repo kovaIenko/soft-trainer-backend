@@ -11,7 +11,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -34,7 +33,7 @@ public class HomeController {
   @GetMapping("/health")
 //  @PreAuthorize("hasAnyRole('ROLE_OWNER')")
   public ResponseEntity<String> health() {
-    return ResponseEntity.ok("Hello, Misha");
+    return ResponseEntity.ok("Welcome, Miha");
   }
 
   @PostMapping("/login")
@@ -45,10 +44,15 @@ public class HomeController {
     Authentication auth = authManager.authenticate(authenticationToken);
 
     CustomUsrDetails user = (CustomUsrDetails) usrDetailsService.loadUserByUsername(request.email());
+    usrDetailsService.createAuthRecord(user.user().getId());
     String access_token = tokenService.generateAccessToken(user);
     String refresh_token = tokenService.generateRefreshToken(user);
 
-    return ResponseEntity.ok(new LoginResponse("User with email = "+ request.email() + " successfully logined!",access_token, refresh_token));
+    return ResponseEntity.ok(new LoginResponse(
+      "User with email = " + request.email() + " successfully logined!",
+      access_token,
+      refresh_token
+    ));
   }
 
   @GetMapping("/token/refresh")

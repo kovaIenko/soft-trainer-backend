@@ -1,9 +1,14 @@
 package com.backend.softtrainer.services.auth;
 
 import com.backend.softtrainer.dtos.StaticRole;
+import com.backend.softtrainer.entities.Auth;
+import com.backend.softtrainer.entities.enums.AuthType;
+import com.backend.softtrainer.entities.enums.AuthWay;
+import com.backend.softtrainer.entities.enums.PlatformType;
 import com.backend.softtrainer.entities.Role;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
+import com.backend.softtrainer.repositories.AuthRepository;
 import com.backend.softtrainer.repositories.RoleRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.Data;
@@ -29,12 +34,23 @@ public class CustomUsrDetailsService implements UserDetailsService {
   private final UserRepository userRepository;
   private PasswordEncoder passwordEncoder;
   private final RoleRepository roleRepository;
+  private final AuthRepository authRepository;
 
   @Override
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
     User user = userRepository.findByEmail(email)
       .orElseThrow(() -> new UsernameNotFoundException("User with email = " + email + " not exist!"));
     return new CustomUsrDetails(user);
+  }
+
+  public void createAuthRecord(final Long userId) {
+    var login = Auth.builder()
+      .platform(PlatformType.WEB)
+      .userId(userId)
+      .authType(AuthType.LOGIN)
+      .authWay(AuthWay.BASIC)
+      .build();
+    authRepository.save(login);
   }
 
   public void createUser(String email, String password) {
@@ -47,7 +63,16 @@ public class CustomUsrDetailsService implements UserDetailsService {
       var roles = new HashSet<Role>();
       roles.add(optLowestRole.get());
       user.setRoles(roles);
-      userRepository.save(user);
+      var userEnt = userRepository.save(user);
+
+      var signUp = Auth.builder()
+        .platform(PlatformType.WEB)
+        .userId(userEnt.getId())
+        .authType(AuthType.SIGNUP)
+        .authWay(AuthWay.BASIC)
+        .build();
+
+      authRepository.save(signUp);
     } else {
       throw new RuntimeException("There is no such role in the db");
     }

@@ -1,4 +1,4 @@
-package com.backend.softtrainer.entities;
+package com.backend.softtrainer.entities.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

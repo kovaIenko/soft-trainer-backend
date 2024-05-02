@@ -1,6 +1,6 @@
 package com.backend.softtrainer.interpreter.entity
 
-import com.backend.softtrainer.entities.MessageType
+import com.backend.softtrainer.entities.enums.MessageType
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask
 import com.backend.softtrainer.entities.flow.SingleChoiceQuestion
 import com.backend.softtrainer.entities.messages.Message

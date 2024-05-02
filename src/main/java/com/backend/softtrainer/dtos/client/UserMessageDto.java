@@ -2,7 +2,7 @@ package com.backend.softtrainer.dtos.client;
 
 
 import com.backend.softtrainer.entities.Character;
-import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

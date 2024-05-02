@@ -1,6 +1,6 @@
 package com.backend.softtrainer.dtos.messages;
 
-import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

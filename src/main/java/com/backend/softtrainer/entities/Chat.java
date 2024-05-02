@@ -1,6 +1,7 @@
 package com.backend.softtrainer.entities;
 
 import com.backend.softtrainer.entities.messages.Message;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -11,7 +12,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SourceType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -34,5 +38,9 @@ public class Chat {
   private String simulationName;
 
   private Long skillId;
+
+  @Column(name = "timestamp", insertable = false, updatable = false)
+  @CreationTimestamp(source = SourceType.DB)
+  private LocalDateTime timestamp;
 
 }

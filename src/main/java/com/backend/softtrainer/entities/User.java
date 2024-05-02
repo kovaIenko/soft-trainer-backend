@@ -50,6 +50,8 @@ public class User {
   @ManyToOne(fetch = FetchType.EAGER)
   private Organization organization;
 
+  private String department;
+
   @ManyToMany(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
   @JoinTable(name = "user_roles",
     joinColumns = @JoinColumn(name = "user_id"),

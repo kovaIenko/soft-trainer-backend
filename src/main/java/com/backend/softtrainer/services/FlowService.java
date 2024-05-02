@@ -11,7 +11,7 @@ import com.backend.softtrainer.dtos.flow.SingleChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.TextDto;
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.HyperParameter;
-import com.backend.softtrainer.entities.MessageType;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
