@@ -98,7 +98,7 @@ public class ChatController {
   }
 
   @GetMapping("/get")
-  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, ownerId)")
+  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #ownerId)")
   public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "ownerId") Long ownerId,
                                              @RequestParam(name = "flowName") String flowName) {
     var chatOptional = chatService.findChatWithMessages(ownerId, flowName);
@@ -133,7 +133,7 @@ public class ChatController {
   }
 
   @GetMapping("/get/all")
-  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, ownerId)")
+  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #ownerId)")
   public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId) {
     var chats = chatService.getAll(ownerId);
     return ResponseEntity.ok(new ChatsResponseDto(

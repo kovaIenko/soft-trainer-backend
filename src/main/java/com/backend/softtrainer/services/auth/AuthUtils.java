@@ -6,7 +6,7 @@ import org.springframework.security.core.GrantedAuthority;
 
 public class AuthUtils {
 
-  public static boolean isOwnerApp(final Authentication authentication) {
+  public static boolean userIsOwnerApp(final Authentication authentication) {
     return authentication.getAuthorities()
       .stream()
       .map(GrantedAuthority::getAuthority)

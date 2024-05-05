@@ -8,6 +8,7 @@ import com.backend.softtrainer.entities.enums.PlatformType;
 import com.backend.softtrainer.entities.Role;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
+import com.backend.softtrainer.exceptions.InsufficientUserPrivilegesException;
 import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
 import com.backend.softtrainer.repositories.AuthRepository;
 import com.backend.softtrainer.repositories.RoleRepository;
@@ -26,7 +27,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.backend.softtrainer.services.auth.AuthUtils.isOwnerApp;
+import static com.backend.softtrainer.services.auth.AuthUtils.userIsOwnerApp;
 
 @Service
 @RequiredArgsConstructor
@@ -54,12 +55,14 @@ public class CustomUsrDetailsService implements UserDetailsService {
       .authWay(AuthWay.BASIC)
       .build();
     authRepository.save(login);
+
   }
 
   public void createUser(String email, String password) throws UserAlreadyExitsException {
     var userByEmail = userRepository.findByEmail(email);
-    if(userByEmail.isPresent())
+    if (userByEmail.isPresent()) {
       throw new UserAlreadyExitsException(String.format("The user with email %s already exists", email));
+    }
     var optLowestRole = roleRepository.findByName(StaticRole.ROLE_USER);
     if (optLowestRole.isPresent()) {
       User user = new User();
@@ -85,20 +88,32 @@ public class CustomUsrDetailsService implements UserDetailsService {
     }
   }
 
-  public boolean isResourceOwner(Authentication authentication, Long ownerId) {
+  public boolean isResourceOwner(Authentication authentication, Long ownerId) throws InsufficientUserPrivilegesException {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
-    return optUser.map(user -> user.getId().equals(ownerId)).orElse(false);
+    return optUser.map(user -> user.getId().equals(ownerId))
+      .orElse(false);
+//    () -> new InsufficientUserPrivilegesException(String.format(
+//        "The user %s does not have access to this resource",
+//        authentication.getName()
+//      ))
   }
 
-  public boolean isSkillAvailable(Authentication authentication, Long skillId) {
+  public boolean isSkillAvailable(Authentication authentication, Long skillId) throws InsufficientUserPrivilegesException {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
-    if (isOwnerApp(authentication)) {
+    if (userIsOwnerApp(authentication)) {
       return true;
     }
     if (optUser.isPresent()) {
       for (Skill skill : optUser.get().getOrganization().getAvailableSkills()) {
         if (Objects.equals(skill.getId(), skillId)) {
           return true;
+        } else {
+//          throw new InsufficientUserPrivilegesException(String.format(
+//            "The user %s does not have access to the skill %s",
+//            authentication.getName(),
+//            skillId
+//          ));
+          return false;
         }
       }
     }
@@ -114,6 +129,7 @@ public class CustomUsrDetailsService implements UserDetailsService {
       if (Objects.nonNull(user.getOrganization())) {
         return user.getOrganization().getName().equalsIgnoreCase(org);
       } else {
+        log.error("The organization cannot be empty");
         return false;
       }
     }

@@ -18,7 +18,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import static com.backend.softtrainer.services.auth.AuthUtils.isOwnerApp;
+import static com.backend.softtrainer.services.auth.AuthUtils.userIsOwnerApp;
 import static com.backend.softtrainer.utils.Converter.convertSimulations;
 import static com.backend.softtrainer.utils.Converter.convertSkills;
 
@@ -36,7 +36,7 @@ public class SkillController {
                                                                final Authentication authentication) {
     Set<Skill> skills = new HashSet<>();
     if ((Objects.isNull(organization) || organization.isEmpty())) {
-      if (isOwnerApp(authentication)) {
+      if (userIsOwnerApp(authentication)) {
         skills = skillService.getAllSkill();
       } else {
         ResponseEntity.ok(new AllSkillsResponseDto(
