@@ -1,9 +1,11 @@
 package com.backend.softtrainer.controllers;
 
+import com.backend.softtrainer.dtos.SignUpUserResponseDto;
 import com.backend.softtrainer.dtos.auth.LoginRequest;
 import com.backend.softtrainer.dtos.auth.LoginResponse;
 import com.backend.softtrainer.dtos.auth.RefreshTokenResponse;
 import com.backend.softtrainer.dtos.auth.SignupRequestDto;
+import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import com.backend.softtrainer.services.auth.TokenService;
@@ -76,9 +78,15 @@ public class HomeController {
   }
 
   @PostMapping("/signup")
-  public ResponseEntity<String> signUp(@RequestBody final SignupRequestDto request) {
-    usrDetailsService.createUser(request.email(), request.password());
-    return ResponseEntity.ok("User registered successfully.");
+  public ResponseEntity<SignUpUserResponseDto> signUp(@RequestBody final SignupRequestDto request) {
+    try {
+      usrDetailsService.createUser(request.email(), request.password());
+      return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), true, "success"));
+    } catch (UserAlreadyExitsException e) {
+      return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), false, e.getMessage()));
+    } catch (Exception e) {
+      return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), true, "unknown"));
+    }
   }
 
 }

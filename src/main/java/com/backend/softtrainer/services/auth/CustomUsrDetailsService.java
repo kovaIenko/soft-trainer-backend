@@ -8,6 +8,7 @@ import com.backend.softtrainer.entities.enums.PlatformType;
 import com.backend.softtrainer.entities.Role;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
+import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
 import com.backend.softtrainer.repositories.AuthRepository;
 import com.backend.softtrainer.repositories.RoleRepository;
 import com.backend.softtrainer.repositories.UserRepository;
@@ -55,7 +56,10 @@ public class CustomUsrDetailsService implements UserDetailsService {
     authRepository.save(login);
   }
 
-  public void createUser(String email, String password) {
+  public void createUser(String email, String password) throws UserAlreadyExitsException {
+    var userByEmail = userRepository.findByEmail(email);
+    if(userByEmail.isPresent())
+      throw new UserAlreadyExitsException(String.format("The user with email %s already exists", email));
     var optLowestRole = roleRepository.findByName(StaticRole.ROLE_USER);
     if (optLowestRole.isPresent()) {
       User user = new User();
