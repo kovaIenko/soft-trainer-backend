@@ -30,7 +30,7 @@ public class SkillController {
 
   private final SkillService skillService;
 
-  @GetMapping("/names")
+  @GetMapping()
   @PreAuthorize("@customUsrDetailsService.orgHasEmployee(authentication, #organization)")
   public ResponseEntity<AllSkillsResponseDto> getAllSkillNames(@RequestParam(name = "org") String organization,
                                                                final Authentication authentication) {

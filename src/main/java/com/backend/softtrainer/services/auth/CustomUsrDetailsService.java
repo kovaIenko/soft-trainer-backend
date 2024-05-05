@@ -91,14 +91,16 @@ public class CustomUsrDetailsService implements UserDetailsService {
   public boolean isResourceOwner(Authentication authentication, Long ownerId) throws InsufficientUserPrivilegesException {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
     return optUser.map(user -> user.getId().equals(ownerId))
-      .orElse(false);
-//    () -> new InsufficientUserPrivilegesException(String.format(
-//        "The user %s does not have access to this resource",
-//        authentication.getName()
-//      ))
+      .orElseGet(() -> {
+        log.error(String.format(
+          "The user %s does not have access to this resource",
+          authentication.getName()
+        ));
+        return false;
+      });
   }
 
-  public boolean isSkillAvailable(Authentication authentication, Long skillId) throws InsufficientUserPrivilegesException {
+  public boolean isSkillAvailable(Authentication authentication, Long skillId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
     if (userIsOwnerApp(authentication)) {
       return true;
@@ -108,11 +110,11 @@ public class CustomUsrDetailsService implements UserDetailsService {
         if (Objects.equals(skill.getId(), skillId)) {
           return true;
         } else {
-//          throw new InsufficientUserPrivilegesException(String.format(
-//            "The user %s does not have access to the skill %s",
-//            authentication.getName(),
-//            skillId
-//          ));
+          log.error(String.format(
+            "The user %s does not have access to the skill %s",
+            authentication.getName(),
+            skillId
+          ));
           return false;
         }
       }
