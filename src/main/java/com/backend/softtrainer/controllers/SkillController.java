@@ -52,7 +52,7 @@ public class SkillController {
     return ResponseEntity.ok(new AllSkillsResponseDto(convertSkills(skills), true, "success"));
   }
 
-  @GetMapping("/simulation/names")
+  @GetMapping("/simulation")
   @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #skillId)")
   public ResponseEntity<AllSimulationsResponseDto> getAllSimulations(@RequestParam(name = "skillId") Long skillId,
                                                                      final Authentication authentication) {
