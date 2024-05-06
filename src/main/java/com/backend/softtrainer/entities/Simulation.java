@@ -10,13 +10,12 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
@@ -29,6 +28,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Data
+@EqualsAndHashCode(exclude = {"skill"})
 public class Simulation {
 
   @Id
@@ -48,5 +48,8 @@ public class Simulation {
   @Column(name = "created_at", insertable = false, updatable = false)
   @CreationTimestamp(source = SourceType.DB)
   private LocalDateTime createdAt;
+
+  @ManyToOne
+  private Skill skill;
 
 }

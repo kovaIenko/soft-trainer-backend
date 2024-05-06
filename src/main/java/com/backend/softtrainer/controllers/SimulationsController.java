@@ -28,7 +28,7 @@ public class SimulationsController {
     try {
       flowService.uploadFlow(simulationRequestDto);
       var statusMessage = String.format(
-        "Successful stored skill %s and simulation  %s",
+        "Successful stored skill %s and simulation %s",
         simulationRequestDto.getSkill().name(),
         simulationRequestDto.getName()
       );

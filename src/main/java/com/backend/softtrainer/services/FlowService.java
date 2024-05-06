@@ -130,7 +130,7 @@ public class FlowService {
 
     simulation.setNodes(nodes);
 
-//    simulation.setSkill(temp);
+    simulation.setSkill(temp);
     simulationRepository.save(simulation);
   }
 
