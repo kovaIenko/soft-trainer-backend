@@ -121,6 +121,10 @@ public class FlowService {
 
   }
 
+  public Optional<FlowNode> findById(final Long simulationId) {
+    return flowRepository.findById(simulationId);
+  }
+
   //todo stupid violation of second SOLID
   private Stream<FlowNode> convert(final FlowNodeDto flowRecordDto, final Character authorEntity) {
 

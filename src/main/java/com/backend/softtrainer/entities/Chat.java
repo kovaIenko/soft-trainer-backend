@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,8 +33,8 @@ public class Chat {
   @OneToMany(mappedBy = "chatId", fetch = FetchType.LAZY)
   private List<Message> messages;
 
-  //todo change it to the User Entity
-  private Long ownerId;
+  @OneToOne
+  private User user;
 
   private String simulationName;
 

@@ -2,13 +2,11 @@ package com.backend.softtrainer.services.auth;
 
 import com.backend.softtrainer.dtos.StaticRole;
 import com.backend.softtrainer.entities.Auth;
+import com.backend.softtrainer.entities.Role;
+import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.enums.AuthType;
 import com.backend.softtrainer.entities.enums.AuthWay;
 import com.backend.softtrainer.entities.enums.PlatformType;
-import com.backend.softtrainer.entities.Role;
-import com.backend.softtrainer.entities.Skill;
-import com.backend.softtrainer.entities.User;
-import com.backend.softtrainer.exceptions.InsufficientUserPrivilegesException;
 import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
 import com.backend.softtrainer.repositories.AuthRepository;
 import com.backend.softtrainer.repositories.RoleRepository;
@@ -26,8 +24,6 @@ import org.springframework.stereotype.Service;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
-
-import static com.backend.softtrainer.services.auth.AuthUtils.userIsOwnerApp;
 
 @Service
 @RequiredArgsConstructor
@@ -88,10 +84,13 @@ public class CustomUsrDetailsService implements UserDetailsService {
     }
   }
 
-  public boolean isResourceOwner(Authentication authentication, Long skillId) {
+  public boolean isSkillAvailable(Authentication authentication, Long skillId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
     return optUser.map(user -> {
-        if (user.getOrganization().getAvailableSkills().stream().anyMatch(a -> a.getId().equals(skillId))) {
+        if (user.getOrganization()
+          .getAvailableSkills()
+          .stream()
+          .anyMatch(a -> a.getId().equals(skillId))) {
           return true;
         } else {
           log.error(String.format(
@@ -107,26 +106,25 @@ public class CustomUsrDetailsService implements UserDetailsService {
       });
   }
 
-  public boolean isSkillAvailable(Authentication authentication, Long skillId) {
+  public boolean isSimulationAvailable(Authentication authentication, Long simulationId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
-    if (userIsOwnerApp(authentication)) {
-      return true;
-    }
-    if (optUser.isPresent()) {
-      for (Skill skill : optUser.get().getOrganization().getAvailableSkills()) {
-        if (Objects.equals(skill.getId(), skillId)) {
+    return optUser.map(user -> {
+        if (user.getOrganization().getAvailableSkills()
+          .stream().flatMap(a -> a.getSimulations().keySet().stream())
+          .anyMatch(simulation -> simulation.getId().equals(simulationId))) {
           return true;
         } else {
           log.error(String.format(
-            "The user %s does not have access to the skill %s",
-            authentication.getName(),
-            skillId
+            "The user %s does not have access to this simulation",
+            authentication.getName()
           ));
           return false;
         }
-      }
-    }
-    return false;
+      })
+      .orElseGet(() -> {
+        log.error(String.format("The user %s doesn't exit", authentication.getName()));
+        return false;
+      });
   }
 
   public boolean orgHasEmployee(Authentication authentication, String org) {

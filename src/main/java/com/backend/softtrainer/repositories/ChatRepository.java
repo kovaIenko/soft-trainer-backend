@@ -1,6 +1,7 @@
 package com.backend.softtrainer.repositories;
 
 import com.backend.softtrainer.entities.Chat;
+import com.backend.softtrainer.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,14 +16,13 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
   @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.id = :chatId")
   Optional<Chat> findByIdWithMessages(@Param("chatId") Long chatId);
 
-  boolean existsByOwnerIdAndSimulationNameAndSkillId(@Param("ownerId") final Long ownerId,
+
+  boolean existsByUserAndSimulationNameAndSkillId(@Param("user") final User user,
                                                      @Param("simulationName") final String simulationName,
                                                      @Param("skillId") final Long skillId);
 
-  @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.ownerId = :ownerId AND c.simulationName = :simulationName")
-  Optional<Chat> findByOwnerIdAndFlowNameWithMessages(@Param("ownerId") final Long ownerId,
+  @Query("SELECT c FROM Chat c JOIN FETCH c.messages WHERE c.user.email = :username AND c.simulationName = :simulationName")
+  Optional<Chat> findByOwnerIdAndFlowNameWithMessages(@Param("username") final String username,
                                                       @Param("simulationName") final String simulationName);
-
-  List<Chat> findAllByOwnerId(@Param("ownerId") final Long ownerId);
 
 }

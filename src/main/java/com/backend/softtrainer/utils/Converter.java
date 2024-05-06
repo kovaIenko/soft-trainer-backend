@@ -7,6 +7,7 @@ import com.backend.softtrainer.dtos.SimulationResponseDto;
 import com.backend.softtrainer.dtos.SkillResponseDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Skill;
+import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import lombok.NoArgsConstructor;
 
@@ -16,10 +17,10 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 public class Converter {
 
-  public static Chat convert(final ChatRequestDto chatRequestDto, final Long userId) {
+  public static Chat convert(final ChatRequestDto chatRequestDto, final User user) {
     return Chat.builder()
-      .ownerId(userId)
-      .simulationName(chatRequestDto.getSimulationName())
+      .user(user)
+      .simulationName(chatRequestDto.getSimulationId())
       .skillId(chatRequestDto.getSkillId())
       .build();
   }

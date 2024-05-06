@@ -9,7 +9,7 @@ public class ChatRequestDto {
   @JsonProperty("skill_id")
   private Long skillId;
 
-  @JsonProperty("simulation_name")
-  private String simulationName;
+  @JsonProperty("simulation_id")
+  private String simulationId;
 
 }

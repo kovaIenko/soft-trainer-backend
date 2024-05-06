@@ -2,8 +2,6 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
-import com.backend.softtrainer.dtos.ChatsResponseDto;
-import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.UserHyperParameter;
 import com.backend.softtrainer.repositories.HyperParameterRepository;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
@@ -46,10 +44,10 @@ public class ChatController {
   private final CustomUsrDetailsService customUsrDetailsService;
 
   @PutMapping("/create")
-  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #chatRequestDto.skillId)")
+  @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #chatRequestDto.skillId)")
   public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto, Authentication authentication) {
-    var userDetails = (CustomUsrDetails)customUsrDetailsService.loadUserByUsername(authentication.getName());
-    if (chatService.existsBy(userDetails.user().getId(), chatRequestDto.getSimulationName(), chatRequestDto.getSkillId())) {
+    var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
+    if (chatService.existsBy(userDetails.user(), chatRequestDto.getSimulationId(), chatRequestDto.getSkillId())) {
       return ResponseEntity.ok(new ChatResponseDto(
         null,
         null,
@@ -57,22 +55,22 @@ public class ChatController {
         String.format(
           "Chat already exists for user %s and for training %s",
           userDetails.user().getId(),
-          chatRequestDto.getSimulationName()
+          chatRequestDto.getSimulationId()
         ),
         null
       ));
     }
 
     //todo check if flows available for this user
-    var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationName());
+    var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationId());
 
     if (!flowTillActions.isEmpty()) {
-      var createdChat = chatService.store(chatRequestDto, userDetails.user().getId());
+      var createdChat = chatService.store(chatRequestDto, userDetails.user());
 
       var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
       var combinedMessages = userMessageService.combineMessages(messages);
 
-      var hyperparams = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getSimulationName())
+      var hyperparams = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getSimulationId())
         .stream()
         .map(hpKey -> UserHyperParameter.builder()
           .key(hpKey)
@@ -97,56 +95,68 @@ public class ChatController {
         null,
         null,
         false,
-        String.format("No flow with name %s", chatRequestDto.getSimulationName()),
+        String.format("No flow with name %s", chatRequestDto.getSimulationId()),
         null
       ));
     }
   }
 
   @GetMapping("/get")
-  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #ownerId)")
-  public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "ownerId") Long ownerId,
-                                             @RequestParam(name = "flowName") String flowName) {
-    var chatOptional = chatService.findChatWithMessages(ownerId, flowName);
+  @PreAuthorize("@customUsrDetailsService.isSimulationAvailable(authentication, #simulationId)")
+  public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "simulation_id") Long simulationId,
+                                             Authentication authentication) {
 
-    if (chatOptional.isEmpty()) {
+    var simulationOpt = flowService.findById(simulationId);
+    if (simulationOpt.isPresent()) {
+      var chatOptional = chatService.findChatWithMessages(authentication.getName(), simulationOpt.get().getName());
+
+      if (chatOptional.isEmpty()) {
+        return ResponseEntity.ok(new ChatResponseDto(
+          null,
+          null,
+          false,
+          String.format(
+            "Chat doesn't exists for user %s and for simulation %s",
+            authentication.getName(),
+            simulationId
+          ),
+          null
+        ));
+      }
+
+      var chat = chatOptional.get();
+
+      var messages = chat.getMessages().stream().toList();
+
+      var combinedMessages = userMessageService.combineMessages(messages);
+
+      return ResponseEntity.ok(new ChatResponseDto(
+        chat.getId(),
+        chat.getSkillId(),
+        true,
+        "success",
+        combinedMessages
+      ));
+    } else {
       return ResponseEntity.ok(new ChatResponseDto(
         null,
         null,
         false,
-        String.format(
-          "Chat doesn't exists for user %s and for training %s",
-          ownerId,
-          flowName
-        ),
+        String.format("The is no such simulation %s", simulationId),
         null
       ));
     }
-
-    var chat = chatOptional.get();
-
-    var messages = chat.getMessages().stream().toList();
-
-    var combinedMessages = userMessageService.combineMessages(messages);
-
-    return ResponseEntity.ok(new ChatResponseDto(
-      chat.getId(),
-      chat.getSkillId(),
-      true,
-      "success",
-      combinedMessages
-    ));
   }
 
-  @GetMapping("/get/all")
-  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #ownerId)")
-  public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId) {
-    var chats = chatService.getAll(ownerId);
-    return ResponseEntity.ok(new ChatsResponseDto(
-      chats.stream().map(Chat::getSimulationName).toList(),
-      true,
-      "success"
-    ));
-  }
+//  @GetMapping("/get/all")
+//  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #ownerId)")
+//  public ResponseEntity<ChatsResponseDto> getAll(@RequestParam(name = "ownerId") Long ownerId) {
+//    var chats = chatService.getAll(ownerId);
+//    return ResponseEntity.ok(new ChatsResponseDto(
+//      chats.stream().map(Chat::getSimulationName).toList(),
+//      true,
+//      "success"
+//    ));
+//  }
 
 }
