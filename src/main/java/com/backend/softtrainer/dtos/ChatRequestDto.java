@@ -6,9 +6,6 @@ import lombok.Data;
 @Data
 public class ChatRequestDto {
 
-  @JsonProperty("owner_id")
-  private Long ownerId;
-
   @JsonProperty("skill_id")
   private Long skillId;
 

@@ -11,10 +11,13 @@ import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
 import com.backend.softtrainer.services.UserMessageService;
+import com.backend.softtrainer.services.auth.CustomUsrDetails;
+import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,17 +43,20 @@ public class ChatController {
 
   private final HyperParameterRepository hyperParameterRepository;
 
+  private final CustomUsrDetailsService customUsrDetailsService;
+
   @PutMapping("/create")
-  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #chatRequestDto.ownerId)")
-  public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto) {
-    if (chatService.existsBy(chatRequestDto.getOwnerId(), chatRequestDto.getSimulationName(), chatRequestDto.getSkillId())) {
+  @PreAuthorize("@customUsrDetailsService.isResourceOwner(authentication, #chatRequestDto.skillId)")
+  public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto, Authentication authentication) {
+    var userDetails = (CustomUsrDetails)customUsrDetailsService.loadUserByUsername(authentication.getName());
+    if (chatService.existsBy(userDetails.user().getId(), chatRequestDto.getSimulationName(), chatRequestDto.getSkillId())) {
       return ResponseEntity.ok(new ChatResponseDto(
         null,
         null,
         false,
         String.format(
           "Chat already exists for user %s and for training %s",
-          chatRequestDto.getOwnerId(),
+          userDetails.user().getId(),
           chatRequestDto.getSimulationName()
         ),
         null
@@ -61,7 +67,7 @@ public class ChatController {
     var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationName());
 
     if (!flowTillActions.isEmpty()) {
-      var createdChat = chatService.store(chatRequestDto);
+      var createdChat = chatService.store(chatRequestDto, userDetails.user().getId());
 
       var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
       var combinedMessages = userMessageService.combineMessages(messages);
@@ -71,7 +77,7 @@ public class ChatController {
         .map(hpKey -> UserHyperParameter.builder()
           .key(hpKey)
           .chatId(createdChat.getId())
-          .ownerId(chatRequestDto.getOwnerId())
+          .ownerId(userDetails.user().getId())
           .value((double) 0)
           .build())
         .toList();

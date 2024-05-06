@@ -41,9 +41,9 @@ public class CustomUsrDetailsService implements UserDetailsService {
   private final AuthRepository authRepository;
 
   @Override
-  public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-    User user = userRepository.findByEmail(email)
-      .orElseThrow(() -> new UsernameNotFoundException("User with email = " + email + " not exist!"));
+  public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    User user = userRepository.findByEmail(username)
+      .orElseThrow(() -> new UsernameNotFoundException("User with username = " + username + " not exist!"));
     return new CustomUsrDetails(user);
   }
 
@@ -88,14 +88,21 @@ public class CustomUsrDetailsService implements UserDetailsService {
     }
   }
 
-  public boolean isResourceOwner(Authentication authentication, Long ownerId) throws InsufficientUserPrivilegesException {
+  public boolean isResourceOwner(Authentication authentication, Long skillId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
-    return optUser.map(user -> user.getId().equals(ownerId))
+    return optUser.map(user -> {
+        if (user.getOrganization().getAvailableSkills().stream().anyMatch(a -> a.getId().equals(skillId))) {
+          return true;
+        } else {
+          log.error(String.format(
+            "The user %s does not have access to this resource",
+            authentication.getName()
+          ));
+          return false;
+        }
+      })
       .orElseGet(() -> {
-        log.error(String.format(
-          "The user %s does not have access to this resource",
-          authentication.getName()
-        ));
+        log.error(String.format("The user %s doesn't exit", authentication.getName()));
         return false;
       });
   }
@@ -135,7 +142,7 @@ public class CustomUsrDetailsService implements UserDetailsService {
         return false;
       }
     }
-    
+
     return false;
   }
 

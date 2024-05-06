@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 public class Converter {
 
-  public static Chat convert(final ChatRequestDto chatRequestDto) {
+  public static Chat convert(final ChatRequestDto chatRequestDto, final Long userId) {
     return Chat.builder()
-      .ownerId(chatRequestDto.getOwnerId())
+      .ownerId(userId)
       .simulationName(chatRequestDto.getSimulationName())
       .skillId(chatRequestDto.getSkillId())
       .build();

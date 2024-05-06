@@ -16,8 +16,8 @@ public class ChatService {
 
   private final ChatRepository chatRepository;
 
-  public Chat store(final ChatRequestDto chatRequestDto) {
-    var chat = Converter.convert(chatRequestDto);
+  public Chat store(final ChatRequestDto chatRequestDto, final Long userId) {
+    var chat = Converter.convert(chatRequestDto, userId);
     return chatRepository.save(chat);
   }
 
