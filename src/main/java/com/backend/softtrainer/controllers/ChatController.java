@@ -47,63 +47,74 @@ public class ChatController {
   @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #chatRequestDto.skillId)")
   public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto, Authentication authentication) {
     var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
-    if (chatService.existsBy(userDetails.user(), chatRequestDto.getSimulationId(), chatRequestDto.getSkillId())) {
-      return ResponseEntity.ok(new ChatResponseDto(
-        null,
-        null,
-        false,
-        String.format(
-          "Chat already exists for user %s and for training %s",
-          userDetails.user().getId(),
-          chatRequestDto.getSimulationId()
-        ),
-        null
-      ));
+    var simulationOpt = flowService.findById(chatRequestDto.getSimulationId());
+    if (simulationOpt.isPresent()) {
+      var simulation = simulationOpt.get();
+      if (chatService.existsBy(userDetails.user(), simulation.getName(), chatRequestDto.getSkillId())) {
+        return ResponseEntity.ok(new ChatResponseDto(
+          null,
+          null,
+          false,
+          String.format(
+            "Chat already exists for user %s and for training %s",
+            userDetails.user().getId(),
+            chatRequestDto.getSimulationId()
+          ),
+          null
+        ));
+      }
+
+      //todo check if flows available for this user
+      var flowTillActions = flowService.getFirstFlowNodesUntilActionable(simulation.getName());
+
+      if (!flowTillActions.isEmpty()) {
+        var createdChat = chatService.store(chatRequestDto, simulation.getName(), userDetails.user());
+
+        var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
+        var combinedMessages = userMessageService.combineMessages(messages);
+
+        var hyperparams = hyperParameterRepository.getAllKeysByFlowName(simulation.getName())
+          .stream()
+          .map(hpKey -> UserHyperParameter.builder()
+            .key(hpKey)
+            .chatId(createdChat.getId())
+            .ownerId(userDetails.user().getId())
+            .value((double) 0)
+            .build())
+          .toList();
+
+        userHyperParameterRepository.saveAll(hyperparams);
+
+        return ResponseEntity.ok(new ChatResponseDto(
+          createdChat.getId(),
+          createdChat.getSkillId(),
+          true,
+          "success",
+          combinedMessages
+        ));
+
+      } else {
+        return ResponseEntity.ok(new ChatResponseDto(
+          null,
+          null,
+          false,
+          String.format("No simulation with name %s", chatRequestDto.getSimulationId()),
+          null
+        ));
+      }
     }
-
-    //todo check if flows available for this user
-    var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationId());
-
-    if (!flowTillActions.isEmpty()) {
-      var createdChat = chatService.store(chatRequestDto, userDetails.user());
-
-      var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
-      var combinedMessages = userMessageService.combineMessages(messages);
-
-      var hyperparams = hyperParameterRepository.getAllKeysByFlowName(chatRequestDto.getSimulationId())
-        .stream()
-        .map(hpKey -> UserHyperParameter.builder()
-          .key(hpKey)
-          .chatId(createdChat.getId())
-          .ownerId(userDetails.user().getId())
-          .value((double) 0)
-          .build())
-        .toList();
-
-      userHyperParameterRepository.saveAll(hyperparams);
-
-      return ResponseEntity.ok(new ChatResponseDto(
-        createdChat.getId(),
-        createdChat.getSkillId(),
-        true,
-        "success",
-        combinedMessages
-      ));
-
-    } else {
-      return ResponseEntity.ok(new ChatResponseDto(
-        null,
-        null,
-        false,
-        String.format("No flow with name %s", chatRequestDto.getSimulationId()),
-        null
-      ));
-    }
+    return ResponseEntity.ok(new ChatResponseDto(
+      null,
+      null,
+      false,
+      String.format("No simulation %s", chatRequestDto.getSimulationId()),
+      null
+    ));
   }
 
   @GetMapping("/get")
   @PreAuthorize("@customUsrDetailsService.isSimulationAvailable(authentication, #simulationId)")
-  public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "simulation_id") Long simulationId,
+  public ResponseEntity<ChatResponseDto> get(@RequestParam(name = "simulationId") Long simulationId,
                                              Authentication authentication) {
 
     var simulationOpt = flowService.findById(simulationId);

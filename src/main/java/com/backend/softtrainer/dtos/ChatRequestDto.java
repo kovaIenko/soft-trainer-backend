@@ -10,6 +10,6 @@ public class ChatRequestDto {
   private Long skillId;
 
   @JsonProperty("simulation_id")
-  private String simulationId;
+  private Long simulationId;
 
 }

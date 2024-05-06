@@ -17,13 +17,13 @@ public class ChatService {
 
   private final ChatRepository chatRepository;
 
-  public Chat store(final ChatRequestDto chatRequestDto, final User user) {
-    var chat = Converter.convert(chatRequestDto, user);
+  public Chat store(final ChatRequestDto chatRequestDto, String name, final User user) {
+    var chat = Converter.convert(chatRequestDto, name, user);
     return chatRepository.save(chat);
   }
 
-  public boolean existsBy(final User user, final String flowName, final Long skillId) {
-    return chatRepository.existsByUserAndSimulationNameAndSkillId(user, flowName, skillId);
+  public boolean existsBy(final User user, final String simulationName, final Long skillId) {
+    return chatRepository.existsByUserAndSimulationNameAndSkillId(user, simulationName, skillId);
   }
 
   public Optional<Chat> findChatWithMessages(final String username, final String flowName) {

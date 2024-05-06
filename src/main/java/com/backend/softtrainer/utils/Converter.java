@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 public class Converter {
 
-  public static Chat convert(final ChatRequestDto chatRequestDto, final User user) {
+  public static Chat convert(final ChatRequestDto chatRequestDto, final String name, final User user) {
     return Chat.builder()
       .user(user)
-      .simulationName(chatRequestDto.getSimulationId())
+      .simulationName(name)
       .skillId(chatRequestDto.getSkillId())
       .build();
   }
