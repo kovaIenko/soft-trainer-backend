@@ -46,7 +46,7 @@ public class HomeController {
     Authentication auth = authManager.authenticate(authenticationToken);
 
     CustomUsrDetails user = (CustomUsrDetails) usrDetailsService.loadUserByUsername(request.email());
-    usrDetailsService.createAuthRecord(user.user().getId());
+    usrDetailsService.createAuthRecord(user.user());
     String access_token = tokenService.generateAccessToken(user);
     String refresh_token = tokenService.generateRefreshToken(user);
 

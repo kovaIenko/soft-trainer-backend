@@ -1,8 +1,8 @@
 package com.backend.softtrainer.entities.flow;
 
 import com.backend.softtrainer.entities.Character;
+import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.enums.MessageType;
-import com.backend.softtrainer.entities.enums.SimulationComplexity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,22 +10,19 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
 import org.springframework.core.annotation.Order;
 
-import java.time.LocalDateTime;
-
-@Entity(name = "flows")
+@Entity(name = "nodes")
 @Data
 @SuperBuilder
 @NoArgsConstructor
-@EqualsAndHashCode(exclude = {"character", "showPredicate", "name"})
+@EqualsAndHashCode(exclude = {"character", "showPredicate", "simulation"})
 public class FlowNode {
 
   @Id
@@ -36,7 +33,7 @@ public class FlowNode {
   @Column(name = "order_number", nullable = false)
   private Long orderNumber;
 
-  //pointer to the parent orderNumber
+
   @Column(name = "previous_order_number", nullable = false)
   private Long previousOrderNumber = 0L;
 
@@ -44,20 +41,14 @@ public class FlowNode {
   @Enumerated(EnumType.STRING)
   private MessageType messageType;
 
-  //for example 'giving feedback'
-  private String name;
-
   @Column(name = "show_predicate", nullable = false)
   private String showPredicate;
 
   @ManyToOne
   private Character character;
 
-  @Enumerated(EnumType.STRING)
-  private SimulationComplexity complexity;
-
-  @Column(name = "timestamp", insertable = false, updatable = false)
-  @CreationTimestamp(source = SourceType.DB)
-  private LocalDateTime timestamp;
+  @ManyToOne
+//  @JoinColumn(name = "simulation_id")
+  private Simulation simulation;
 
 }

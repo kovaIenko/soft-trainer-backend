@@ -1,7 +1,7 @@
 package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.CharacterDto;
-import com.backend.softtrainer.dtos.FlowRequestDto;
+import com.backend.softtrainer.dtos.SimulationRequestDto;
 import com.backend.softtrainer.dtos.flow.ContentQuestionDto;
 import com.backend.softtrainer.dtos.flow.EnterTextQuestionDto;
 import com.backend.softtrainer.dtos.flow.FlowNodeDto;
@@ -11,8 +11,10 @@ import com.backend.softtrainer.dtos.flow.SingleChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.TextDto;
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.HyperParameter;
+import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.Skill;
+import com.backend.softtrainer.entities.enums.SimulationComplexity;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
@@ -24,6 +26,7 @@ import com.backend.softtrainer.repositories.CharacterRepository;
 import com.backend.softtrainer.repositories.FlowRepository;
 import com.backend.softtrainer.repositories.HyperParameterRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
+import com.backend.softtrainer.repositories.SimulationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -53,7 +56,9 @@ public class FlowService {
 
   private final SkillRepository skillRepository;
 
-  public void uploadFlow(final FlowRequestDto flowRequestDto) {
+  private final SimulationRepository simulationRepository;
+
+  public void uploadFlow(final SimulationRequestDto flowRequestDto) {
 
     var skillReq = flowRequestDto.getSkill();
     Skill temp = null;
@@ -76,6 +81,13 @@ public class FlowService {
         .name(skillReq.name())
         .build();
     }
+
+    var simulation = Simulation.builder()
+      .complexity(SimulationComplexity.MEDIUM)
+      .name(flowRequestDto.getName())
+      .build();
+
+    simulationRepository.save(simulation);
 
     Map<Long, Character> characterMap = flowRequestDto.getCharacters().stream()
       .collect(Collectors.toMap(
@@ -103,11 +115,8 @@ public class FlowService {
     var flowRecords =
       flowRequestDto.getFlow()
         .stream()
-        .flatMap(flowNodeDto -> this.convert(flowNodeDto, characterMap.get(flowNodeDto.getAuthor())))
-        .map(a -> {
-          a.setName(flowRequestDto.getName());
-          return a;
-        }).toList();
+        .flatMap(flowNodeDto -> this.convert(flowNodeDto, characterMap.get(flowNodeDto.getAuthor()), simulation))
+        .toList();
 
     var nodes = flowRepository.saveAll(flowRecords);
 
@@ -115,10 +124,14 @@ public class FlowService {
       if (Objects.isNull(temp.getSimulations())) {
         temp.setSimulations(new HashMap<>());
       }
-      temp.getSimulations().put(nodes.get(0), temp.getSimulations().keySet().size() + 1L);
-      skillRepository.save(temp);
+      temp.getSimulations().put(simulation, temp.getSimulations().keySet().size() + 1L);
+      temp = skillRepository.save(temp);
     }
 
+    simulation.setNodes(nodes);
+
+//    simulation.setSkill(temp);
+    simulationRepository.save(simulation);
   }
 
   public Optional<FlowNode> findById(final Long simulationId) {
@@ -126,18 +139,21 @@ public class FlowService {
   }
 
   //todo stupid violation of second SOLID
-  private Stream<FlowNode> convert(final FlowNodeDto flowRecordDto, final Character authorEntity) {
+  private Stream<FlowNode> convert(final FlowNodeDto flowRecordDto,
+                                   final Character authorEntity,
+                                   final Simulation simulation) {
 
     if (flowRecordDto.getPreviousOrderNumber().isEmpty()) {
-      return Stream.of(convertFlow(flowRecordDto, -1, authorEntity));
+      return Stream.of(convertFlow(flowRecordDto, -1, authorEntity, simulation));
     }
 
     return flowRecordDto.getPreviousOrderNumber()
       .stream()
-      .map(prevOrderNumber -> convertFlow(flowRecordDto, prevOrderNumber, authorEntity));
+      .map(prevOrderNumber -> convertFlow(flowRecordDto, prevOrderNumber, authorEntity, simulation));
   }
 
-  private FlowNode convertFlow(final FlowNodeDto flowRecordDto, final long previousMessageId, final Character authorEntity) {
+  private FlowNode convertFlow(final FlowNodeDto flowRecordDto, final long previousMessageId, final Character authorEntity,
+                               final Simulation simulation) {
 
     if (flowRecordDto instanceof ContentQuestionDto contentQuestionDto) {
       return ContentQuestion.builder()
@@ -147,6 +163,7 @@ public class FlowService {
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.CONTENT_QUESTION)
+        .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof EnterTextQuestionDto enterTextQuestionDto) {
       return EnterTextQuestion.builder()
@@ -156,6 +173,7 @@ public class FlowService {
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.ENTER_TEXT_QUESTION)
+        .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof TextDto textDto) {
       return Text.builder()
@@ -165,6 +183,7 @@ public class FlowService {
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.TEXT)
+        .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof SingleChoiceTaskDto singleChoiceTaskDto) {
       return SingleChoiceTask.builder()
@@ -175,6 +194,7 @@ public class FlowService {
         .options(String.join(" || ", singleChoiceTaskDto.getOptions()))
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof SingleChoiceQuestionDto singleChoiceQuestionDto) {
       return SingleChoiceQuestion.builder()
@@ -185,6 +205,7 @@ public class FlowService {
         .options(String.join(" || ", singleChoiceQuestionDto.getOptions()))
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof MultiChoiceTaskDto multipleChoiceQuestionDto) {
       return MultipleChoiceTask.builder()
@@ -195,20 +216,17 @@ public class FlowService {
         .options(String.join(" || ", multipleChoiceQuestionDto.getOptions()))
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.MULTI_CHOICE_TASK)
+        .simulation(simulation)
         .build();
     }
     throw new NoSuchElementException();
   }
 
-  public Optional<FlowNode> getRootFlowTask(final String name) {
-    return flowRepository.findFlowTaskByPreviousOrderNumberAndName(0L, name);
-  }
-
-  public List<FlowNode> getFirstFlowNodesUntilActionable(final String name) {
+  public List<FlowNode> getFirstFlowNodesUntilActionable(final Long simulationId) {
 
     var actionableMessageTypes = MessageType.getActionableMessageTypes();
 
-    List<FlowNode> questions = flowRepository.findFirst10QuestionsByName(name)
+    List<FlowNode> questions = flowRepository.findFirst10QuestionsBySimulation(simulationId)
       .stream()
       .sorted(Comparator.comparing(FlowNode::getOrderNumber))
       .toList();
@@ -223,10 +241,6 @@ public class FlowService {
       }
     }
     return result;
-  }
-
-  public boolean existsByName(final String name) {
-    return flowRepository.existsByName(name);
   }
 
 //  public Set<String> getAllSimulationNames() {
@@ -244,8 +258,8 @@ public class FlowService {
 //      .orElse(Collections.emptySet());
 //  }
 
-  public List<FlowNode> findAllByNameAndPreviousOrderNumber(final String flowName, final long previousOrderNumber) {
-    return flowRepository.findAllByNameAndPreviousOrderNumber(flowName, previousOrderNumber);
+  public List<FlowNode> findAllByNameAndPreviousOrderNumber(final Long simulationId, final long previousOrderNumber) {
+    return flowRepository.findAllBySimulationAndPreviousOrderNumber(simulationId, previousOrderNumber);
   }
 
 }

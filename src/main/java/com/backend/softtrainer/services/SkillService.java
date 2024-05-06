@@ -1,6 +1,7 @@
 package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.entities.Organization;
+import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.backend.softtrainer.repositories.OrganizationRepository;
@@ -35,7 +36,7 @@ public class SkillService {
     return new HashSet<>(skillRepository.findAll());
   }
 
-  public Set<FlowNode> findSimulationsBySkill(final Long skillId) {
+  public Set<Simulation> findSimulationsBySkill(final Long skillId) {
     var optSkill = skillRepository.findById(skillId);
     if (optSkill.isPresent()) {
       return optSkill.get().getSimulations().keySet();

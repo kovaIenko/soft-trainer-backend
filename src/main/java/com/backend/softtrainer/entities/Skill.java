@@ -1,6 +1,5 @@
 package com.backend.softtrainer.entities;
 
-import com.backend.softtrainer.entities.flow.FlowNode;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
@@ -11,7 +10,6 @@ import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
@@ -34,7 +32,7 @@ public class Skill {
   //integer is an order of the simulation in that skill
   @ElementCollection(fetch = FetchType.EAGER)
   //reference to the first node of simulations
-  private Map<FlowNode, Long> simulations = new HashMap<>();
+  private Map<Simulation, Long> simulations = new HashMap<>();
 
   @Column(length = 1000)
   private String avatar;

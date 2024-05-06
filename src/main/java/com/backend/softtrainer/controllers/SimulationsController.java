@@ -1,6 +1,6 @@
 package com.backend.softtrainer.controllers;
 
-import com.backend.softtrainer.dtos.FlowRequestDto;
+import com.backend.softtrainer.dtos.SimulationRequestDto;
 import com.backend.softtrainer.dtos.SimulationUploadResponseDto;
 import com.backend.softtrainer.services.FlowService;
 import lombok.AllArgsConstructor;
@@ -24,16 +24,16 @@ public class SimulationsController {
 
   @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_OWNER')")
   @PutMapping("/upload")
-  public ResponseEntity<SimulationUploadResponseDto> upload(@RequestBody final FlowRequestDto flowRequestDto) {
+  public ResponseEntity<SimulationUploadResponseDto> upload(@RequestBody final SimulationRequestDto simulationRequestDto) {
     try {
-      flowService.uploadFlow(flowRequestDto);
+      flowService.uploadFlow(simulationRequestDto);
       var statusMessage = String.format(
         "Successful stored skill %s and simulation  %s",
-        flowRequestDto.getSkill().name(),
-        flowRequestDto.getName()
+        simulationRequestDto.getSkill().name(),
+        simulationRequestDto.getName()
       );
       log.info(statusMessage);
-      return ResponseEntity.ok(new SimulationUploadResponseDto(flowRequestDto.getName(), true, statusMessage));
+      return ResponseEntity.ok(new SimulationUploadResponseDto(simulationRequestDto.getName(), true, statusMessage));
     } catch (NoSuchElementException e) {
       return ResponseEntity.ok(new SimulationUploadResponseDto("", false, e.getMessage()));
     }

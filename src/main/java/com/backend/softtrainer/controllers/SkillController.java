@@ -30,7 +30,7 @@ public class SkillController {
 
   private final SkillService skillService;
 
-  @GetMapping()
+  @GetMapping
   @PreAuthorize("@customUsrDetailsService.orgHasEmployee(authentication, #organization)")
   public ResponseEntity<AllSkillsResponseDto> getAllSkillNames(@RequestParam(name = "org") String organization,
                                                                final Authentication authentication) {
@@ -52,7 +52,7 @@ public class SkillController {
     return ResponseEntity.ok(new AllSkillsResponseDto(convertSkills(skills), true, "success"));
   }
 
-  @GetMapping("/simulation")
+  @GetMapping("/simulations")
   @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #skillId)")
   public ResponseEntity<AllSimulationsResponseDto> getAllSimulations(@RequestParam(name = "skillId") Long skillId,
                                                                      final Authentication authentication) {

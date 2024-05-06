@@ -7,24 +7,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 @Repository
 public interface FlowRepository extends JpaRepository<FlowNode, Long> {
 
-  Optional<FlowNode> findFlowTaskByPreviousOrderNumberAndName(final long parentOrderNumber, final String name);
+  @Query("SELECT f FROM nodes f WHERE f.simulation.id = :simulationId ORDER BY f.orderNumber LIMIT 10")
+  List<FlowNode> findFirst10QuestionsBySimulation(@Param("simulationId") final Long simulationId);
 
-  boolean existsByName(final String name);
+  @Query("SELECT f FROM nodes f WHERE f.simulation.id = :simulationId and f.previousOrderNumber = :previousOrderNumber ORDER BY f.orderNumber LIMIT 10")
+  List<FlowNode> findAllBySimulationAndPreviousOrderNumber(@Param("simulationId") final Long simulationId, @Param("previousOrderNumber") final long previousOrderNumber);
 
-  @Query("SELECT DISTINCT f.name FROM flows f")
-  Set<String> findAllNameFlows();
-
-  @Query("SELECT f FROM flows f WHERE f.name = :name ORDER BY f.orderNumber LIMIT 10")
-  List<FlowNode> findFirst10QuestionsByName(@Param("name") final String name);
-
-  List<FlowNode> findAllByNameAndPreviousOrderNumber(@Param("name") final String name, @Param("previousOrderNumber") final long previousOrderNumber);
-
-  List<FlowNode> findAllByOrderNumber(@Param("orderNumber") final long orderNumber);
+//  List<FlowNode> findAllByOrderNumber(@Param("orderNumber") final long orderNumber);
 
 }

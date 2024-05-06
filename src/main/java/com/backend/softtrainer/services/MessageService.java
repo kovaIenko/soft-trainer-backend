@@ -98,7 +98,7 @@ public class MessageService {
         .answer(singleChoiceAnswerMessageDto.getAnswer())
         .build();
       messageRepository.save(message);
-      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getName());
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getSimulation().getId());
     } else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
       message = SingleChoiceTaskAnswerMessage.builder()
         .messageType(MessageType.SINGLE_CHOICE_TASK)
@@ -113,7 +113,7 @@ public class MessageService {
         .build();
       messageRepository.save(message);
 
-      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getName());
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getSimulation().getId());
 
     } else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
       message = MultiChoiceTaskAnswerMessage.builder()
@@ -129,7 +129,7 @@ public class MessageService {
         .build();
 
       messageRepository.save(message);
-      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getName());
+      return figureOutNextMessages(messageRequestDto.getChatId(), flowNode.getOrderNumber(), flowNode.getSimulation().getId());
 
     } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
       message = EnterTextMessage.builder()
@@ -165,9 +165,9 @@ public class MessageService {
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessages(final Long chatId,
                                                                  final Long previousOrderNumber,
-                                                                 final String flowName) throws SendMessageConditionException {
+                                                                 final Long simulationId) throws SendMessageConditionException {
     List<Message> messages = new ArrayList<>();
-    var nextFlowNodeOptional = getNextFlowNode(chatId, previousOrderNumber, flowName);
+    var nextFlowNodeOptional = getNextFlowNode(chatId, previousOrderNumber, simulationId);
 
     if (nextFlowNodeOptional.isPresent()) {
       var nextFlowNode = nextFlowNodeOptional.get();
@@ -178,7 +178,7 @@ public class MessageService {
 
 
       while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
-        nextFlowNodeOptional = getNextFlowNode(chatId, nextFlowNode.getOrderNumber(), flowName);
+        nextFlowNodeOptional = getNextFlowNode(chatId, nextFlowNode.getOrderNumber(), simulationId);
         if (nextFlowNodeOptional.isPresent()) {
           nextFlowNode = nextFlowNodeOptional.get();
           nextMessage = convert(nextFlowNode, chatId);
@@ -195,9 +195,9 @@ public class MessageService {
   private Optional<FlowNode> getNextFlowNode(
     final Long chatId,
     final Long previousOrderNumber,
-    final String flowName) throws SendMessageConditionException {
+    final Long simulationId) throws SendMessageConditionException {
 
-    List<FlowNode> flowNodes = flowService.findAllByNameAndPreviousOrderNumber(flowName, previousOrderNumber);
+    List<FlowNode> flowNodes = flowService.findAllByNameAndPreviousOrderNumber(simulationId, previousOrderNumber);
 
     if (flowNodes.size() == 1) {
       return Optional.of(flowNodes.get(0));

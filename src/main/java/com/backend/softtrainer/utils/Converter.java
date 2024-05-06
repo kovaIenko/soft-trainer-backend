@@ -1,14 +1,13 @@
 package com.backend.softtrainer.utils;
 
 import com.backend.softtrainer.dtos.ChatDto;
-import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.dtos.SimulationResponseDto;
 import com.backend.softtrainer.dtos.SkillResponseDto;
 import com.backend.softtrainer.entities.Chat;
+import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
-import com.backend.softtrainer.entities.flow.FlowNode;
 import lombok.NoArgsConstructor;
 
 import java.util.Set;
@@ -17,11 +16,10 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 public class Converter {
 
-  public static Chat convert(final ChatRequestDto chatRequestDto, final String name, final User user) {
+  public static Chat convert(final Simulation simulation, final User user) {
     return Chat.builder()
       .user(user)
-      .simulationName(name)
-      .skillId(chatRequestDto.getSkillId())
+      .simulation(simulation)
       .build();
   }
 
@@ -29,8 +27,8 @@ public class Converter {
     return new ChatDto(chat.getMessages().stream().map(a -> new MessageDto("a.getContent()")).collect(Collectors.toSet()));
   }
 
-  public static Set<SimulationResponseDto> convertSimulations(final Set<FlowNode> nodes) {
-    return nodes.stream().map(node -> new SimulationResponseDto(node.getId(), node.getName())).collect(
+  public static Set<SimulationResponseDto> convertSimulations(final Set<Simulation> simulations) {
+    return simulations.stream().map(node -> new SimulationResponseDto(node.getId(), node.getName())).collect(
       Collectors.toSet());
   }
 

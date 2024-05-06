@@ -22,7 +22,6 @@ public class UserHyperParameter {
 
   private Long chatId;
 
-  //todo change it to the User Entity
   private Long ownerId;
 
   //id from the table hyperparams
