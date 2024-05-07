@@ -1,6 +1,7 @@
 package com.backend.softtrainer.entities;
 
 import com.backend.softtrainer.entities.messages.Message;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -31,17 +32,20 @@ public class Chat {
   @GeneratedValue(strategy = GenerationType.AUTO)
   private Long id;
 
-  @OneToMany(mappedBy = "chatId", fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "chat", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   private List<Message> messages;
 
   @ManyToOne
   private User user;
 
-  @ManyToOne
+  @ManyToOne(fetch = FetchType.EAGER)
   private Simulation simulation;
 
   @Column(name = "timestamp", insertable = false, updatable = false)
   @CreationTimestamp(source = SourceType.DB)
   private LocalDateTime timestamp;
+
+  @ManyToOne(fetch = FetchType.EAGER)
+  private Skill skill;
 
 }

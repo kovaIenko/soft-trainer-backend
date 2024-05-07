@@ -84,6 +84,7 @@ public class FlowService {
 
     var simulation = Simulation.builder()
       .complexity(SimulationComplexity.MEDIUM)
+      .isOpen(true)
       .name(flowRequestDto.getName())
       .build();
 

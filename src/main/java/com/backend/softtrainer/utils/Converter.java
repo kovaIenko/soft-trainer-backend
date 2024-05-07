@@ -20,6 +20,7 @@ public class Converter {
     return Chat.builder()
       .user(user)
       .simulation(simulation)
+      .skill(simulation.getSkill())
       .build();
   }
 
@@ -27,9 +28,10 @@ public class Converter {
     return new ChatDto(chat.getMessages().stream().map(a -> new MessageDto("a.getContent()")).collect(Collectors.toSet()));
   }
 
-  public static Set<SimulationResponseDto> convertSimulations(final Set<Simulation> simulations) {
-    return simulations.stream().map(node -> new SimulationResponseDto(node.getId(), node.getName())).collect(
-      Collectors.toSet());
+  public static SimulationResponseDto convertSimulation(final Simulation simulation,
+                                                        final boolean available,
+                                                        final boolean completed, final Long order) {
+    return new SimulationResponseDto(simulation.getId(), simulation.getName(), simulation.getAvatar(), available, completed, order);
   }
 
   public static Set<SkillResponseDto> convertSkills(final Set<Skill> skills) {

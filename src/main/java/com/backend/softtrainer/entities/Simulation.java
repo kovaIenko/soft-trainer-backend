@@ -3,10 +3,12 @@ package com.backend.softtrainer.entities;
 
 import com.backend.softtrainer.entities.enums.SimulationComplexity;
 import com.backend.softtrainer.entities.flow.FlowNode;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,7 +39,7 @@ public class Simulation {
 
   private String name;
 
-  @OneToMany
+  @OneToMany(cascade = CascadeType.ALL)
   private List<FlowNode> nodes;
 
   private String avatar;
@@ -49,7 +51,10 @@ public class Simulation {
   @CreationTimestamp(source = SourceType.DB)
   private LocalDateTime createdAt;
 
-  @ManyToOne
+  @ManyToOne(fetch = FetchType.EAGER)
   private Skill skill;
+
+  @Column(name = "is_open")
+  private boolean isOpen;
 
 }

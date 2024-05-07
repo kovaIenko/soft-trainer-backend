@@ -1,5 +1,6 @@
 package com.backend.softtrainer.repositories;
 
+import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -7,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FlowRepository extends JpaRepository<FlowNode, Long> {
@@ -18,5 +20,7 @@ public interface FlowRepository extends JpaRepository<FlowNode, Long> {
   List<FlowNode> findAllBySimulationAndPreviousOrderNumber(@Param("simulationId") final Long simulationId, @Param("previousOrderNumber") final long previousOrderNumber);
 
 //  List<FlowNode> findAllByOrderNumber(@Param("orderNumber") final long orderNumber);
+
+  Optional<FlowNode> findTopBySimulationOrderByOrderNumberDesc(@Param("simulation") final Simulation simulation);
 
 }

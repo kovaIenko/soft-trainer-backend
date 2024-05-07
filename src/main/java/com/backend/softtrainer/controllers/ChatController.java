@@ -10,6 +10,7 @@ import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.MessageService;
+import com.backend.softtrainer.services.SkillService;
 import com.backend.softtrainer.services.UserMessageService;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
@@ -47,6 +48,8 @@ public class ChatController {
 
   private final SimulationRepository simulationRepository;
 
+  private final SkillService skillService;
+
   @PutMapping("/create")
   @PreAuthorize("@customUsrDetailsService.areSkillAndSimulationAvailable(authentication, #chatRequestDto.skillId, " +
     "#chatRequestDto.simulationId)")
@@ -59,6 +62,18 @@ public class ChatController {
     if (simulationOpt.isPresent()) {
       var simulation = simulationOpt.get();
 
+      if (!skillService.isSimulationAvailableForUser(userDetails.user(), simulation)) {
+        return ResponseEntity.ok(new ChatResponseDto(
+          null,
+          chatRequestDto.getSkillId(),
+          false,
+          String.format(
+            "Simulation %s is not available",
+            chatRequestDto.getSimulationId()
+          ),
+          null
+        ));
+      }
       if (userDetails.user().getRoles().stream().noneMatch(a -> a.getName().equals(StaticRole.ROLE_OWNER))) {
         if (chatService.existsBy(userDetails.user(), chatRequestDto.getSimulationId())) {
           return ResponseEntity.ok(new ChatResponseDto(
@@ -80,7 +95,7 @@ public class ChatController {
       if (!flowTillActions.isEmpty()) {
         var createdChat = chatService.store(simulation, userDetails.user());
 
-        var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat.getId()).stream().toList();
+        var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
         var combinedMessages = userMessageService.combineMessages(messages);
 
         var hyperparams = hyperParameterRepository.getAllKeysByFlowName(simulation.getName())

@@ -4,6 +4,8 @@ import com.backend.softtrainer.dtos.AllSimulationsResponseDto;
 import com.backend.softtrainer.dtos.AllSkillsResponseDto;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.services.SkillService;
+import com.backend.softtrainer.services.auth.CustomUsrDetails;
+import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +21,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import static com.backend.softtrainer.services.auth.AuthUtils.userIsOwnerApp;
-import static com.backend.softtrainer.utils.Converter.convertSimulations;
 import static com.backend.softtrainer.utils.Converter.convertSkills;
 
 @RestController
@@ -29,6 +30,8 @@ import static com.backend.softtrainer.utils.Converter.convertSkills;
 public class SkillController {
 
   private final SkillService skillService;
+
+  private final CustomUsrDetailsService customUsrDetailsService;
 
   @Deprecated
   @GetMapping
@@ -42,6 +45,7 @@ public class SkillController {
       } else {
         ResponseEntity.ok(new AllSkillsResponseDto(
           new HashSet<>(),
+          new HashSet<>(),
           false,
           "The organization should be specified for that user"
         ));
@@ -50,22 +54,26 @@ public class SkillController {
       skills = skillService.getAvailableSkillByOrg(organization);
     }
 
-    return ResponseEntity.ok(new AllSkillsResponseDto(convertSkills(skills), true, "success"));
+    var converted = convertSkills(skills);
+    return ResponseEntity.ok(new AllSkillsResponseDto(converted, converted, true, "success"));
   }
 
   @GetMapping("/available")
   public ResponseEntity<AllSkillsResponseDto> getSkills(final Authentication authentication) {
     var username = authentication.getName();
     var skills = skillService.getAvailableSkill(username);
-    return ResponseEntity.ok(new AllSkillsResponseDto(convertSkills(skills), true, "success"));
+    var converted = convertSkills(skills);
+    return ResponseEntity.ok(new AllSkillsResponseDto(converted, converted, true, "success"));
   }
 
   @GetMapping("/simulations")
   @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #skillId)")
   public ResponseEntity<AllSimulationsResponseDto> getAllSimulations(@RequestParam(name = "skillId") Long skillId,
                                                                      final Authentication authentication) {
-    var simulations = skillService.findSimulationsBySkill(skillId);
-    return ResponseEntity.ok(new AllSimulationsResponseDto(skillId, convertSimulations(simulations), true, "success"));
+    var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
+
+    var simulations = skillService.findSimulationsBySkill(userDetails.user(), skillId);
+    return ResponseEntity.ok(new AllSimulationsResponseDto(skillId, simulations, simulations, true, "success"));
   }
 
 }
