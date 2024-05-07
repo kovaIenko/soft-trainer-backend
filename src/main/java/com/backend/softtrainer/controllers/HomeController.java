@@ -85,7 +85,7 @@ public class HomeController {
     } catch (UserAlreadyExitsException e) {
       return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), false, e.getMessage()));
     } catch (Exception e) {
-      return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), true, "unknown"));
+      return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), false, "unknown"));
     }
   }
 

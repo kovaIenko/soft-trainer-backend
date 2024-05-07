@@ -3,11 +3,13 @@ package com.backend.softtrainer.services;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.User;
+import com.backend.softtrainer.interpreter.Option;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.utils.Converter;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.Optional;
 
 @Service
@@ -26,7 +28,12 @@ public class ChatService {
   }
 
   public Optional<Chat> findChatWithMessages(final User user, final Simulation simulation) {
-    return chatRepository.findByUserAndSimulationWithMessages(user, simulation);
+    var chats = chatRepository.findByUserAndSimulationWithMessages(user, simulation);
+    var sorted = chats.stream().sorted(Comparator.comparing(Chat::getTimestamp)).toList();
+    if (sorted.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(sorted.get(sorted.size() - 1));
   }
 
 }

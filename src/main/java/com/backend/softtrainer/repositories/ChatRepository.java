@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,7 +25,7 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
 
 
   @Query("SELECT c FROM chats c JOIN FETCH c.messages WHERE c.user = :user AND c.simulation = :simulation")
-  Optional<Chat> findByUserAndSimulationWithMessages(@Param("user") final User user,
-                                                     @Param("simulation") final Simulation simulation);
+  List<Chat> findByUserAndSimulationWithMessages(@Param("user") final User user,
+                                                 @Param("simulation") final Simulation simulation);
 
 }

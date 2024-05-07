@@ -10,6 +10,7 @@ import com.backend.softtrainer.entities.enums.PlatformType;
 import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
 import com.backend.softtrainer.repositories.AuthRepository;
 import com.backend.softtrainer.repositories.ChatRepository;
+import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.RoleRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.Data;
@@ -38,6 +39,7 @@ public class CustomUsrDetailsService implements UserDetailsService {
   private final AuthRepository authRepository;
 
   private final ChatRepository chatRepository;
+  private final OrganizationRepository organizationRepository;
 
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -63,14 +65,21 @@ public class CustomUsrDetailsService implements UserDetailsService {
       throw new UserAlreadyExitsException(String.format("The user with email %s already exists", email));
     }
     var optLowestRole = roleRepository.findByName(StaticRole.ROLE_USER);
+
+    var optOrg = organizationRepository.findById(1L);
+
     if (optLowestRole.isPresent()) {
       User user = new User();
       user.setUsername(email);
       user.setPassword(passwordEncoder.encode(password));
       user.setEmail(email);
+
+      optOrg.ifPresent(user::setOrganization);
+
       var roles = new HashSet<Role>();
       roles.add(optLowestRole.get());
       user.setRoles(roles);
+
       var userEnt = userRepository.save(user);
 
       var signUp = Auth.builder()
@@ -81,6 +90,16 @@ public class CustomUsrDetailsService implements UserDetailsService {
         .build();
 
       authRepository.save(signUp);
+
+      //update org with new employee
+      if (optOrg.isPresent()) {
+        var org = optOrg.get();
+        var userOfOrg = org.getEmployees();
+        userOfOrg.add(user);
+
+        org.setEmployees(userOfOrg);
+        organizationRepository.save(org);
+      }
     } else {
       log.error(String.format("We have no %s role ", StaticRole.ROLE_USER));
       throw new RuntimeException("There is no such role in the db");

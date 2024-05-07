@@ -2,6 +2,7 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
+import com.backend.softtrainer.dtos.StaticRole;
 import com.backend.softtrainer.entities.UserHyperParameter;
 import com.backend.softtrainer.repositories.HyperParameterRepository;
 import com.backend.softtrainer.repositories.SimulationRepository;
@@ -57,18 +58,21 @@ public class ChatController {
 
     if (simulationOpt.isPresent()) {
       var simulation = simulationOpt.get();
-      if (chatService.existsBy(userDetails.user(), chatRequestDto.getSimulationId())) {
-        return ResponseEntity.ok(new ChatResponseDto(
-          null,
-          null,
-          false,
-          String.format(
-            "Chat already exists for user %s and for training %s",
-            userDetails.user().getId(),
-            chatRequestDto.getSimulationId()
-          ),
-          null
-        ));
+
+      if (userDetails.user().getRoles().stream().noneMatch(a -> a.getName().equals(StaticRole.ROLE_OWNER))) {
+        if (chatService.existsBy(userDetails.user(), chatRequestDto.getSimulationId())) {
+          return ResponseEntity.ok(new ChatResponseDto(
+            null,
+            null,
+            false,
+            String.format(
+              "Chat already exists for user %s and for training %s",
+              userDetails.user().getId(),
+              chatRequestDto.getSimulationId()
+            ),
+            null
+          ));
+        }
       }
 
       var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationId());

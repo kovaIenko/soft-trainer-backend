@@ -30,10 +30,11 @@ public class SkillController {
 
   private final SkillService skillService;
 
+  @Deprecated
   @GetMapping
   @PreAuthorize("@customUsrDetailsService.orgHasEmployee(authentication, #organization)")
-  public ResponseEntity<AllSkillsResponseDto> getAllSkillNames(@RequestParam(name = "org") String organization,
-                                                               final Authentication authentication) {
+  public ResponseEntity<AllSkillsResponseDto> getSkills(@RequestParam(name = "org") String organization,
+                                                        final Authentication authentication) {
     Set<Skill> skills = new HashSet<>();
     if ((Objects.isNull(organization) || organization.isEmpty())) {
       if (userIsOwnerApp(authentication)) {
@@ -46,9 +47,16 @@ public class SkillController {
         ));
       }
     } else {
-      skills = skillService.getAvailableSkill(organization);
+      skills = skillService.getAvailableSkillByOrg(organization);
     }
 
+    return ResponseEntity.ok(new AllSkillsResponseDto(convertSkills(skills), true, "success"));
+  }
+
+  @GetMapping("/available")
+  public ResponseEntity<AllSkillsResponseDto> getSkills(final Authentication authentication) {
+    var username = authentication.getName();
+    var skills = skillService.getAvailableSkill(username);
     return ResponseEntity.ok(new AllSkillsResponseDto(convertSkills(skills), true, "success"));
   }
 

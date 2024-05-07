@@ -47,7 +47,8 @@ public class User {
 
   private String password;
 
-  @ManyToOne(fetch = FetchType.EAGER)
+  @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+  @JoinColumn(name = "organization_id")
   private Organization organization;
 
   private String department;

@@ -38,7 +38,7 @@ public class Organization {
   //todo make simulation names unique withing the skill
   private Set<Skill> availableSkills;
 
-  @OneToMany(fetch = FetchType.LAZY)
+  @OneToMany(fetch = FetchType.LAZY, mappedBy = "organization", cascade = CascadeType.ALL)
   private List<User> employees;
 
 }

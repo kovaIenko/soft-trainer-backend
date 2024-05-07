@@ -34,7 +34,7 @@ public class Chat {
   @OneToMany(mappedBy = "chatId", fetch = FetchType.LAZY)
   private List<Message> messages;
 
-  @OneToOne
+  @ManyToOne
   private User user;
 
   @ManyToOne
