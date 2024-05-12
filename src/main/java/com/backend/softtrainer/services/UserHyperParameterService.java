@@ -14,13 +14,23 @@ public class UserHyperParameterService {
   private final UserHyperParameterRepository userHyperParameterRepository;
 
   @Transactional
-  public UserHyperParameter update(final Long chatId, final String key, final double value) throws UserHyperParamException {
+  public UserHyperParameter update(final Long chatId, final String key, final double newValue) throws UserHyperParamException {
     var userHyperParamOptional = userHyperParameterRepository.findUserHyperParameterByChatIdAndKey(chatId, key);
 
     if (userHyperParamOptional.isPresent()) {
       var userHyperParam = userHyperParamOptional.get();
-      userHyperParam.setValue(userHyperParam.getValue() + value);
+      userHyperParam.setValue(newValue);
       return userHyperParameterRepository.save(userHyperParam);
+    }
+    throw new UserHyperParamException(String.format("Hyper Parameter with key: %s wasn't found for the chatId: %s", key, chatId));
+  }
+
+
+  public UserHyperParameter getUserHyperParam(final Long chatId, final String key) throws UserHyperParamException {
+    var userHyperParamOptional = userHyperParameterRepository.findUserHyperParameterByChatIdAndKey(chatId, key);
+
+    if (userHyperParamOptional.isPresent()) {
+      return userHyperParamOptional.get();
     }
     throw new UserHyperParamException(String.format("Hyper Parameter with key: %s wasn't found for the chatId: %s", key, chatId));
   }
