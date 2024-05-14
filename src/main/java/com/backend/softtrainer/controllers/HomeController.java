@@ -40,7 +40,7 @@ public class HomeController {
 
   @PostMapping("/login")
   public ResponseEntity<LoginResponse> login(@RequestBody final LoginRequest request) {
-
+    log.info(String.format("The user %s is trying to login by pass %s", request.email(), request.password()));
     UsernamePasswordAuthenticationToken authenticationToken =
       new UsernamePasswordAuthenticationToken(request.email(), request.password());
     Authentication auth = authManager.authenticate(authenticationToken);
