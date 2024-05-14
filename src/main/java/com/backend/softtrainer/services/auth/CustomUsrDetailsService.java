@@ -56,7 +56,6 @@ public class CustomUsrDetailsService implements UserDetailsService {
       .authWay(AuthWay.BASIC)
       .build();
     authRepository.save(login);
-
   }
 
   public void createUser(String email, String password) throws UserAlreadyExitsException {

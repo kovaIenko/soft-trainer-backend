@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy the application JAR file to /app
 # First arg points to file on our system and second file is the destination inside container
-COPY build/libs/softtrainer-backend-*.jar app.jar
+COPY build/libs/soft-trainer-backend-*.jar app.jar
 COPY .env keystore.p12 docker-entrypoint.sh /app/
 
 RUN chmod +x docker-entrypoint.sh

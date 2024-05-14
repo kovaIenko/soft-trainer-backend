@@ -1,40 +1,42 @@
-package com.backend.softtrainer.interpreter.entity
+package com.backend.softtrainer.interpreter
 
 import com.backend.softtrainer.entities.enums.MessageType
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask
 import com.backend.softtrainer.entities.flow.SingleChoiceQuestion
-import com.backend.softtrainer.entities.messages.Message
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage
 import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage
-import com.backend.softtrainer.interpreter.Option
+import com.oruel.conditionscript.Message
+import com.oruel.conditionscript.Option
+import com.backend.softtrainer.entities.messages.Message as DbMessage
 
-class PredicateMessage(val message: Message) {
+class InterpreterMessageMapper {
+    fun map(dbMessage: DbMessage) = Message(
+        dbMessage.id,
+        com.oruel.conditionscript.MessageType.entries
+            .firstOrNull { it.name == dbMessage.messageType.name }
+            ?: com.oruel.conditionscript.MessageType.Text,
+        getOptions(dbMessage),
+    )
 
-    val id: String get() = message.id
 
-    val previousMessageId: Long get() = message.flowNode.previousOrderNumber
+    fun getType(message: DbMessage): MessageType = message.messageType
 
-    val viewPredicate: String? get() = message.flowNode.showPredicate
-
-    val type: MessageType get() = message.messageType
-
-    val stringAnswer: String?
-        get() = message.run {
-            when (this) {
-                is MultiChoiceTaskAnswerMessage -> answer
-                is SingleChoiceAnswerMessage -> answer
-                else -> null
-            }
+    fun getStringAnswer(message: DbMessage): String? = message.run {
+        when (this) {
+            is MultiChoiceTaskAnswerMessage -> answer
+            is SingleChoiceAnswerMessage -> answer
+            else -> null
         }
+    }
 
-    val options: List<Option>? = message.flowNode.run {
+    fun getOptions(backMessage: DbMessage): List<Option>? = backMessage.flowNode.run {
         when (this) {
             is MultipleChoiceTask -> correct to options
             is SingleChoiceQuestion -> correct to options
             else -> null
         }
     }?.let { (correctString, optionsString) ->
-        val answer = stringAnswer
+        val answer = getStringAnswer(backMessage)
             ?.split("||")
             ?.map { it.trim() }
 

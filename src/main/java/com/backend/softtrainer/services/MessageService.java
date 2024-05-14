@@ -6,8 +6,8 @@ import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.entities.Chat;
-import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.enums.ChatRole;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
@@ -24,12 +24,14 @@ import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
-import com.backend.softtrainer.interpreter.Runner;
-import com.backend.softtrainer.interpreter.entity.PredicateMessage;
-import com.backend.softtrainer.interpreter.libs.MessageManagerLib;
+import com.backend.softtrainer.exceptions.UserHyperParamException;
+import com.backend.softtrainer.interpreter.InterpreterMessageMapper;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.utils.Converter;
+import com.oruel.conditionscript.libs.MessageManagerLib;
+import com.oruel.conditionscript.script.ConditionScriptRunnerKt;
+import com.oruel.scriptforge.Runner;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -51,8 +53,11 @@ public class MessageService {
   private final ChatRepository chatRepository;
   private final MessageRepository messageRepository;
   private final FlowService flowService;
-  private final Runner runner = new Runner();
+  private final UserHyperParameterService userHyperParameterService;
+  private final Runner conditionScriptRunner = ConditionScriptRunnerKt.ConditionScriptRunner();
   private ChatGptService chatGptService;
+
+  private final InterpreterMessageMapper interpreterMessageMapper = new InterpreterMessageMapper();
 
   private void verifyWhetherQuestionIsAlreadyAnswered(final List<Message> actionableMessages) throws
                                                                                               SendMessageConditionException {
@@ -218,14 +223,30 @@ public class MessageService {
     final Long chatId,
     final List<FlowNode> flowNodes
   ) throws SendMessageConditionException {
+
     var messageManagerLib = new MessageManagerLib(
       (Long orderNumber) -> {
         Optional<Message> messages = findQuestionUserMessageByOrderNumber(chatId, orderNumber);
         if (messages.isPresent()) {
-          return new PredicateMessage(messages.get());
+          return interpreterMessageMapper.map(messages.get());
         } else {
           return null;
         }
+      },
+      (String key) -> {
+        try {
+          return userHyperParameterService.getUserHyperParam(chatId, key).getValue();
+        } catch (UserHyperParamException e) {
+          throw new RuntimeException(e);
+        }
+      },
+      (key, value) -> {
+        try {
+          userHyperParameterService.update(chatId, key, value);
+        } catch (UserHyperParamException e) {
+          throw new RuntimeException(e);
+        }
+        return true;
       }
     );
 
@@ -233,13 +254,13 @@ public class MessageService {
       .stream()
       .filter(
         flowNode -> {
-          runner.reset();
-          runner.loadLib(messageManagerLib.getLib());
+          conditionScriptRunner.resetLibs();
+          conditionScriptRunner.loadLib(messageManagerLib.getLib());
           var predicate = flowNode.getShowPredicate();
           if (predicate == null || predicate.isEmpty()) {
             return true;
           } else {
-            var res = runner.runPredicate(predicate);
+            var res = conditionScriptRunner.runPredicate(predicate);
             var logString = String.format(
               "runPredicate: %s, flowNodeId: %s, result: %s",
               predicate,

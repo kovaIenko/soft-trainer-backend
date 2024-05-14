@@ -3,7 +3,6 @@ package com.backend.softtrainer.services;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.User;
-import com.backend.softtrainer.interpreter.Option;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.utils.Converter;
 import lombok.AllArgsConstructor;

@@ -51,6 +51,8 @@ dependencies {
   // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
   implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '3.2.4'
   // https://mvnrepository.com/artifact/org.springframework.security/spring-security-oauth2-resource-server
+  implementation fileTree(dir: 'libs', include: '*.jar')
+
 
   implementation group: 'org.springframework.security', name: 'spring-security-oauth2-resource-server', version: '6.2.4'
   implementation group: 'org.springframework.security.oauth', name: 'spring-security-oauth2', version: '2.5.2.RELEASE'
