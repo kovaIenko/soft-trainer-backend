@@ -4,7 +4,7 @@ source .env
 
 ssh -i "~/.ssh/aws-kovalenko98.pem" ec2-user@${EC2_IP} "docker stop softtrainer-backend && docker rm softtrainer-backend"
 
-ssh -i "~/.ssh/aws-kovalenko98.pem" ec2-user@${EC2_IP} "docker rmi $(docker images '${AWS_ECR_ENDPOINT}/softtrainer-backend' -a -q)"
+ssh -i "~/.ssh/aws-kovalenko98.pem" ec2-user@${EC2_IP} "docker rmi $(docker images ${AWS_ECR_ENDPOINT}/softtrainer-backend -a -q)"
 
 aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${AWS_ECR_ENDPOINT}"
 
