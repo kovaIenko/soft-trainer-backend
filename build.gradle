@@ -9,10 +9,58 @@ plugins {
 }
 
 group = 'com.backend'
-version = '0.0.1.1-SNAPSHOT'
+version = '0.0.3'
 
 java {
   sourceCompatibility = '17'
+}
+
+tasks.register("incrementVersion") {
+  doFirst {
+    def ver = project.version.toString()
+    println "Current version: ${ver}"
+
+    // Ensure the version string matches the expected format
+    if (!ver.matches("\\d+\\.\\d+\\.\\d+")) {
+      throw new GradleException("Version format is incorrect. It should be in the format 'x.y.z'.")
+    }
+
+    String[] versionParts = ver.split('\\.')
+    if (versionParts.length == 3) {
+      int lastNumber = Integer.parseInt(versionParts[2])
+      int incremented = lastNumber + 1
+      println "New last number: ${incremented}"
+
+      String newVersion = "${versionParts[0]}.${versionParts[1]}.${incremented}"
+      println "New version: ${newVersion}"
+
+      // Read the build.gradle file
+      def buildFile = project.buildFile
+      def buildFileText = buildFile.getText('UTF-8')
+
+      // Update the version in the build.gradle file
+      def updatedBuildFileText = buildFileText.replaceFirst("version = '${ver}'", "version = '${newVersion}'")
+      buildFile.write(updatedBuildFileText, 'UTF-8')
+
+      println "Version updated in build.gradle to ${newVersion}"
+    } else {
+      throw new GradleException("Version format is incorrect. It should be in the format 'x.y.z'.")
+    }
+  }
+}
+
+
+// Make the 'build' task depend on 'incrementVersion' task
+tasks.named('build') {
+  dependsOn 'incrementVersion'
+}
+tasks.named('bootJar') {
+  manifest {
+    attributes(
+      'Implementation-Version': "${version}"
+    )
+  }
+  dependsOn 'incrementVersion'
 }
 
 jar {
@@ -63,3 +111,5 @@ dependencies {
 tasks.named('test') {
   useJUnitPlatform()
 }
+
+

@@ -8,7 +8,7 @@ source .env
 # gradle clean test
 
 echo "--- Building JAR ---"
-gradle build -x test
+gradle clean bootJar -x test
 
 PROJECT_VERSION=$(gradle properties --no-daemon --console=plain -q | grep "^version:" | awk '{printf $2}')
 

@@ -35,7 +35,11 @@ public class HomeController {
   @GetMapping("/health")
   //@PreAuthorize("hasAnyRole('ROLE_OWNER')")
   public ResponseEntity<String> health() {
-    return ResponseEntity.ok("Welcome, Miha");
+    return ResponseEntity.ok(String.format("Welcome, Miha. Here is current version of the app: %s", getManifestInfo()));
+  }
+
+  public String getManifestInfo() {
+    return getClass().getPackage().getImplementationVersion();
   }
 
   @PostMapping("/login")
