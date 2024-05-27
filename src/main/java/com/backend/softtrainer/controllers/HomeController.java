@@ -1,11 +1,15 @@
 package com.backend.softtrainer.controllers;
 
+import com.backend.softtrainer.dtos.ContactInfoRequestDto;
+import com.backend.softtrainer.dtos.ContactInfoResponse;
 import com.backend.softtrainer.dtos.SignUpUserResponseDto;
 import com.backend.softtrainer.dtos.auth.LoginRequest;
 import com.backend.softtrainer.dtos.auth.LoginResponse;
 import com.backend.softtrainer.dtos.auth.RefreshTokenResponse;
 import com.backend.softtrainer.dtos.auth.SignupRequestDto;
+import com.backend.softtrainer.entities.ContactInfo;
 import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
+import com.backend.softtrainer.repositories.ContactInfoRepository;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import com.backend.softtrainer.services.auth.TokenService;
@@ -31,6 +35,7 @@ public class HomeController {
   private final TokenService tokenService;
   private final AuthenticationManager authManager;
   private final CustomUsrDetailsService usrDetailsService;
+  private final ContactInfoRepository contactInfoRepository;
 
   @GetMapping("/health")
   //@PreAuthorize("hasAnyRole('ROLE_OWNER')")
@@ -90,6 +95,22 @@ public class HomeController {
       return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), false, e.getMessage()));
     } catch (Exception e) {
       return ResponseEntity.ok(new SignUpUserResponseDto(request.email(), false, "unknown"));
+    }
+  }
+
+
+  @PostMapping("/contact/info")
+  public ResponseEntity<ContactInfoResponse> addContactInfo(@RequestBody final ContactInfoRequestDto request) {
+    try {
+      var entity = ContactInfo.builder()
+        .contact(request.contact())
+        .name(request.name())
+        .request(request.request())
+        .build();
+      contactInfoRepository.save(entity);
+      return ResponseEntity.ok(new ContactInfoResponse(true, "success"));
+    } catch (Exception e) {
+      return ResponseEntity.ok(new ContactInfoResponse(false, "unknown"));
     }
   }
 

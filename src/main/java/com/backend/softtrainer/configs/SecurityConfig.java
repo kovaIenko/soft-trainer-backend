@@ -94,6 +94,7 @@ public class SecurityConfig {
           .requestMatchers("/signup").permitAll()
           .requestMatchers("/health").permitAll()
           .requestMatchers("/token/refresh").permitAll()
+          .requestMatchers("/contact/info").permitAll()
           .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2ResourceServer((auth) -> auth.jwt((jwt) -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
