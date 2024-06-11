@@ -18,6 +18,8 @@ public enum MessageType {
   CONTENT_QUESTION("ContentQuestion", false),
   ENTER_TEXT_QUESTION("EnterTextQuestion", true),
 
+  RESULT_SIMULATION("ResultSimulation", false),
+
   @Deprecated
   ENTER_TEXT_ANSWER("enterTextAnswer", false),
   @Deprecated

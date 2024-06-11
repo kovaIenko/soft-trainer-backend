@@ -95,6 +95,9 @@ public class SecurityConfig {
           .requestMatchers("/health").permitAll()
           .requestMatchers("/token/refresh").permitAll()
           .requestMatchers("/contact/info").permitAll()
+          .requestMatchers("/swagger-ui/*").permitAll()
+          .requestMatchers("/v3/*").permitAll()
+          .requestMatchers("/v3/api-docs/*").permitAll()
           .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2ResourceServer((auth) -> auth.jwt((jwt) -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
@@ -111,11 +114,11 @@ public class SecurityConfig {
     return token -> {
       try {
         if (JWTParser.parse(token).getJWTClaimsSet().getIssuer().equals("self")) {
-          System.err.println("Self!");
+          System.err.println("Auth with self-generated JWT token");
           JwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaKeys.publicKey()).build();
           return jwtDecoder.decode(token);
         } else if (JWTParser.parse(token).getJWTClaimsSet().getIssuer().equals("accounts.google.com")) {
-          System.err.println("Google");
+          System.err.println("Auth with Google JWT token");
           JwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
           return jwtDecoder.decode(token);
         }

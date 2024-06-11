@@ -4,9 +4,11 @@ import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,5 +39,10 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
 
 //  @Query("select c from chats c join fetch c.simulation s, c.messages m join fetch s.nodes n where s.id = skillId")
 //  boolean chatIsCompletedBySimulation(@Param("chatId") final Long chatId);
+
+  @Modifying
+  @Transactional
+  @Query("update chats c set c.isFinished = :isFinished where c.id = :chatId")
+  void updateIsFinished(@Param("chatId") final Long chatId, @Param("isFinished") final boolean isFinished);
 
 }

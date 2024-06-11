@@ -48,4 +48,7 @@ public class Chat {
   @ManyToOne(fetch = FetchType.EAGER)
   private Skill skill;
 
+  @Column(nullable = true)
+  private boolean isFinished = false;
+
 }

@@ -2,7 +2,7 @@ package com.backend.softtrainer.utils;
 
 import com.backend.softtrainer.dtos.ChatDto;
 import com.backend.softtrainer.dtos.MessageDto;
-import com.backend.softtrainer.dtos.SimulationResponseDto;
+import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
 import com.backend.softtrainer.dtos.SkillResponseDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Simulation;
@@ -28,10 +28,10 @@ public class Converter {
     return new ChatDto(chat.getMessages().stream().map(a -> new MessageDto("a.getContent()")).collect(Collectors.toSet()));
   }
 
-  public static SimulationResponseDto convertSimulation(final Simulation simulation,
-                                                        final boolean available,
-                                                        final boolean completed, final Long order) {
-    return new SimulationResponseDto(simulation.getId(), simulation.getName(), simulation.getAvatar(), available, completed, order);
+  public static SimulationAvailabilityStatusDto convertSimulation(final Simulation simulation,
+                                                                  final boolean available,
+                                                                  final boolean completed, final Long order) {
+    return new SimulationAvailabilityStatusDto(simulation.getId(), simulation.getName(), simulation.getAvatar(), available, completed, order);
   }
 
   public static Set<SkillResponseDto> convertSkills(final Set<Skill> skills) {

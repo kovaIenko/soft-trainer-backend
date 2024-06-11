@@ -1,6 +1,6 @@
 package com.backend.softtrainer.services;
 
-import com.backend.softtrainer.dtos.SimulationResponseDto;
+import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Organization;
 import com.backend.softtrainer.entities.Simulation;
@@ -72,7 +72,7 @@ public class SkillService {
     return new HashSet<>(skillRepository.findAll());
   }
 
-  public Set<SimulationResponseDto> findSimulationsBySkill(final User user, final Long skillId) {
+  public Set<SimulationAvailabilityStatusDto> findSimulationsBySkill(final User user, final Long skillId) {
     var optSkill = skillRepository.findById(skillId);
     if (optSkill.isPresent()) {
 
@@ -89,49 +89,56 @@ public class SkillService {
         .map(simulation -> {
           var chatsPerSimulation = chatBySimulationId.getOrDefault(simulation.getId(), List.of());
 
-          if (chatsPerSimulation.isEmpty()) {
-            if (isFirst.get()) {
-              isFirst.set(false);
-              return convertSimulation(simulation, true, false, simulations.get(simulation));
-            } else {
-              return convertSimulation(simulation, false, false, simulations.get(simulation));
-            }
-          }
-          var atLeastOneCompleted = chatsPerSimulation.stream()
-            .anyMatch(this::isChatCompleted);
-
-          if (atLeastOneCompleted) {
-            return convertSimulation(simulation, true, true, simulations.get(simulation));
-          } else {
-            isFirst.set(false);
-            return convertSimulation(simulation, true, false, simulations.get(simulation));
-          }
+//          if (chatsPerSimulation.isEmpty()) {
+//            if (isFirst.get()) {
+//              isFirst.set(false);
+//              return convertSimulation(simulation, true, false, simulations.get(simulation));
+//            } else {
+//              return convertSimulation(simulation, false, false, simulations.get(simulation));
+//            }
+//          }
+//          var atLeastOneCompleted = chatsPerSimulation.stream()
+//            .anyMatch(Chat::isFinished);
+//
+//          if (atLeastOneCompleted) {
+//            return convertSimulation(simulation, true, true, simulations.get(simulation));
+//          } else {
+//            isFirst.set(false);
+//            return convertSimulation(simulation, true, false, simulations.get(simulation));
+//          }
+          return convertSimulation(simulation, true, false, simulations.get(simulation));
 
         })
-        .sorted(Comparator.comparing(SimulationResponseDto::order))
+        .sorted(Comparator.comparing(SimulationAvailabilityStatusDto::order))
         .collect(Collectors.toCollection(LinkedHashSet::new));
     }
     throw new NoSuchElementException(String.format("There is no skills with id %s", skillId));
   }
 
   public boolean isSimulationAvailableForUser(final User user, final Simulation simulationInput) {
-    return findSimulationsBySkill(user, simulationInput.getSkill().getId()).stream().anyMatch(simulation -> simulation.id().equals(simulationInput.getId()) && simulation.available());
+    return findSimulationsBySkill(
+      user,
+      simulationInput.getSkill()
+        .getId()
+    )
+      .stream()
+      .anyMatch(simulation -> simulation.id().equals(simulationInput.getId()) && simulation.available());
   }
 
 
-  //todo very-very complex method
-  private boolean isChatCompleted(final Chat chat) {
-    var simulation = chat.getSimulation();
-    var lastNode = flowRepository.findTopBySimulationOrderByOrderNumberDesc(simulation);
-    if (lastNode.isEmpty()) {
-      throw new RuntimeException(String.format(
-        "The simulation %s of chat %s doesn't have last node",
-        simulation.getId(),
-        chat.getId()
-      ));
-    }
-    var lastMessages = messageRepository.existsByOrderNumberAndChatId(chat, lastNode.get().getOrderNumber());
-    return !lastMessages.isEmpty();
-  }
+//  //todo very-very complex method
+//  private boolean isChatCompleted(final Chat chat) {
+//    var simulation = chat.getSimulation();
+//    var lastNode = flowRepository.findTopBySimulationOrderByOrderNumberDesc(simulation);
+//    if (lastNode.isEmpty()) {
+//      throw new RuntimeException(String.format(
+//        "The simulation %s of chat %s doesn't have last node",
+//        simulation.getId(),
+//        chat.getId()
+//      ));
+//    }
+//    var lastMessages = messageRepository.existsByOrderNumberAndChatId(chat, lastNode.get().getOrderNumber());
+//    return !lastMessages.isEmpty();
+//  }
 
 }

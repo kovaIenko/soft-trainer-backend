@@ -1,5 +1,7 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
+import com.backend.softtrainer.dtos.UserHyperParamResponseDto;
 import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.MessageRequestDto;
 import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
@@ -15,6 +17,7 @@ import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
 import com.backend.softtrainer.entities.flow.SingleChoiceTask;
 import com.backend.softtrainer.entities.flow.Text;
 import com.backend.softtrainer.entities.messages.EnterTextMessage;
+import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
@@ -35,11 +38,16 @@ import com.oruel.scriptforge.Runner;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +63,9 @@ public class MessageService {
   private final FlowService flowService;
   private final UserHyperParameterService userHyperParameterService;
   private final Runner conditionScriptRunner = ConditionScriptRunnerKt.ConditionScriptRunner();
+
+  private final SkillService skillService;
+
   private ChatGptService chatGptService;
 
   private final InterpreterMessageMapper interpreterMessageMapper = new InterpreterMessageMapper();
@@ -94,9 +105,11 @@ public class MessageService {
 
     var chatOpt = chatRepository.findById(messageRequestDto.getChatId());
 
-    if(chatOpt.isEmpty()) throw new NoSuchElementException(String.format("There is no such chat %s", messageRequestDto.getChatId()));
+    if (chatOpt.isEmpty()) {
+      throw new NoSuchElementException(String.format("There is no such chat %s", messageRequestDto.getChatId()));
+    }
 
-    var chat  = chatOpt.get();
+    var chat = chatOpt.get();
 
     if (messageRequestDto instanceof SingleChoiceAnswerMessageDto singleChoiceAnswerMessageDto) {
       message = SingleChoiceAnswerMessage.builder()
@@ -172,7 +185,6 @@ public class MessageService {
     }
   }
 
-
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessages(final Chat chat,
                                                                  final Long previousOrderNumber,
@@ -187,7 +199,6 @@ public class MessageService {
       nextMessage = messageRepository.save(nextMessage);
       messages.add(nextMessage);
 
-
       while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
         nextFlowNodeOptional = getNextFlowNode(chat.getId(), nextFlowNode.getOrderNumber(), simulationId);
         if (nextFlowNodeOptional.isPresent()) {
@@ -195,12 +206,48 @@ public class MessageService {
           nextMessage = convert(nextFlowNode, chat);
           nextMessage = messageRepository.save(nextMessage);
           messages.add(nextMessage);
+
+          if (flowService.isLastNode(nextFlowNode)) {
+            log.info("Start building last message for the last simulation node id: {}", nextFlowNode.getId());
+            var lastSimulationMessage = buildLastMessage(nextFlowNode, chat);
+            lastSimulationMessage.ifPresent(messages::add);
+            lastSimulationMessage.ifPresent(msg -> log.info("Built message: {}", msg));
+            chatRepository.updateIsFinished(chat.getId(), true);
+          }
         } else {
           break;
         }
       }
     }
     return CompletableFuture.completedFuture(messages);
+  }
+
+  private Optional<LastSimulationMessage> buildLastMessage(final FlowNode flowNode, final Chat chat) {
+
+    try {
+      var nextSimulationId = skillService.findSimulationsBySkill(chat.getUser(), flowNode.getSimulation().getSkill().getId())
+        .stream().filter(SimulationAvailabilityStatusDto::available)
+        .map(SimulationAvailabilityStatusDto::id)
+        .filter(id -> !id.equals(flowNode.getSimulation().getId()))
+        .findFirst();
+
+      var params = userHyperParameterService.findAllByChatId(chat.getId())
+        .stream()
+        .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
+        .toList();
+
+      return Optional.of(LastSimulationMessage.builder()
+                           .role(ChatRole.APP)
+                           .id(UUID.randomUUID().toString())
+                           .chat(chat)
+                           .timestamp(LocalDateTime.now())
+                           .hyperParams(params)
+                           .nextSimulationId(nextSimulationId.orElse(null))
+                           .build());
+    } catch (Exception e) {
+      log.error("Error while building last message", e);
+      return Optional.empty();
+    }
   }
 
   private Optional<FlowNode> getNextFlowNode(
@@ -218,36 +265,15 @@ public class MessageService {
     return Optional.of(findFirstByPredicate(chatId, flowNodes));
   }
 
-  private @NotNull
-  FlowNode findFirstByPredicate(
+  private @NotNull FlowNode findFirstByPredicate(
     final Long chatId,
     final List<FlowNode> flowNodes
   ) throws SendMessageConditionException {
 
     var messageManagerLib = new MessageManagerLib(
-      (Long orderNumber) -> {
-        Optional<Message> messages = findQuestionUserMessageByOrderNumber(chatId, orderNumber);
-        if (messages.isPresent()) {
-          return interpreterMessageMapper.map(messages.get());
-        } else {
-          return null;
-        }
-      },
-      (String key) -> {
-        try {
-          return userHyperParameterService.getUserHyperParam(chatId, key).getValue();
-        } catch (UserHyperParamException e) {
-          throw new RuntimeException(e);
-        }
-      },
-      (key, value) -> {
-        try {
-          userHyperParameterService.update(chatId, key, value);
-        } catch (UserHyperParamException e) {
-          throw new RuntimeException(e);
-        }
-        return true;
-      }
+      (Long orderNumber) -> getMessage(chatId, orderNumber),
+      (String key) -> userHyperParameterService.getOrCreateUserHyperParameter(chatId, key),
+      (String key, Double value) -> userHyperParameterService.update(chatId, key, value)
     );
 
     var nextFlowNodes = flowNodes
@@ -285,6 +311,17 @@ public class MessageService {
     return nextFlowNodes;
   }
 
+  @Nullable
+  private com.oruel.conditionscript.Message getMessage(final Long chatId, final Long orderNumber) {
+    Optional<Message> messages = findQuestionUserMessageByOrderNumber(chatId, orderNumber);
+    if (messages.isPresent()) {
+      return interpreterMessageMapper.map(messages.get());
+    } else {
+      //todo return null is not the best practice, using Optional is better
+      return null;
+    }
+  }
+
   private CompletableFuture<List<Message>> chatGptResponse(final Message messageEntity) {
 
     var optionalChat = chatRepository.findByIdWithMessages(messageEntity.getChat().getId());
@@ -311,11 +348,13 @@ public class MessageService {
   }
 
   public List<Message> getAndStoreMessageByFlow(final List<FlowNode> flowNodes, final Chat chat) {
-    List<Message> messages = flowNodes.stream()
-//      .filter(Objects::nonNull)
+    return flowNodes.stream()
+      .filter(Objects::nonNull)
+      .sorted(Comparator.comparing(FlowNode::getOrderNumber))
       .map(question -> convert(question, chat))
-      .collect(Collectors.toList());
-    return messageRepository.saveAll(messages);
+      .map(messageRepository::save)
+      .sorted(Comparator.comparing(Message::getTimestamp))
+      .toList();
   }
 
   private Message convert(final FlowNode flowNode, final Chat chat) {

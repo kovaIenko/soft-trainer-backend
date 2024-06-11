@@ -59,7 +59,6 @@ public class FlowService {
   private final SimulationRepository simulationRepository;
 
   public void uploadFlow(final SimulationRequestDto flowRequestDto) {
-
     var skillReq = flowRequestDto.getSkill();
     Skill temp = null;
     if (Objects.isNull(skillReq)) {
@@ -137,6 +136,10 @@ public class FlowService {
 
   public Optional<FlowNode> findById(final Long simulationId) {
     return flowRepository.findById(simulationId);
+  }
+
+  public boolean isLastNode(final FlowNode flowNode) {
+    return flowRepository.findAllBySimulationAndPreviousOrderNumber(flowNode.getSimulation().getId(), flowNode.getOrderNumber()).isEmpty();
   }
 
   //todo stupid violation of second SOLID

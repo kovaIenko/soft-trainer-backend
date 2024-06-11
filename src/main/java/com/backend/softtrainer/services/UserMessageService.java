@@ -2,6 +2,7 @@ package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.client.UserContentMessageDto;
 import com.backend.softtrainer.dtos.client.UserEnterTextMessageDto;
+import com.backend.softtrainer.dtos.client.UserLastSimulationMessage;
 import com.backend.softtrainer.dtos.client.UserMessageDto;
 import com.backend.softtrainer.dtos.client.UserMultiChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
@@ -10,6 +11,7 @@ import com.backend.softtrainer.dtos.client.UserTextMessageDto;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextMessage;
+import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
@@ -24,6 +26,8 @@ import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,9 +72,11 @@ public class UserMessageService {
                                        + " id: " + answer.getId());
   }
 
-
   public List<UserMessageDto> combineMessages(final List<Message> messages) {
-    var messagesGroupedByFlowNodes = messages.stream().collect(Collectors.groupingBy(Message::getFlowNode));
+
+    var messagesGroupedByFlowNodes = messages.stream()
+      .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
+
     return messagesGroupedByFlowNodes.values().stream()
       .map(collection -> {
         if (collection.size() == 2) {
@@ -79,26 +85,33 @@ public class UserMessageService {
         } else if (collection.size() == 1) {
           return convert(collection.get(0));
         } else {
-
           log.info(String.format(
             "Collection size while combining messages by flow node is %s, the collection is %s",
             collection.size(),
             collection
           ));
-          throw new NoSuchElementException("message has not flow node");
+          return null;
         }
       })
+      .filter(Objects::nonNull)
       .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
-      .toList();
+      .collect(Collectors.toList());
   }
 
-  private UserMessageDto convert(final Message message) {
+  public UserMessageDto convert(final Message message) {
     if (message instanceof TextMessage textMessage) {
       return UserTextMessageDto.builder()
         .timestamp(textMessage.getTimestamp())
         .messageType(MessageType.TEXT)
         .content(textMessage.getContent())
         .character(textMessage.getCharacter())
+        .build();
+    } else if (message instanceof LastSimulationMessage lastSimulationMessage) {
+      return UserLastSimulationMessage.builder()
+        .timestamp(lastSimulationMessage.getTimestamp())
+        .messageType(MessageType.RESULT_SIMULATION)
+        .nextSimulationId(lastSimulationMessage.getNextSimulationId())
+        .hyperParams(lastSimulationMessage.getHyperParams())
         .build();
     } else if (message instanceof ContentMessage contentMessage) {
       return UserContentMessageDto.builder()

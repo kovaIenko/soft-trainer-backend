@@ -10,6 +10,9 @@ source .env
 echo "--- Building JAR ---"
 gradle clean bootJar -x test
 
+echo "--- Launch Docker daemon ---"
+open -a Docker
+
 PROJECT_VERSION=$(gradle properties --no-daemon --console=plain -q | grep "^version:" | awk '{printf $2}')
 
 echo "--- Building Docker Image ---"

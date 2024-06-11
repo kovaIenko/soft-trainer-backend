@@ -40,9 +40,7 @@ public class MessageController {
           "success",
           userMessageService.combineMessages(messages)
         )));
-
     } catch (SendMessageConditionException e) {
-
       log.error(e.getMessage());
       return CompletableFuture.completedFuture(
         ResponseEntity.ok(new ChatResponseDto(
