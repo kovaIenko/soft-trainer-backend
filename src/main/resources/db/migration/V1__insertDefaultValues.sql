@@ -12,3 +12,6 @@ values (3, 'ROLE_ADMIN');
 
 insert into organizations (id, name)
 values (1, 'SoftTrainer')
+
+--     insert into organizations (id, name)
+-- values (5, 'Onboarding')

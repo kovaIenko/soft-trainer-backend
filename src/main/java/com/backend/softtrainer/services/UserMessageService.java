@@ -95,6 +95,13 @@ public class UserMessageService {
       })
       .filter(Objects::nonNull)
       .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
+      .peek(msg->{
+        if(Objects.nonNull(msg.getCharacter())){
+          if(msg.getCharacter().getName().equalsIgnoreCase("user")){
+            msg.setCharacter(null);
+          }
+        }
+      })
       .collect(Collectors.toList());
   }
 

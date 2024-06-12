@@ -13,7 +13,7 @@ import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "message_type")
 @JsonSubTypes({
-  @JsonSubTypes.Type(value = EnterTextQuestionDto.class, name = "EnterText"),
+  @JsonSubTypes.Type(value = EnterTextQuestionDto.class, name = "EnterTextQuestion"),
   @JsonSubTypes.Type(value = SingleChoiceQuestionDto.class, name = "SingleChoiceQuestion"),
   @JsonSubTypes.Type(value = SingleChoiceTaskDto.class, name = "SingleChoiceTask"),
   @JsonSubTypes.Type(value = MultiChoiceTaskDto.class, name = "MultiChoiceTask"),

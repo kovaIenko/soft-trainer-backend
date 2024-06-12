@@ -30,7 +30,6 @@ public class MessageController {
   @PutMapping("/send")
   @PreAuthorize("@customUsrDetailsService.isChatOfUser(authentication, #messageRequestDto?.chatId)")
   public CompletableFuture<ResponseEntity<ChatResponseDto>> create(@RequestBody MessageRequestDto messageRequestDto) {
-
     try {
       return messageService.buildResponse(messageRequestDto)
         .thenApply(messages -> ResponseEntity.ok(new ChatResponseDto(

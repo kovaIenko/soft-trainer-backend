@@ -27,7 +27,6 @@ import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
-import com.backend.softtrainer.exceptions.UserHyperParamException;
 import com.backend.softtrainer.interpreter.InterpreterMessageMapper;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
@@ -41,7 +40,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -167,6 +165,9 @@ public class MessageService {
         .build();
       messageRepository.save(message);
       //chat gpt
+      if (flowNode.getSimulation().getName().equals("Onboarding")) {
+        return figureOutNextMessages(chat, flowNode.getOrderNumber(), flowNode.getSimulation().getId());
+      }
       return chatGptResponse(message);
     } else {
       throw new SendMessageConditionException(
@@ -387,7 +388,7 @@ public class MessageService {
         .id(UUID.randomUUID().toString())
         .chat(chat)
         .role(ChatRole.APP)
-        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .messageType(MessageType.ENTER_TEXT_QUESTION)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         //.timestamp(LocalDateTime.now())

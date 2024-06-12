@@ -12,6 +12,7 @@ import com.backend.softtrainer.repositories.AuthRepository;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.RoleRepository;
+import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ import java.util.Optional;
 public class CustomUsrDetailsService implements UserDetailsService {
 
   private final UserRepository userRepository;
+  private final SkillRepository skillRepository;
   private PasswordEncoder passwordEncoder;
   private final RoleRepository roleRepository;
   private final AuthRepository authRepository;
@@ -107,6 +109,12 @@ public class CustomUsrDetailsService implements UserDetailsService {
 
   public boolean areSkillAndSimulationAvailable(Authentication authentication, Long skillId, Long simulationId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
+
+    //todo 1 org to 1 user when onboarding is a org
+    if(isSkillOnboarding(skillId)){
+      return true;
+    }
+
     return optUser.map(user -> {
         var skillOpt = user.getOrganization()
           .getAvailableSkills()
@@ -131,8 +139,20 @@ public class CustomUsrDetailsService implements UserDetailsService {
       });
   }
 
+  private boolean isSkillOnboarding(final Long skillId) {
+    //todo 1 org to 1 user when onboarding is a org
+    var isOnboarding = skillRepository.findById(skillId);
+    return isOnboarding.map(skill -> skill.getName().equals("Onboarding")).orElse(false);
+  }
+
   public boolean isSkillAvailable(Authentication authentication, Long skillId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
+
+    //todo 1 org to 1 user when onboarding is a org
+    if(isSkillOnboarding(skillId)){
+      return true;
+    }
+
     return optUser.map(user -> {
         if (user.getOrganization()
           .getAvailableSkills()
@@ -163,8 +183,9 @@ public class CustomUsrDetailsService implements UserDetailsService {
           return true;
         } else {
           log.error(String.format(
-            "The user %s does not have access to this simulation",
-            authentication.getName()
+            "The user %s does not have access to this simulation %",
+            authentication.getName(),
+            simulationId
           ));
           return false;
         }

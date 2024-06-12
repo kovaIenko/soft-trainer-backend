@@ -1,7 +1,6 @@
 package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
-import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Organization;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.Skill;
@@ -14,6 +13,7 @@ import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -50,7 +50,18 @@ public class SkillService {
   public Set<Skill> getAvailableSkillByOrg(final String organization) {
 
     var optOrg = organizationRepository.getFirstByName(organization);
+    return getAvailableSkillsByOrgName(optOrg);
+  }
+
+  private @NotNull Set<Skill> getAvailableSkillsByOrgName(final Optional<Organization> optOrg) {
+    //todo for now like that due to the restriction 1 user <-> 1 org
+    var optOnboardingOrg = organizationRepository.getFirstByName("Onboarding");
+
     return optOrg.map(Organization::getAvailableSkills)
+      .map(skills -> {
+        optOnboardingOrg.ifPresent(value -> skills.addAll(value.getAvailableSkills()));
+        return skills;
+      })
       .orElse(Collections.emptySet());
   }
 
@@ -59,8 +70,7 @@ public class SkillService {
     var userOpt = userRepository.findByEmail(username);
     if (userOpt.isPresent()) {
       var optOrg = Optional.ofNullable(userOpt.get().getOrganization());
-      return optOrg.map(Organization::getAvailableSkills)
-        .orElse(Collections.emptySet());
+      return getAvailableSkillsByOrgName(optOrg);
     } else {
       var errorMessage = String.format("The user %s doesn't exist", username);
       log.error(errorMessage);
