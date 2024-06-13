@@ -138,6 +138,7 @@ public class ChatController {
     }
   }
 
+  //todo rename it
   @GetMapping("/get")
   @PreAuthorize("@customUsrDetailsService.isSimulationAvailable(authentication, #simulationId)")
   public ResponseEntity<ChatResponseDto> getUserChatBySimulation(@RequestParam(name = "simulationId") Long simulationId,
@@ -186,6 +187,40 @@ public class ChatController {
         null
       ));
     }
+  }
+
+
+  @GetMapping("/get/by")
+  @PreAuthorize("@customUsrDetailsService.isChatOfUser(authentication, #chatId)")
+  public ResponseEntity<ChatResponseDto> getUserChatById(@RequestParam(name = "chatId") Long chatId,
+                                                         Authentication authentication) {
+
+    var chatOptional = chatService.findChatWithMessages(chatId);
+
+    if (chatOptional.isEmpty()) {
+      return ResponseEntity.ok(new ChatResponseDto(
+        null,
+        null,
+        false,
+        String.format(
+          "Chat % doesn't exists for user %s",
+          chatId,
+          authentication.getName()
+        ),
+        null
+      ));
+    }
+
+    var chat = chatOptional.get();
+    var messages = chat.getMessages().stream().toList();
+    var combinedMessages = userMessageService.combineMessages(messages);
+    return ResponseEntity.ok(new ChatResponseDto(
+      chat.getId(),
+      null,
+      true,
+      "success",
+      combinedMessages
+    ));
   }
 
 //  @GetMapping("/get/all")

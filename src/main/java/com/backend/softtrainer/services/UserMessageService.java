@@ -1,5 +1,6 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.MessageAnswerOptionDto;
 import com.backend.softtrainer.dtos.client.UserContentMessageDto;
 import com.backend.softtrainer.dtos.client.UserEnterTextMessageDto;
 import com.backend.softtrainer.dtos.client.UserLastSimulationMessage;
@@ -28,7 +29,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Slf4j
@@ -40,32 +43,56 @@ public class UserMessageService {
     MultiChoiceTaskQuestionMessage.class
   );
 
+  private List<MessageAnswerOptionDto> convertOptions(String options, final String answer) {
+    var answers = Stream.of(answer.split("\\|\\|"))
+      .filter(Objects::nonNull)
+      .map(String::trim)
+      .map(String::toLowerCase)
+      .collect(Collectors.toSet());
+
+    return Stream.of(options.split("\\|\\|")).map(option -> {
+        var modifiedOption = option.trim();
+      var messageBuilder = MessageAnswerOptionDto.builder()
+          .optionId(UUID.randomUUID().toString())
+          .text(modifiedOption);
+
+        if (answers.contains(modifiedOption.toLowerCase())) {
+          messageBuilder.isSelected(true);
+        }
+        return messageBuilder;
+      })
+      .map(MessageAnswerOptionDto.MessageAnswerOptionDtoBuilder::build)
+      .toList();
+  }
+
   public UserMessageDto combine(final Message question, final Message answer) {
 
     if (question instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage
       && answer instanceof SingleChoiceTaskAnswerMessage singleChoiceTaskAnswerMessage) {
-
       return UserSingleChoiceTaskMessageDto.builder()
         .answer(singleChoiceTaskAnswerMessage.getAnswer())
-        .options(singleChoiceTaskQuestionMessage.getOptions())
+        .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), singleChoiceTaskAnswerMessage.getAnswer()))
         .timestamp(singleChoiceTaskAnswerMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .isVoted(true)
         .build();
     } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
       && answer instanceof SingleChoiceAnswerMessage singleChoiceAnswerMessage) {
       return UserSingleChoiceMessageDto.builder()
         .answer(singleChoiceAnswerMessage.getAnswer())
-        .options(singleChoiceQuestionMessage.getOptions())
+        .options(convertOptions(singleChoiceQuestionMessage.getOptions(), singleChoiceAnswerMessage.getAnswer()))
         .timestamp(singleChoiceAnswerMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .isVoted(true)
         .build();
     } else if (question instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage
       && answer instanceof MultiChoiceTaskAnswerMessage multiChoiceTaskAnswerMessage) {
       return UserMultiChoiceTaskMessageDto.builder()
         .answer(multiChoiceTaskAnswerMessage.getAnswer())
-        .options(multiChoiceTaskQuestionMessage.getOptions())
+        .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), multiChoiceTaskAnswerMessage.getAnswer()))
         .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
         .messageType(MessageType.MULTI_CHOICE_TASK)
+        .isVoted(true)
         .build();
     }
     throw new NoSuchElementException("The incorrect pair of question and answer. Question id: " + question.getId() + " , answer"
@@ -95,9 +122,9 @@ public class UserMessageService {
       })
       .filter(Objects::nonNull)
       .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
-      .peek(msg->{
-        if(Objects.nonNull(msg.getCharacter())){
-          if(msg.getCharacter().getName().equalsIgnoreCase("user")){
+      .peek(msg -> {
+        if (Objects.nonNull(msg.getCharacter())) {
+          if (msg.getCharacter().getName().equalsIgnoreCase("user")) {
             msg.setCharacter(null);
           }
         }
@@ -136,21 +163,24 @@ public class UserMessageService {
         .build();
     } else if (message instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage) {
       return UserSingleChoiceMessageDto.builder()
-        .options(singleChoiceQuestionMessage.getOptions())
+        .options(convertOptions(singleChoiceQuestionMessage.getOptions(), ""))
         .timestamp(singleChoiceQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .isVoted(false)
         .build();
     } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
       return UserSingleChoiceTaskMessageDto.builder()
-        .options(singleChoiceTaskQuestionMessage.getOptions())
+        .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), ""))
         .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .isVoted(false)
         .build();
     } else if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage) {
       return UserMultiChoiceTaskMessageDto.builder()
-        .options(multiChoiceTaskQuestionMessage.getOptions())
+        .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), ""))
         .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
         .messageType(MessageType.MULTI_CHOICE_TASK)
+        .isVoted(false)
         .build();
     }
     throw new NoSuchElementException("The incorrect question type");

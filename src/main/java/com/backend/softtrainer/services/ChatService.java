@@ -35,4 +35,8 @@ public class ChatService {
     return Optional.ofNullable(sorted.get(sorted.size() - 1));
   }
 
+  public Optional<Chat> findChatWithMessages(final Long chatId) {
+    return chatRepository.findByIdWithMessages(chatId);
+  }
+
 }

@@ -1,8 +1,12 @@
 package com.backend.softtrainer.dtos.client;
 
+import com.backend.softtrainer.dtos.MessageAnswerOptionDto;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
+import java.util.List;
 
 @Data
 @SuperBuilder
@@ -14,7 +18,9 @@ public class UserSingleChoiceTaskMessageDto extends UserMessageDto {
 
   private String answer;
 
-  //todo split it into list
-  private String options;
+  @JsonProperty("is_voted")
+  private boolean isVoted;
+
+  private List<MessageAnswerOptionDto> options;
 
 }
