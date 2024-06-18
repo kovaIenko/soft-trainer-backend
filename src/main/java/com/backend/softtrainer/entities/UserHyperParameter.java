@@ -24,6 +24,8 @@ public class UserHyperParameter {
 
   private Long ownerId;
 
+  private Long simulationId;
+
   //id from the table hyperparams
   private String key;
 

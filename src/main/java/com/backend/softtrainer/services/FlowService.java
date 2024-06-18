@@ -106,7 +106,10 @@ public class FlowService {
     if (Objects.nonNull(flowRequestDto.getHyperparameters())) {
       List<HyperParameter> hyperParameters = flowRequestDto.getHyperparameters()
         .stream()
-        .map(param -> new HyperParameter(param.key(), flowRequestDto.getName()))
+        .map(param -> HyperParameter.builder()
+          .key(param.key())
+          .simulationId(simulation.getId())
+          .build())
         .toList();
 
       hyperParameterRepository.saveAll(hyperParameters);
@@ -139,7 +142,8 @@ public class FlowService {
   }
 
   public boolean isLastNode(final FlowNode flowNode) {
-    return flowRepository.findAllBySimulationAndPreviousOrderNumber(flowNode.getSimulation().getId(), flowNode.getOrderNumber()).isEmpty();
+    return flowRepository.findAllBySimulationAndPreviousOrderNumber(flowNode.getSimulation().getId(), flowNode.getOrderNumber())
+      .isEmpty();
   }
 
   //todo stupid violation of second SOLID

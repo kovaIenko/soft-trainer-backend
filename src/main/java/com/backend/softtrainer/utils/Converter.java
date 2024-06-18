@@ -1,7 +1,6 @@
 package com.backend.softtrainer.utils;
 
 import com.backend.softtrainer.dtos.ChatDto;
-import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
 import com.backend.softtrainer.dtos.SkillResponseDto;
 import com.backend.softtrainer.entities.Chat;
@@ -10,6 +9,7 @@ import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,7 +25,7 @@ public class Converter {
   }
 
   public static ChatDto convert(final Chat chat) {
-    return new ChatDto(chat.getMessages().stream().map(a -> new MessageDto("a.getContent()")).collect(Collectors.toSet()));
+    return new ChatDto(new HashSet<>(chat.getMessages()));
   }
 
   public static SimulationAvailabilityStatusDto convertSimulation(final Simulation simulation,

@@ -1,5 +1,6 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
 import com.backend.softtrainer.dtos.UserHyperParamResponseDto;
 import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
@@ -8,6 +9,7 @@ import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.entities.Chat;
+import com.backend.softtrainer.entities.PromptName;
 import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
@@ -30,6 +32,7 @@ import com.backend.softtrainer.exceptions.SendMessageConditionException;
 import com.backend.softtrainer.interpreter.InterpreterMessageMapper;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
+import com.backend.softtrainer.repositories.PromptRepository;
 import com.backend.softtrainer.utils.Converter;
 import com.oruel.conditionscript.libs.MessageManagerLib;
 import com.oruel.conditionscript.script.ConditionScriptRunnerKt;
@@ -64,7 +67,10 @@ public class MessageService {
 
   private final SkillService skillService;
 
-  private ChatGptService chatGptService;
+  private final ChatGptService chatGptService;
+  private final PromptRepository promptRepository;
+
+  private final PromptService promptService;
 
   private final InterpreterMessageMapper interpreterMessageMapper = new InterpreterMessageMapper();
 
@@ -224,7 +230,6 @@ public class MessageService {
   }
 
   private Optional<LastSimulationMessage> buildLastMessage(final FlowNode flowNode, final Chat chat) {
-
     try {
       var nextSimulationId = skillService.findSimulationsBySkill(chat.getUser(), flowNode.getSimulation().getSkill().getId())
         .stream().filter(SimulationAvailabilityStatusDto::available)
@@ -237,6 +242,9 @@ public class MessageService {
         .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
         .toList();
 
+      var updatedChat = chatRepository.findByIdWithMessages(chat.getId());
+      Optional<MessageDto> aiSummary = generateAiSummary(updatedChat, params);
+
       return Optional.of(LastSimulationMessage.builder()
                            .role(ChatRole.APP)
                            .id(UUID.randomUUID().toString())
@@ -244,11 +252,42 @@ public class MessageService {
                            .timestamp(LocalDateTime.now())
                            .hyperParams(params)
                            .nextSimulationId(nextSimulationId.orElse(null))
+                           .aiSummary(aiSummary.map(MessageDto::content).orElse(null))
                            .build());
     } catch (Exception e) {
       log.error("Error while building last message", e);
       return Optional.empty();
     }
+  }
+
+  private Optional<MessageDto> generateAiSummary(final Optional<Chat> updatedChat,
+                                                 final List<UserHyperParamResponseDto> params) {
+    try {
+      if (updatedChat.isPresent()) {
+
+        var simulationSummaryPrompt = promptRepository.findById(PromptName.SIMULATION_SUMMARY).orElseThrow();
+
+        var userName = updatedChat.get().getUser().getUsername();
+        var summary = chatGptService.buildSimulationSummary(
+          Converter.convert(updatedChat.get()),
+          simulationSummaryPrompt.getPrompt(),
+          params.stream().collect(Collectors.toMap(
+            UserHyperParamResponseDto::key,
+            UserHyperParamResponseDto::value
+          )),
+          userName,
+          updatedChat.get().getSkill().getName()
+          ).get();
+
+        promptService.validateSimulationSummary(summary.content(), userName);
+        return Optional.ofNullable(summary);
+      }
+      return Optional.empty();
+    } catch (Exception e) {
+      log.error("Error while generating AI summary", e);
+      return Optional.empty();
+    }
+
   }
 
   private Optional<FlowNode> getNextFlowNode(

@@ -2,28 +2,26 @@ package com.backend.softtrainer.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity(name = "hyperparams")
+@Entity(name = "prompts")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class HyperParameter {
+public class Prompt {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  private Long id;
+  @Enumerated(EnumType.STRING)
+  private PromptName name;
 
-  private String key;
-
-  @Column(name = "simulation_id")
-  private Long simulationId;
+  @Column(length = 5000)
+  private String prompt;
 
 }

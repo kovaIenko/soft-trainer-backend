@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class ChatRequestDto {
 
+  @Deprecated
   @JsonProperty("skill_id")
   private Long skillId;
 

@@ -30,6 +30,10 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
   List<Chat> findByUserAndSimulationWithMessages(@Param("user") final User user,
                                                  @Param("simulation") final Simulation simulation);
 
+  @Query("SELECT c FROM chats c JOIN FETCH c.messages WHERE c.user = :user AND c.simulation.id = :simulationId")
+  List<Chat> findByUserAndSimulationIdWithMessages(@Param("user") final User user,
+                                                 @Param("simulationId") final Long simulationId);
+
   @Query("select c from chats c join fetch c.skill s where s.id = :skillId AND c.user = :user")
   List<Chat> findAllBySkillId(@Param("user") final User user, @Param("skillId") final Long skillId);
 

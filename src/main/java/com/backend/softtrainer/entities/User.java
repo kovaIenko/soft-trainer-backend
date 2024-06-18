@@ -43,6 +43,8 @@ public class User {
   @Column(unique = true)
   private String username;
 
+  private String name;
+
   private String avatar;
 
   private String password;

@@ -12,6 +12,7 @@ import com.backend.softtrainer.repositories.AuthRepository;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.RoleRepository;
+import com.backend.softtrainer.repositories.SimulationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.Data;
@@ -36,6 +37,7 @@ public class CustomUsrDetailsService implements UserDetailsService {
 
   private final UserRepository userRepository;
   private final SkillRepository skillRepository;
+  private final SimulationRepository simulationRepository;
   private PasswordEncoder passwordEncoder;
   private final RoleRepository roleRepository;
   private final AuthRepository authRepository;
@@ -145,6 +147,12 @@ public class CustomUsrDetailsService implements UserDetailsService {
     return isOnboarding.map(skill -> skill.getName().equals("Onboarding")).orElse(false);
   }
 
+  private boolean isSimulationOnboarding(final Long simulationId) {
+    //todo 1 org to 1 user when onboarding is a org
+    var isOnboarding = simulationRepository.findById(simulationId);
+    return isOnboarding.map(simulation -> simulation.getSkill().getName().equals("Onboarding")).orElse(false);
+  }
+
   public boolean isSkillAvailable(Authentication authentication, Long skillId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
 
@@ -176,6 +184,12 @@ public class CustomUsrDetailsService implements UserDetailsService {
 
   public boolean isSimulationAvailable(Authentication authentication, Long simulationId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
+
+    //todo 1 org to 1 user when onboarding is a org
+    if(isSimulationOnboarding(simulationId)){
+      return true;
+    }
+
     return optUser.map(user -> {
         if (user.getOrganization().getAvailableSkills()
           .stream().flatMap(a -> a.getSimulations().keySet().stream())
@@ -183,7 +197,7 @@ public class CustomUsrDetailsService implements UserDetailsService {
           return true;
         } else {
           log.error(String.format(
-            "The user %s does not have access to this simulation %",
+            "The user %s does not have access to this simulation %s",
             authentication.getName(),
             simulationId
           ));

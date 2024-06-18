@@ -1,7 +1,8 @@
 package com.backend.softtrainer.dtos;
 
-import java.util.List;
+import com.backend.softtrainer.entities.messages.Message;
+
 import java.util.Set;
 
-public record ChatDto(Set<MessageDto> messages) {
+public record ChatDto(Set<Message> messages) {
 }

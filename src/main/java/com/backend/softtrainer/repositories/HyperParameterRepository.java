@@ -9,9 +9,9 @@ import org.springframework.stereotype.Repository;
 import java.util.Set;
 
 @Repository
-public interface HyperParameterRepository extends JpaRepository<HyperParameter, String> {
+public interface HyperParameterRepository extends JpaRepository<HyperParameter, Long> {
 
-  @Query("SELECT hp.key FROM hyperparams hp WHERE hp.simulationName = :flowName")
-  Set<String> getAllKeysByFlowName(@Param("flowName") final String flowName);
+  @Query("SELECT hp.key FROM hyperparams hp WHERE hp.simulationId = :simulationId")
+  Set<String> getAllKeysBySimulationId(@Param("simulationId") final Long simulationId);
 
 }

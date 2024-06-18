@@ -95,7 +95,7 @@ public class UserMessageService {
         .isVoted(true)
         .build();
     }
-    throw new NoSuchElementException("The incorrect pair of question and answer. Question id: " + question.getId() + " , answer"
+    throw new NoSuchElementException("The incorrect pair of question and answer for chat " + question.getChat().getId() + " Question id: " + question.getId() + " , answer"
                                        + " id: " + answer.getId());
   }
 
@@ -146,6 +146,7 @@ public class UserMessageService {
         .messageType(MessageType.RESULT_SIMULATION)
         .nextSimulationId(lastSimulationMessage.getNextSimulationId())
         .hyperParams(lastSimulationMessage.getHyperParams())
+        .aiSummary(lastSimulationMessage.getAiSummary())
         .build();
     } else if (message instanceof ContentMessage contentMessage) {
       return UserContentMessageDto.builder()

@@ -51,8 +51,7 @@ public class ChatController {
   private final SkillService skillService;
 
   @PutMapping("/create")
-  @PreAuthorize("@customUsrDetailsService.areSkillAndSimulationAvailable(authentication, #chatRequestDto.skillId, " +
-    "#chatRequestDto.simulationId)")
+  @PreAuthorize("@customUsrDetailsService.isSimulationAvailable(authentication, #chatRequestDto.simulationId)")
   public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto, Authentication authentication) {
 
     var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
@@ -62,18 +61,6 @@ public class ChatController {
     if (simulationOpt.isPresent()) {
       var simulation = simulationOpt.get();
 
-      if (!skillService.isSimulationAvailableForUser(userDetails.user(), simulation)) {
-        return ResponseEntity.ok(new ChatResponseDto(
-          null,
-          chatRequestDto.getSkillId(),
-          false,
-          String.format(
-            "Simulation %s is not available",
-            chatRequestDto.getSimulationId()
-          ),
-          null
-        ));
-      }
       if (userDetails.user().getRoles().stream().noneMatch(a -> a.getName().equals(StaticRole.ROLE_OWNER))) {
         if (chatService.existsBy(userDetails.user(), chatRequestDto.getSimulationId())) {
           return ResponseEntity.ok(new ChatResponseDto(
@@ -91,24 +78,16 @@ public class ChatController {
       }
 
       var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationId());
-
       if (!flowTillActions.isEmpty()) {
         var createdChat = chatService.store(simulation, userDetails.user());
 
         var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
         var combinedMessages = userMessageService.combineMessages(messages);
 
-        var hyperparams = hyperParameterRepository.getAllKeysByFlowName(simulation.getName())
-          .stream()
-          .map(hpKey -> UserHyperParameter.builder()
-            .key(hpKey)
-            .chatId(createdChat.getId())
-            .ownerId(userDetails.user().getId())
-            .value((double) 0)
-            .build())
-          .toList();
+        //init default values to the hyper params for the user
+        initUserDefaultHyperParams(simulation.getId(), createdChat.getId(), userDetails.user().getId());
 
-        userHyperParameterRepository.saveAll(hyperparams);
+        log.info("Chat {} created for user {} and simulation {}", createdChat.getId(), userDetails.user().getId(), simulation.getId());
 
         return ResponseEntity.ok(new ChatResponseDto(
           createdChat.getId(),
@@ -145,48 +124,65 @@ public class ChatController {
                                                                  Authentication authentication) {
 
     var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
+    var chatOptional = chatService.findChatWithMessages(userDetails.user(), simulationId);
 
-    var simulationOpt = simulationRepository.findById(simulationId);
-    if (simulationOpt.isPresent()) {
-      var simulation = simulationOpt.get();
-      var chatOptional = chatService.findChatWithMessages(userDetails.user(), simulation);
-
-      if (chatOptional.isEmpty()) {
-        return ResponseEntity.ok(new ChatResponseDto(
-          null,
-          null,
-          false,
-          String.format(
-            "Chat doesn't exists for user %s and for simulation %s",
-            authentication.getName(),
-            simulationId
-          ),
-          null
-        ));
-      }
-
-      var chat = chatOptional.get();
-
-      var messages = chat.getMessages().stream().toList();
-
-      var combinedMessages = userMessageService.combineMessages(messages);
-
-      return ResponseEntity.ok(new ChatResponseDto(
-        chat.getId(),
-        null,
-        true,
-        "success",
-        combinedMessages
-      ));
-    } else {
+    if (chatOptional.isEmpty()) {
       return ResponseEntity.ok(new ChatResponseDto(
         null,
         null,
         false,
-        String.format("The is no such simulation %s", simulationId),
+        String.format(
+          "Chat doesn't exists for user %s and for simulation %s",
+          authentication.getName(),
+          simulationId
+        ),
         null
       ));
     }
+
+    var chat = chatOptional.get();
+    var messages = chat.getMessages().stream().toList();
+    var combinedMessages = userMessageService.combineMessages(messages);
+    return ResponseEntity.ok(new ChatResponseDto(
+      chat.getId(),
+      null,
+      true,
+      "success",
+      combinedMessages
+    ));
+  }
+
+  @GetMapping("/get/by")
+  @PreAuthorize("@customUsrDetailsService.isChatOfUser(authentication, #chatId)")
+  public ResponseEntity<ChatResponseDto> getUserChatById(@RequestParam(name = "chatId") Long chatId,
+                                                         Authentication authentication) {
+
+    var chatOptional = chatService.findChatWithMessages(chatId);
+
+    if (chatOptional.isEmpty()) {
+      return ResponseEntity.ok(new ChatResponseDto(
+        null,
+        null,
+        false,
+        String.format(
+          "Chat % doesn't exists for user %s",
+          chatId,
+          authentication.getName()
+        ),
+        null
+      ));
+    }
+
+    var chat = chatOptional.get();
+    var messages = chat.getMessages().stream().toList();
+    var combinedMessages = userMessageService.combineMessages(messages);
+    return ResponseEntity.ok(new ChatResponseDto(
+      chat.getId(),
+      null,
+      true,
+      "success",
+      combinedMessages
+    ));
   }
 
 
@@ -233,5 +229,22 @@ public class ChatController {
 //      "success"
 //    ));
 //  }
+
+  private void initUserDefaultHyperParams(final Long simulationId, final Long chatId, final Long userId) {
+    var hyperparams = hyperParameterRepository.getAllKeysBySimulationId(simulationId);
+
+    var userHyperParams = hyperparams.stream()
+      .map(hpKey -> UserHyperParameter.builder()
+        .key(hpKey)
+        .chatId(chatId)
+        .ownerId(userId)
+        .simulationId(simulationId)
+        .value((double) 0)
+        .build())
+      .toList();
+
+    userHyperParameterRepository.saveAll(userHyperParams);
+    log.info("User hyper params {} initialized for user {} and simulation {}", hyperparams, userId, simulationId);
+  }
 
 }

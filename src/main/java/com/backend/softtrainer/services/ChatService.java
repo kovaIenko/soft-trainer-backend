@@ -26,8 +26,8 @@ public class ChatService {
     return chatRepository.existsByUserAndSimulationId(user, simulationId);
   }
 
-  public Optional<Chat> findChatWithMessages(final User user, final Simulation simulation) {
-    var chats = chatRepository.findByUserAndSimulationWithMessages(user, simulation);
+  public Optional<Chat> findChatWithMessages(final User user, final Long simulationId) {
+    var chats = chatRepository.findByUserAndSimulationIdWithMessages(user, simulationId);
     var sorted = chats.stream().sorted(Comparator.comparing(Chat::getTimestamp)).toList();
     if (sorted.isEmpty()) {
       return Optional.empty();
