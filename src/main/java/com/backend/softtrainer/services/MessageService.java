@@ -242,8 +242,9 @@ public class MessageService {
         .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
         .toList();
 
-      var updatedChat = chatRepository.findByIdWithMessages(chat.getId());
-      Optional<MessageDto> aiSummary = generateAiSummary(updatedChat, params);
+      //var updatedChat = chatRepository.findByIdWithMessages(chat.getId());
+      Optional<MessageDto> aiSummary = Optional.empty();
+        //generateAiSummary(updatedChat, params);
 
       return Optional.of(LastSimulationMessage.builder()
                            .role(ChatRole.APP)
@@ -255,7 +256,7 @@ public class MessageService {
                            .aiSummary(aiSummary.map(MessageDto::content).orElse(null))
                            .build());
     } catch (Exception e) {
-      log.error("Error while building last message", e);
+      log.error("Error while building last message['", e);
       return Optional.empty();
     }
   }
