@@ -58,7 +58,8 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
     throw new NotImplementedException("Please implement that method");
   }
 
-  public CompletableFuture<MessageDto> buildSimulationSummary(final ChatDto chat, String prompt, Map<String, Double> params, final String userName, final String skillName) {
+  public CompletableFuture<MessageDto> buildSimulationSummary(final ChatDto chat, String template, Map<String, Double> params,
+                                                              final String userName, final String skillName) {
 
     String userParams = params.entrySet().stream()
       .map(entry -> {
@@ -68,34 +69,44 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
       })
       .collect(Collectors.joining(" \n "));
 
+    System.out.println("user params: " + userParams);
 
-    System.out.println("userParams: " + userParams);
-    var promptWithParams = String.format(prompt, gptModel, skillName, userParams, userName);
-    var promptMessage = ChatMessage.systemMessage(promptWithParams);
+    var chatHistory = new StringBuilder();
+    chat.messages().forEach(message -> convert(chatHistory, message));
 
-    System.out.println("promptMessage: " + promptMessage.content());
+    System.out.println("chat history: " + chatHistory);
+
+    var promptMessage = String.format(
+      template,
+      userName,
+      skillName,
+      userName,
+      "software engineer",
+      chatHistory,
+      userParams,
+      "fostering open dialogue and reducing directive communication",
+      userName
+    );
+
+    System.out.println(promptMessage);
+
     var messages = new ArrayList<ChatMessage>();
-    messages.add(promptMessage);
-
-    messages.addAll(chat.messages().stream()
-                      .map(this::convert)
-                      .toList());
-
-    System.out.println("messages: " + messages);
-
-    var responseFormat = new CreateChatCompletionRequest.ResponseFormat("text");
+    messages.add(ChatMessage.userMessage(promptMessage));
 
     CreateChatCompletionRequest request = CreateChatCompletionRequest.newBuilder()
       .model(gptModel)
       .messages(messages)
-      .responseFormat(responseFormat)
-      .temperature(0.01)
+      .responseFormat(new CreateChatCompletionRequest.ResponseFormat("text"))
+//      .temperature(0.01)
       .build();
 
     return chatClient.createChatCompletionAsync(request)
       .thenApply(chatCompletion -> {
         if (!chatCompletion.choices().isEmpty()) {
-          System.out.println("chatCompletion.choices().get(0).message().content(): " + chatCompletion.choices().get(0).message().content());
+          System.out.println("chatCompletion.choices().get(0).message().content(): " + chatCompletion.choices()
+            .get(0)
+            .message()
+            .content());
           return new MessageDto(chatCompletion.choices().get(0).message().content());
         }
 

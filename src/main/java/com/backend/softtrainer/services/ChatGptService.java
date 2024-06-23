@@ -16,6 +16,7 @@ import io.github.stefanbratanov.jvm.openai.ChatMessage;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -23,31 +24,32 @@ public interface ChatGptService {
 
   CompletableFuture<MessageDto> completeChat(final ChatDto chat);
 
-  CompletableFuture<MessageDto> buildSimulationSummary(final ChatDto chat, String prompt, Map<String, Double> params, final String userName, final String skillName);
+  CompletableFuture<MessageDto> buildSimulationSummary(final ChatDto chat, String prompt, Map<String, Double> params,
+                                                       final String userName, final String skillName);
 
-  default ChatMessage convert(final Message message) {
+  default void convert(StringBuilder chatHistory, final Message message) {
     if (message instanceof EnterTextMessage msg) {
-      return ChatMessage.userMessage(msg.getContent());
+      chatHistory.append(msg.getCharacter().getName()).append(" : ").append(msg.getContent());
     } else if (message instanceof TextMessage msg) {
-      return ChatMessage.userMessage(msg.getContent());
+      chatHistory.append(getCharacterName(msg)).append(" : ").append(msg.getContent());
     } else if (message instanceof SingleChoiceQuestionMessage msg) {
       var options = "Options are : " + msg.getOptions();
-      return ChatMessage.systemMessage(options);
+      chatHistory.append(getCharacterName(msg)).append(" : ").append(options);
     } else if (message instanceof SingleChoiceAnswerMessage msg) {
       var options = "Answers are: " + msg.getAnswer();
-      return ChatMessage.userMessage(options);
+      chatHistory.append(getCharacterName(msg)).append(" : ").append(options);
     } else if (message instanceof SingleChoiceTaskQuestionMessage msg) {
       var options = "Options are: " + msg.getOptions();
-      return ChatMessage.systemMessage(options);
+      chatHistory.append(getCharacterName(msg)).append(" : ").append(options);
     } else if (message instanceof SingleChoiceTaskAnswerMessage msg) {
       var options = "Answers are: " + msg.getAnswer();
-      return ChatMessage.userMessage(options);
+      chatHistory.append(getCharacterName(msg)).append(" : ").append(options);
     } else if (message instanceof MultiChoiceTaskQuestionMessage msg) {
       var options = "Options are: " + msg.getOptions();
-      return ChatMessage.systemMessage(options);
+      chatHistory.append(getCharacterName(msg)).append(" : ").append(options);
     } else if (message instanceof MultiChoiceTaskAnswerMessage msg) {
       var options = "Answers are: " + msg.getAnswer();
-      return ChatMessage.userMessage(options);
+      chatHistory.append(getCharacterName(msg)).append(" : ").append(options);
     } else if (message instanceof ContentMessage msg) {
       var img = new ChatMessage.UserMessage.UserMessageWithContentParts.ContentPart.ImageContentPart.ImageUrl(
         msg.getUrl(),
@@ -56,11 +58,20 @@ public interface ChatGptService {
       var content =
         List.of((ChatMessage.UserMessage.UserMessageWithContentParts.ContentPart)
                   new ChatMessage.UserMessage.UserMessageWithContentParts.ContentPart.ImageContentPart(
-        img));
-      return new ChatMessage.UserMessage.UserMessageWithContentParts(content, Optional.empty());
+                    img));
+
+//      chatHistory.append(msg.getCharacter().getName()).append(" : ").append(content);
     } else {
       throw new IllegalArgumentException("Unknown message type: " + message.getClass());
     }
 
+  }
+
+  default String getCharacterName(Message message) {
+    if (Objects.isNull(message.getCharacter())) {
+      return "User";
+    } else {
+      return message.getCharacter().getName();
+    }
   }
 }

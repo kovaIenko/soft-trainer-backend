@@ -15,13 +15,15 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class UserLastSimulationMessage extends UserMessageDto {
 
+  @Deprecated
   @JsonProperty("next_simulation_id")
   private Long nextSimulationId;
 
   @JsonProperty("achieved_scores")
   private List<UserHyperParamResponseDto> hyperParams;
 
-  @JsonProperty("summary")
-  private String aiSummary;
+  private String description;
+
+  private String title;
 
 }

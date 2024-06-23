@@ -12,7 +12,9 @@ public class WebConfig implements WebMvcConfigurer {
   @Override
   public void addCorsMappings(CorsRegistry registry) {
     registry.addMapping("/**")
-      .allowedOrigins("https://app.thesofttrainer.com", "https://test-web-flutter-427fd.web.app/")
+      .allowedOrigins("https://app.thesofttrainer.com",
+                      "https://test-web-flutter-427fd.web.app/",
+                      "https://thesofttrainer.com")
       .allowedMethods("GET", "POST", "PUT", "DELETE")
       .allowedHeaders("*")
       .allowCredentials(true);

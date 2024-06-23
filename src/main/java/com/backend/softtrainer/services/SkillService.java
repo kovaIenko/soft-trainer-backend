@@ -92,11 +92,13 @@ public class SkillService {
       var chatBySimulationId = chats.stream().collect(Collectors.groupingBy(a -> a.getSimulation().getId()));
       final AtomicBoolean isFirst = new AtomicBoolean(true);
 
-      return simulations.entrySet().stream().sorted(java.util.Map.Entry.comparingByValue())
+      return simulations.entrySet().stream().sorted(Map.Entry.comparingByValue())
         .map(Map.Entry::getKey)
         .filter(Simulation::isOpen)
         .map(simulation -> {
           var chatsPerSimulation = chatBySimulationId.getOrDefault(simulation.getId(), List.of());
+
+          System.out.println("For simulation " + simulation.getId() + " with the order " + simulations.get(simulation) + " there are " + chatsPerSimulation.size() + " chats");
 
           if (chatsPerSimulation.isEmpty()) {
             if (isFirst.get()) {
@@ -106,9 +108,11 @@ public class SkillService {
               return convertSimulation(simulation, false, false, simulations.get(simulation));
             }
           }
+
           var atLeastOneCompleted = chatsPerSimulation.stream()
             .anyMatch(Chat::isFinished);
 
+          System.out.println("At least one completed chat: " + atLeastOneCompleted + " for simulation " + simulation.getId());
           if (atLeastOneCompleted) {
             return convertSimulation(simulation, true, true, simulations.get(simulation));
           } else {

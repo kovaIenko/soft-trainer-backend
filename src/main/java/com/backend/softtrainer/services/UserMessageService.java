@@ -123,8 +123,9 @@ public class UserMessageService {
       .filter(Objects::nonNull)
       .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
       .peek(msg -> {
+        //todo the stupid thing
         if (Objects.nonNull(msg.getCharacter())) {
-          if (msg.getCharacter().getName().equalsIgnoreCase("user")) {
+          if (msg.getCharacter().getFlowCharacterId() == -1) {
             msg.setCharacter(null);
           }
         }
@@ -144,9 +145,10 @@ public class UserMessageService {
       return UserLastSimulationMessage.builder()
         .timestamp(lastSimulationMessage.getTimestamp())
         .messageType(MessageType.RESULT_SIMULATION)
-        .nextSimulationId(lastSimulationMessage.getNextSimulationId())
+//        .nextSimulationId(lastSimulationMessage.getNextSimulationId())
         .hyperParams(lastSimulationMessage.getHyperParams())
-        .aiSummary(lastSimulationMessage.getAiSummary())
+        .description(lastSimulationMessage.getContent())
+        .title(lastSimulationMessage.getTitle())
         .build();
     } else if (message instanceof ContentMessage contentMessage) {
       return UserContentMessageDto.builder()

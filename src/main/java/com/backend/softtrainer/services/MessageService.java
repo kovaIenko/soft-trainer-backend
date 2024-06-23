@@ -1,7 +1,6 @@
 package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.MessageDto;
-import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
 import com.backend.softtrainer.dtos.UserHyperParamResponseDto;
 import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.MessageRequestDto;
@@ -9,6 +8,7 @@ import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.entities.Chat;
+import com.backend.softtrainer.entities.Prompt;
 import com.backend.softtrainer.entities.PromptName;
 import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.enums.MessageType;
@@ -43,7 +43,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -52,6 +51,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -205,7 +205,7 @@ public class MessageService {
 
       nextMessage = messageRepository.save(nextMessage);
       messages.add(nextMessage);
-
+      boolean isOnboarding = nextFlowNode.getSimulation().getName().equals("Onboarding");
       while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
         nextFlowNodeOptional = getNextFlowNode(chat.getId(), nextFlowNode.getOrderNumber(), simulationId);
         if (nextFlowNodeOptional.isPresent()) {
@@ -213,15 +213,23 @@ public class MessageService {
           nextMessage = convert(nextFlowNode, chat);
           nextMessage = messageRepository.save(nextMessage);
           messages.add(nextMessage);
+          System.out.println("The orderNumber of current flowNode is " + nextFlowNode.getOrderNumber());
 
-          if (flowService.isLastNode(nextFlowNode)) {
-            log.info("Start building last message for the last simulation node id: {}", nextFlowNode.getId());
-            var lastSimulationMessage = buildLastMessage(nextFlowNode, chat);
-            lastSimulationMessage.ifPresent(messages::add);
-            lastSimulationMessage.ifPresent(msg -> log.info("Built message: {}", msg));
-            chatRepository.updateIsFinished(chat.getId(), true);
-          }
+//          if (flowService.isLastNode(nextFlowNode)) {
+//            log.info("Start building last message for the last simulation node id: {}", nextFlowNode.getId());
+//            var lastSimulationMessage = buildLastMessage(nextFlowNode, chat);
+//            lastSimulationMessage.ifPresent(messages::add);
+//            lastSimulationMessage.ifPresent(msg -> log.info("Built message: {}", msg));
+//            chatRepository.updateIsFinished(chat.getId(), true);
+//          }
         } else {
+          System.out.println("The orderNumber of current flowNode is " + nextFlowNode.getOrderNumber());
+
+          log.info("Start building last message for the last simulation node id: {}", nextFlowNode.getId());
+          var lastSimulationMessage = buildLastMessage(isOnboarding, chat);
+          lastSimulationMessage.ifPresent(messages::add);
+          lastSimulationMessage.ifPresent(msg -> log.info("Built message: {}", msg));
+          chatRepository.updateIsFinished(chat.getId(), true);
           break;
         }
       }
@@ -229,32 +237,52 @@ public class MessageService {
     return CompletableFuture.completedFuture(messages);
   }
 
-  private Optional<LastSimulationMessage> buildLastMessage(final FlowNode flowNode, final Chat chat) {
+  private Optional<LastSimulationMessage> buildLastMessage(final boolean isOnboarding, final Chat chat) {
     try {
-      var nextSimulationId = skillService.findSimulationsBySkill(chat.getUser(), flowNode.getSimulation().getSkill().getId())
-        .stream().filter(SimulationAvailabilityStatusDto::available)
-        .map(SimulationAvailabilityStatusDto::id)
-        .filter(id -> !id.equals(flowNode.getSimulation().getId()))
-        .findFirst();
+//      var nextSimulationId = skillService.findSimulationsBySkill(chat.getUser(), flowNode.getSimulation().getSkill().getId())
+//        .stream().filter(SimulationAvailabilityStatusDto::available)
+//        .map(SimulationAvailabilityStatusDto::id)
+//        .filter(id -> !id.equals(flowNode.getSimulation().getId()))
+//        .findFirst();
 
+      //todo hardcoding
+      var title = isOnboarding ? "Вперед до змін!" : "Твій результат";
       var params = userHyperParameterService.findAllByChatId(chat.getId())
         .stream()
         .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
         .toList();
 
-      //var updatedChat = chatRepository.findByIdWithMessages(chat.getId());
-      Optional<MessageDto> aiSummary = Optional.empty();
-        //generateAiSummary(updatedChat, params);
+      var updatedChat = chatRepository.findByIdWithMessages(chat.getId());
 
-      return Optional.of(LastSimulationMessage.builder()
-                           .role(ChatRole.APP)
-                           .id(UUID.randomUUID().toString())
-                           .chat(chat)
-                           .timestamp(LocalDateTime.now())
-                           .hyperParams(params)
-                           .nextSimulationId(nextSimulationId.orElse(null))
-                           .aiSummary(aiSummary.map(MessageDto::content).orElse(null))
-                           .build());
+      Supplier<Prompt> simulationRecommendationPrompt =
+        () -> promptRepository.findFirstByNameOrderByIdDesc(PromptName.SIMULATION_SUMMARY)
+          .orElseThrow();
+
+      Optional<MessageDto> aiRecommendation = isOnboarding ? Optional.of(new MessageDto(
+        "Раді познайомитися. Го відточувати реальні навички комунікації!"))
+        : Optional.empty();
+      //generateAiSummary(updatedChat, params, simulationRecommendationPrompt);
+
+      String content = aiRecommendation.map(MessageDto::content)
+        .orElse("Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills");
+
+      var simulationResultMessage = LastSimulationMessage.builder()
+        .role(ChatRole.APP)
+        .id(UUID.randomUUID().toString())
+        .messageType(MessageType.RESULT_SIMULATION)
+        .chat(chat)
+//                           .timestamp(LocalDateTime.now())
+        .hyperParams(params)
+        .title(title)
+        //      .nextSimulationId(nextSimulationId.orElse(null))
+        .content(content)
+        .prompt(aiRecommendation.isEmpty() || isOnboarding ? null : simulationRecommendationPrompt.get())
+        .build();
+
+      var temp = messageRepository.save(simulationResultMessage);
+
+      simulationResultMessage.setTimestamp(temp.getTimestamp());
+      return Optional.of(simulationResultMessage);
     } catch (Exception e) {
       log.error("Error while building last message['", e);
       return Optional.empty();
@@ -262,25 +290,24 @@ public class MessageService {
   }
 
   private Optional<MessageDto> generateAiSummary(final Optional<Chat> updatedChat,
-                                                 final List<UserHyperParamResponseDto> params) {
+                                                 final List<UserHyperParamResponseDto> params,
+                                                 final Supplier<Prompt> simulationSummaryPrompt) {
     try {
       if (updatedChat.isPresent()) {
-
-        var simulationSummaryPrompt = promptRepository.findById(PromptName.SIMULATION_SUMMARY).orElseThrow();
 
         var userName = updatedChat.get().getUser().getUsername();
         var summary = chatGptService.buildSimulationSummary(
           Converter.convert(updatedChat.get()),
-          simulationSummaryPrompt.getPrompt(),
+          simulationSummaryPrompt.get().getPrompt(),
           params.stream().collect(Collectors.toMap(
             UserHyperParamResponseDto::key,
             UserHyperParamResponseDto::value
           )),
           userName,
           updatedChat.get().getSkill().getName()
-          ).get();
+        ).get();
 
-        promptService.validateSimulationSummary(summary.content(), userName);
+        //promptService.validateSimulationSummary(summary.content(), userName);
         return Optional.ofNullable(summary);
       }
       return Optional.empty();
@@ -301,6 +328,7 @@ public class MessageService {
     if (flowNodes.size() == 1) {
       return Optional.of(flowNodes.get(0));
     } else if (flowNodes.isEmpty()) {
+      log.info("No flow nodes found for chatId: {} and previousOrderNumber: {}", chatId, previousOrderNumber);
       return Optional.empty();
     }
     return Optional.of(findFirstByPredicate(chatId, flowNodes));
@@ -311,11 +339,14 @@ public class MessageService {
     final List<FlowNode> flowNodes
   ) throws SendMessageConditionException {
 
+    System.out.println("Trying to find first by predicate in flowNodes: " + flowNodes);
+
     var messageManagerLib = new MessageManagerLib(
       (Long orderNumber) -> getMessage(chatId, orderNumber),
       (String key) -> userHyperParameterService.getOrCreateUserHyperParameter(chatId, key),
       (String key, Double value) -> userHyperParameterService.update(chatId, key, value)
     );
+    log.info("Found nodes by order number: {}", flowNodes.stream().map(FlowNode::getOrderNumber).toList());
 
     var nextFlowNodes = flowNodes
       .stream()
@@ -354,10 +385,13 @@ public class MessageService {
 
   @Nullable
   private com.oruel.conditionscript.Message getMessage(final Long chatId, final Long orderNumber) {
+    log.info("Trying to find message by order number: {}", orderNumber);
     Optional<Message> messages = findQuestionUserMessageByOrderNumber(chatId, orderNumber);
     if (messages.isPresent()) {
+      log.info("Message {} found by order number: {}", messages.get(), orderNumber);
       return interpreterMessageMapper.map(messages.get());
     } else {
+      log.error("Message not found by order number: {}", orderNumber);
       //todo return null is not the best practice, using Optional is better
       return null;
     }

@@ -18,6 +18,9 @@ import lombok.NoArgsConstructor;
 public class Prompt {
 
   @Id
+  //@GeneratedValue(strategy = GenerationType.AUTO)
+  private Long id;
+
   @Enumerated(EnumType.STRING)
   private PromptName name;
 
