@@ -11,7 +11,8 @@ import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.ContentMessage;
-import com.backend.softtrainer.entities.messages.EnterTextMessage;
+import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
+import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
 import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
@@ -40,7 +41,8 @@ public class UserMessageService {
   private static List<Class<? extends Message>> QUESTION_CLASSES = List.of(
     SingleChoiceTaskQuestionMessage.class,
     SingleChoiceQuestionMessage.class,
-    MultiChoiceTaskQuestionMessage.class
+    MultiChoiceTaskQuestionMessage.class,
+    EnterTextQuestionMessage.class
   );
 
   private List<MessageAnswerOptionDto> convertOptions(String options, final String answer) {
@@ -52,7 +54,7 @@ public class UserMessageService {
 
     return Stream.of(options.split("\\|\\|")).map(option -> {
         var modifiedOption = option.trim();
-      var messageBuilder = MessageAnswerOptionDto.builder()
+        var messageBuilder = MessageAnswerOptionDto.builder()
           .optionId(UUID.randomUUID().toString())
           .text(modifiedOption);
 
@@ -94,9 +96,17 @@ public class UserMessageService {
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .isVoted(true)
         .build();
+    } else if (question instanceof EnterTextQuestionMessage enterQuestionTextMessage
+      && answer instanceof EnterTextAnswerMessage enterAnswerTextMessage) {
+      return UserEnterTextMessageDto.builder()
+        .content(enterAnswerTextMessage.getContent())
+        .timestamp(enterAnswerTextMessage.getTimestamp())
+        .messageType(MessageType.ENTER_TEXT_QUESTION)
+        .isVoted(true)
+        .build();
     }
-    throw new NoSuchElementException("The incorrect pair of question and answer for chat " + question.getChat().getId() + " Question id: " + question.getId() + " , answer"
-                                       + " id: " + answer.getId());
+    throw new NoSuchElementException("The incorrect pair of question and answer for chat " + question.getChat()
+      .getId() + " Question " + question.getMessageType() + " id: " + question.getId() + " , answer " + answer.getMessageType() + " id: " + answer.getId());
   }
 
   public List<UserMessageDto> combineMessages(final List<Message> messages) {
@@ -157,12 +167,12 @@ public class UserMessageService {
         .url(contentMessage.getUrl())
         .character(contentMessage.getCharacter())
         .build();
-    } else if (message instanceof EnterTextMessage enterTextMessage) {
+    } else if (message instanceof EnterTextQuestionMessage enterTextQuestionMessage) {
       return UserEnterTextMessageDto.builder()
-        .timestamp(enterTextMessage.getTimestamp())
+        .timestamp(enterTextQuestionMessage.getTimestamp())
         .messageType(MessageType.ENTER_TEXT_QUESTION)
-        .character(enterTextMessage.getCharacter())
-        .content(enterTextMessage.getContent())
+        .character(enterTextQuestionMessage.getCharacter())
+        .content(enterTextQuestionMessage.getContent())
         .build();
     } else if (message instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage) {
       return UserSingleChoiceMessageDto.builder()

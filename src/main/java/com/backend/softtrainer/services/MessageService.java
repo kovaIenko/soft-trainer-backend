@@ -18,7 +18,8 @@ import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
 import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
 import com.backend.softtrainer.entities.flow.SingleChoiceTask;
 import com.backend.softtrainer.entities.flow.Text;
-import com.backend.softtrainer.entities.messages.EnterTextMessage;
+import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
+import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
 import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
@@ -76,7 +77,6 @@ public class MessageService {
 
   private void verifyWhetherQuestionIsAlreadyAnswered(final List<Message> actionableMessages) throws
                                                                                               SendMessageConditionException {
-
     if (actionableMessages.isEmpty()) {
       throw new SendMessageConditionException("No messages should be answered");
     }
@@ -89,7 +89,7 @@ public class MessageService {
   public CompletableFuture<List<Message>> buildResponse(final MessageRequestDto messageRequestDto) throws
                                                                                                    SendMessageConditionException {
     var actionableMessageTypes = MessageType.getActionableMessageTypes();
-    var actionableMessages = messageRepository.getActionableMessage(actionableMessageTypes, messageRequestDto.getChatId());
+    var actionableMessages = messageRepository.getActionableMessages(actionableMessageTypes, messageRequestDto.getChatId());
 
     verifyWhetherQuestionIsAlreadyAnswered(actionableMessages);
 
@@ -160,20 +160,30 @@ public class MessageService {
       return figureOutNextMessages(chat, flowNode.getOrderNumber(), flowNode.getSimulation().getId());
 
     } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
-      message = EnterTextMessage.builder()
+//      var originEnterMessage = (EnterTextMessage) messageRepository.findAppQuestionUserMessagesByOrderNumber(
+//          chat.getId(),
+//          flowNode.getOrderNumber()
+//        )
+//        .orElseThrow(() -> new NoSuchElementException("There is no question enter text message for the order number: " + flowNode.getOrderNumber()));
+      message = EnterTextAnswerMessage.builder()
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .role(ChatRole.USER)
         .id(UUID.randomUUID().toString())
         .chat(chat)
         //.timestamp(enterTextAnswerMessageDto.getTimestamp())
         .flowNode(flowNode)
-        .content(enterTextAnswerMessageDto.getContent())
+        .content(enterTextAnswerMessageDto.getAnswer())
         .build();
+
+//      originEnterMessage.setRole(ChatRole.USER);
+//      originEnterMessage.setContent(enterTextAnswerMessageDto.getAnswer());
+
       messageRepository.save(message);
       //chat gpt
       if (flowNode.getSimulation().getName().equals("Onboarding")) {
         return figureOutNextMessages(chat, flowNode.getOrderNumber(), flowNode.getSimulation().getId());
       }
+      //todo test it
       return chatGptResponse(message);
     } else {
       throw new SendMessageConditionException(
@@ -410,7 +420,7 @@ public class MessageService {
     return chatGptService.completeChat(Converter.convert(chat))
       .thenApply(messageDto -> {
                    var message =
-                     EnterTextMessage.builder()
+                     EnterTextAnswerMessage.builder()
                        .chat(chat)
                        .content(messageDto.content())
                        .id(UUID.randomUUID().toString())
@@ -458,7 +468,7 @@ public class MessageService {
         .correct(singleChoiceQuestion.getCorrect())
         .build();
     } else if (flowNode instanceof EnterTextQuestion enterTextQuestion) {
-      return EnterTextMessage.builder()
+      return EnterTextQuestionMessage.builder()
         .id(UUID.randomUUID().toString())
         .chat(chat)
         .role(ChatRole.APP)
@@ -494,7 +504,7 @@ public class MessageService {
         .build();
     }
 
-    throw new RuntimeException("please add converting type of messages from the flow");
+    throw new RuntimeException("Please add converting type of messages from the flow");
   }
 
   @NotNull

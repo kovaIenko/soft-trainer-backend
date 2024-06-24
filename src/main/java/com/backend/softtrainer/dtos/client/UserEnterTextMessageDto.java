@@ -1,5 +1,6 @@
 package com.backend.softtrainer.dtos.client;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -10,4 +11,8 @@ import lombok.experimental.SuperBuilder;
 public class UserEnterTextMessageDto extends UserMessageDto {
 
   private String content;
+
+  @JsonProperty("is_voted")
+  private boolean isVoted;
+
 }

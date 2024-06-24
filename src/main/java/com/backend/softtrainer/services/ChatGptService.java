@@ -3,7 +3,7 @@ package com.backend.softtrainer.services;
 import com.backend.softtrainer.dtos.ChatDto;
 import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.entities.messages.ContentMessage;
-import com.backend.softtrainer.entities.messages.EnterTextMessage;
+import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
@@ -28,7 +28,7 @@ public interface ChatGptService {
                                                        final String userName, final String skillName);
 
   default void convert(StringBuilder chatHistory, final Message message) {
-    if (message instanceof EnterTextMessage msg) {
+    if (message instanceof EnterTextAnswerMessage msg) {
       chatHistory.append(msg.getCharacter().getName()).append(" : ").append(msg.getContent());
     } else if (message instanceof TextMessage msg) {
       chatHistory.append(getCharacterName(msg)).append(" : ").append(msg.getContent());
