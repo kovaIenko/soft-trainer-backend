@@ -9,6 +9,7 @@ import com.backend.softtrainer.dtos.client.UserMultiChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
+import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
@@ -25,6 +26,7 @@ import com.backend.softtrainer.entities.messages.TextMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -104,6 +106,16 @@ public class UserMessageService {
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .isVoted(true)
         .build();
+    } else if (question instanceof LastSimulationMessage lastSimulationMessage
+      && answer instanceof LastSimulationMessage lastSimulationMessage1) {
+      var usersResultMessage = lastSimulationMessage.getRole()
+        .equals(ChatRole.USER) ? lastSimulationMessage : lastSimulationMessage1;
+      return UserEnterTextMessageDto.builder()
+        .content(usersResultMessage.getContent())
+        .timestamp(usersResultMessage.getTimestamp())
+        .messageType(MessageType.RESULT_SIMULATION)
+        .isVoted(true)
+        .build();
     }
     throw new NoSuchElementException("The incorrect pair of question and answer for chat " + question.getChat()
       .getId() + " Question " + question.getMessageType() + " id: " + question.getId() + " , answer " + answer.getMessageType() + " id: " + answer.getId());
@@ -164,7 +176,7 @@ public class UserMessageService {
       return UserContentMessageDto.builder()
         .timestamp(contentMessage.getTimestamp())
         .messageType(MessageType.CONTENT_QUESTION)
-        .url(contentMessage.getUrl())
+        .urls(Collections.singletonList(contentMessage.getContent()))
         .character(contentMessage.getCharacter())
         .build();
     } else if (message instanceof EnterTextQuestionMessage enterTextQuestionMessage) {

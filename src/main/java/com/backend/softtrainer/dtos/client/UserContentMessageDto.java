@@ -4,11 +4,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+import java.util.List;
+
 @Data
 @SuperBuilder
 @NoArgsConstructor
 public class UserContentMessageDto extends UserMessageDto {
 
-  private String url;
+  private List<String> urls;
 
 }

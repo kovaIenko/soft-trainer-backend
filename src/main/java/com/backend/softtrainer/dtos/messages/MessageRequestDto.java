@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
   @JsonSubTypes.Type(value = SingleChoiceAnswerMessageDto.class, name = "SingleChoiceQuestion"),
   @JsonSubTypes.Type(value = SingleChoiceTaskAnswerMessageDto.class, name = "SingleChoiceTask"),
   @JsonSubTypes.Type(value = MultiChoiceTaskAnswerMessageDto.class, name = "MultiChoiceQuestion"),
+  @JsonSubTypes.Type(value = LastSimulationMessageDto.class, name = "ResultSimulation"),
 })
 @Data
 @NoArgsConstructor

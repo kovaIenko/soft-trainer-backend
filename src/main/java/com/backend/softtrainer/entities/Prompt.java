@@ -27,4 +27,7 @@ public class Prompt {
   @Column(length = 5000)
   private String prompt;
 
+  @Column(name = "is_on")
+  private boolean isOn;
+
 }

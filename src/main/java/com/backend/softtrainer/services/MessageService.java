@@ -3,6 +3,7 @@ package com.backend.softtrainer.services;
 import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.dtos.UserHyperParamResponseDto;
 import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
+import com.backend.softtrainer.dtos.messages.LastSimulationMessageDto;
 import com.backend.softtrainer.dtos.messages.MessageRequestDto;
 import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
@@ -12,12 +13,14 @@ import com.backend.softtrainer.entities.Prompt;
 import com.backend.softtrainer.entities.PromptName;
 import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.enums.MessageType;
+import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
 import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
 import com.backend.softtrainer.entities.flow.SingleChoiceTask;
 import com.backend.softtrainer.entities.flow.Text;
+import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
 import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
 import com.backend.softtrainer.entities.messages.LastSimulationMessage;
@@ -52,7 +55,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -73,17 +75,19 @@ public class MessageService {
 
   private final PromptService promptService;
 
+  private final UserDataExtractor userDataExtractor;
+
   private final InterpreterMessageMapper interpreterMessageMapper = new InterpreterMessageMapper();
 
   private void verifyWhetherQuestionIsAlreadyAnswered(final List<Message> actionableMessages) throws
                                                                                               SendMessageConditionException {
-    if (actionableMessages.isEmpty()) {
-      throw new SendMessageConditionException("No messages should be answered");
-    }
+//    if (actionableMessages.isEmpty()) {
+//      throw new SendMessageConditionException("No messages should be answered");
+//    }
     //all questions are answered
-    if (actionableMessages.size() % 2 == 0) {
-      throw new SendMessageConditionException("All questions have been already answered");
-    }
+//    if (actionableMessages.size() % 2 == 0) {
+//      throw new SendMessageConditionException("All questions have been already answered");
+//    }
   }
 
   public CompletableFuture<List<Message>> buildResponse(final MessageRequestDto messageRequestDto) throws
@@ -160,11 +164,6 @@ public class MessageService {
       return figureOutNextMessages(chat, flowNode.getOrderNumber(), flowNode.getSimulation().getId());
 
     } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
-//      var originEnterMessage = (EnterTextMessage) messageRepository.findAppQuestionUserMessagesByOrderNumber(
-//          chat.getId(),
-//          flowNode.getOrderNumber()
-//        )
-//        .orElseThrow(() -> new NoSuchElementException("There is no question enter text message for the order number: " + flowNode.getOrderNumber()));
       message = EnterTextAnswerMessage.builder()
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .role(ChatRole.USER)
@@ -175,16 +174,33 @@ public class MessageService {
         .content(enterTextAnswerMessageDto.getAnswer())
         .build();
 
-//      originEnterMessage.setRole(ChatRole.USER);
-//      originEnterMessage.setContent(enterTextAnswerMessageDto.getAnswer());
-
       messageRepository.save(message);
       //chat gpt
       if (flowNode.getSimulation().getName().equals("Onboarding")) {
         return figureOutNextMessages(chat, flowNode.getOrderNumber(), flowNode.getSimulation().getId());
       }
-      //todo test it
-      return chatGptResponse(message);
+
+      return CompletableFuture.completedFuture(null);
+    } else if (messageRequestDto instanceof LastSimulationMessageDto lastSimulationMessageDto) {
+      var messageWithAiResultsOpt = messageRepository.findMessageByChatIdAndMessageTypeAndRole(
+        chat.getId(),
+        MessageType.RESULT_SIMULATION,
+        ChatRole.USER
+      );
+
+      if (messageWithAiResultsOpt.isPresent()) {
+        var messageWithAiResults = (LastSimulationMessage) messageWithAiResultsOpt.get();
+        log.info("Last Message of simulation {}", messageWithAiResults);
+        return CompletableFuture.completedFuture(List.of(messageWithAiResults));
+      } else {
+        log.info("Weren't able to generate last message from the ai");
+        var mockedQuestionMessage = messageRepository.findMessageByChatIdAndMessageTypeAndRole(
+          chat.getId(),
+          MessageType.RESULT_SIMULATION,
+          ChatRole.APP
+        );
+        return CompletableFuture.completedFuture(List.of(mockedQuestionMessage.get()));
+      }
     } else {
       throw new SendMessageConditionException(
         "Send message has incorrect message type. It should be one of the actionable message type");
@@ -247,85 +263,181 @@ public class MessageService {
     return CompletableFuture.completedFuture(messages);
   }
 
+//  private Optional<LastSimulationMessage> buildLastMessage(final boolean isOnboarding, final Chat chat) {
+//    try {
+//
+//      //todo hardcoding
+//      var title = isOnboarding ? "Вперед до змін!" : "Твій результат";
+//      var params = userHyperParameterService.findAllByChatId(chat.getId())
+//        .stream()
+//        .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
+//        .toList();
+//
+//      var updatedChat = chatRepository.findByIdWithMessages(chat.getId());
+//
+//      Prompt simulationRecommendationPrompt =
+//        promptRepository.findFirstByNameOrderByIdDesc(PromptName.SIMULATION_SUMMARY)
+//          .orElseThrow();
+//
+//      Optional<MessageDto> aiRecommendation = isOnboarding ? Optional.of(new MessageDto(
+//        "Раді познайомитися. Го відточувати реальні навички комунікації!"))
+//        : simulationRecommendationPrompt.isOn() ? generateAiSummary(
+//        updatedChat,
+//        params,
+//        simulationRecommendationPrompt
+//      ) : Optional.empty();
+//
+//      String content = aiRecommendation.map(MessageDto::content)
+//        .orElse("Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills");
+//
+//      var simulationResultMessage = LastSimulationMessage.builder()
+//        .role(ChatRole.APP)
+//        .id(UUID.randomUUID().toString())
+//        .messageType(MessageType.RESULT_SIMULATION)
+//        .chat(chat)
+//        .hyperParams(params)
+//        .title(title)
+//        .content(content)
+////        .prompt(aiRecommendation.isEmpty() || isOnboarding ? null : simulationRecommendationPrompt)
+//        .build();
+//
+//      var temp = messageRepository.save(simulationResultMessage);
+//
+//      simulationResultMessage.setTimestamp(temp.getTimestamp());
+//      return Optional.of(simulationResultMessage);
+//    } catch (Exception e) {
+//      log.error("Error while building last message['", e);
+//      return Optional.empty();
+//    }
+//  }
+
   private Optional<LastSimulationMessage> buildLastMessage(final boolean isOnboarding, final Chat chat) {
     try {
-//      var nextSimulationId = skillService.findSimulationsBySkill(chat.getUser(), flowNode.getSimulation().getSkill().getId())
-//        .stream().filter(SimulationAvailabilityStatusDto::available)
-//        .map(SimulationAvailabilityStatusDto::id)
-//        .filter(id -> !id.equals(flowNode.getSimulation().getId()))
-//        .findFirst();
-
-      //todo hardcoding
       var title = isOnboarding ? "Вперед до змін!" : "Твій результат";
       var params = userHyperParameterService.findAllByChatId(chat.getId())
         .stream()
         .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
         .toList();
 
-      var updatedChat = chatRepository.findByIdWithMessages(chat.getId());
+      if (isOnboarding) {
+        var client = createLastSimulationMessage(
+          chat,
+          params,
+          title,
+          "Раді познайомитися. Го відточувати реальні навички комунікації!",
+          ChatRole.APP
+        );
 
-      Supplier<Prompt> simulationRecommendationPrompt =
-        () -> promptRepository.findFirstByNameOrderByIdDesc(PromptName.SIMULATION_SUMMARY)
+        createLastSimulationMessage(
+          chat,
+          params,
+          title,
+          "Раді познайомитися. Го відточувати реальні навички комунікації!",
+          ChatRole.USER
+        );
+        return client;
+      }
+
+      var updatedChat = chatRepository.findByIdWithMessages(chat.getId()).orElseThrow();
+
+
+
+      Prompt simulationRecommendationPrompt =
+        promptRepository.findFirstByNameOrderByIdDesc(PromptName.SIMULATION_SUMMARY)
           .orElseThrow();
 
-      Optional<MessageDto> aiRecommendation = isOnboarding ? Optional.of(new MessageDto(
-        "Раді познайомитися. Го відточувати реальні навички комунікації!"))
-        : Optional.empty();
-      //generateAiSummary(updatedChat, params, simulationRecommendationPrompt);
+      if (simulationRecommendationPrompt.isOn()) {
+        generateAiSummaryAsync(updatedChat, params, simulationRecommendationPrompt)
+          .thenAccept(aiRecommendation -> {
+            log.info("The content we got from ai is {}", aiRecommendation.map(MessageDto::content));
+            String content = aiRecommendation.map(MessageDto::content)
+              .orElse("Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills");
 
-      String content = aiRecommendation.map(MessageDto::content)
-        .orElse("Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills");
+            var simulationResultMessage = createLastSimulationMessage(chat, params, title, content, ChatRole.USER).orElseThrow();
+            messageRepository.save(simulationResultMessage);
+          });
+      } else {
+        createLastSimulationMessage(
+          chat,
+          params,
+          title,
+          "Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills",
+          ChatRole.USER
+        );
+      }
 
-      var simulationResultMessage = LastSimulationMessage.builder()
-        .role(ChatRole.APP)
-        .id(UUID.randomUUID().toString())
-        .messageType(MessageType.RESULT_SIMULATION)
-        .chat(chat)
-//                           .timestamp(LocalDateTime.now())
-        .hyperParams(params)
-        .title(title)
-        //      .nextSimulationId(nextSimulationId.orElse(null))
-        .content(content)
-        .prompt(aiRecommendation.isEmpty() || isOnboarding ? null : simulationRecommendationPrompt.get())
-        .build();
-
-      var temp = messageRepository.save(simulationResultMessage);
-
-      simulationResultMessage.setTimestamp(temp.getTimestamp());
-      return Optional.of(simulationResultMessage);
+      return createLastSimulationMessage(
+        chat,
+        params,
+        title,
+        "Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills",
+        ChatRole.APP
+      );
     } catch (Exception e) {
-      log.error("Error while building last message['", e);
+      log.error("Error while building last message", e);
       return Optional.empty();
     }
   }
 
-  private Optional<MessageDto> generateAiSummary(final Optional<Chat> updatedChat,
-                                                 final List<UserHyperParamResponseDto> params,
-                                                 final Supplier<Prompt> simulationSummaryPrompt) {
-    try {
-      if (updatedChat.isPresent()) {
+  private Optional<LastSimulationMessage> createLastSimulationMessage(Chat chat,
+                                                                      List<UserHyperParamResponseDto> params,
+                                                                      String title,
+                                                                      String content,
+                                                                      final ChatRole role) {
+    var simulationResultMessage = LastSimulationMessage.builder()
+      .role(role)
+      .id(UUID.randomUUID().toString())
+      .messageType(MessageType.RESULT_SIMULATION)
+      .chat(chat)
+      .hyperParams(params)
+      .title(title)
+      .content(content)
+      .build();
 
-        var userName = updatedChat.get().getUser().getUsername();
-        var summary = chatGptService.buildSimulationSummary(
-          Converter.convert(updatedChat.get()),
-          simulationSummaryPrompt.get().getPrompt(),
-          params.stream().collect(Collectors.toMap(
-            UserHyperParamResponseDto::key,
-            UserHyperParamResponseDto::value
-          )),
-          userName,
-          updatedChat.get().getSkill().getName()
-        ).get();
+    var temp = messageRepository.save(simulationResultMessage);
+    simulationResultMessage.setTimestamp(temp.getTimestamp());
+    return Optional.of(simulationResultMessage);
+  }
 
-        //promptService.validateSimulationSummary(summary.content(), userName);
-        return Optional.ofNullable(summary);
+  public CompletableFuture<Optional<MessageDto>> generateAiSummaryAsync(
+    Chat updatedChat,
+    List<UserHyperParamResponseDto> params,
+    Prompt simulationRecommendationPrompt) {
+
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        return generateAiSummary(updatedChat, params, simulationRecommendationPrompt);
+      } catch (Exception e) {
+        log.error("Error while generating AI summary", e);
+        return Optional.empty();
       }
-      return Optional.empty();
+    });
+  }
+
+  private Optional<MessageDto> generateAiSummary(final Chat updatedChat,
+                                                 final List<UserHyperParamResponseDto> params,
+                                                 final Prompt simulationSummaryPrompt) {
+    try {
+
+      var onboardingExtraction = userDataExtractor.getUserOnboardingData(updatedChat.getUser());
+      var summary = chatGptService.buildAfterwardSimulationRecommendation(
+        Converter.convert(updatedChat),
+        simulationSummaryPrompt.getPrompt(),
+        params.stream().collect(Collectors.toMap(
+          UserHyperParamResponseDto::key,
+          UserHyperParamResponseDto::value
+        )),
+        updatedChat.getSkill().getName(),
+        onboardingExtraction
+      ).get();
+      log.error("everything is fine {} ", summary.content());
+      //promptService.validateSimulationSummary(summary.content(), userName);
+      return Optional.ofNullable(summary);
+
     } catch (Exception e) {
       log.error("Error while generating AI summary", e);
       return Optional.empty();
     }
-
   }
 
   private Optional<FlowNode> getNextFlowNode(
@@ -454,6 +566,17 @@ public class MessageService {
         .role(ChatRole.APP)
         // .timestamp(LocalDateTime.now())
         .content(text.getText())
+        .build();
+    } else if (flowNode instanceof ContentQuestion contentQuestion) {
+      return ContentMessage.builder()
+        .id(UUID.randomUUID().toString())
+        .chat(chat)
+        .messageType(MessageType.CONTENT_QUESTION)
+        .flowNode(flowNode)
+        .character(flowNode.getCharacter())
+        .role(ChatRole.APP)
+        // .timestamp(LocalDateTime.now())
+        .content(contentQuestion.getUrl())
         .build();
     } else if (flowNode instanceof SingleChoiceQuestion singleChoiceQuestion) {
       return SingleChoiceQuestionMessage.builder()
