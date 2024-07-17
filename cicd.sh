@@ -1,4 +1,4 @@
-
+#!/bin/bash
 
 source .env
 
@@ -7,4 +7,3 @@ source scripts/build.sh
 
 echo "--- Deploying ---"
 source scripts/deploy.sh
-```
