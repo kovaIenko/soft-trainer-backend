@@ -25,7 +25,7 @@ resource "aws_lb" "backend" {
   name               = "st"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.ec2_sg.id]
+  security_groups    = [aws_security_group.lb_sg.id]
   subnets            = [for subnet_id in data.aws_subnets.default.ids : subnet_id]
 }
 
@@ -50,11 +50,35 @@ resource "aws_lb_listener" "backend" {
 }
 
 resource "aws_security_group" "ec2_sg" {
-  name        = "allow-ssh-web"
-  description = "Allow access to SSH and WEB"
+  name        = "allow-ssh-app"
+  description = "Allow access to SSH and app 8443"
   vpc_id      = data.aws_vpcs.default.ids[0]
   dynamic "ingress" {
-    for_each = [80, 8080, 443, 22]
+    for_each = [8443, 22]
+    iterator = port
+    content {
+      description = "TLS from VPC"
+      from_port   = port.value
+      to_port     = port.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+resource "aws_security_group" "lb_sg" {
+  name        = "allow-web"
+  description = "Allow access to WEB"
+  vpc_id      = data.aws_vpcs.default.ids[0]
+  dynamic "ingress" {
+    for_each = [80, 8080, 443]
     iterator = port
     content {
       description = "TLS from VPC"
