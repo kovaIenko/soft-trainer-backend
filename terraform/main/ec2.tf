@@ -14,6 +14,13 @@ resource "aws_instance" "backend" {
     volume_size = 20
   }
 
+  user_data_replace_on_change = false
+#   user_data = <<EOF
+# #!/bin/bash
+# yum update
+# yum install docker
+# EOF
+
   tags = {
     Name = var.project
   }
