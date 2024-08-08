@@ -2,8 +2,8 @@ package com.backend.softtrainer.entities.messages;
 
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.Chat;
-import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.enums.ChatRole;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -16,6 +16,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -62,5 +63,11 @@ public class Message {
   @ManyToOne
   @JsonProperty("author")
   private Character character;
+
+  private boolean interacted;
+
+  @JsonIgnore
+  @Version
+  private Integer version;
 
 }

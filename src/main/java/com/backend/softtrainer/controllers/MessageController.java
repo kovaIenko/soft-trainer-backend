@@ -3,7 +3,7 @@ package com.backend.softtrainer.controllers;
 import com.backend.softtrainer.dtos.ChatResponseDto;
 import com.backend.softtrainer.dtos.messages.MessageRequestDto;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
-import com.backend.softtrainer.services.MessageService;
+import com.backend.softtrainer.services.InputMessageService;
 import com.backend.softtrainer.services.UserMessageService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class MessageController {
 
-  private final MessageService messageService;
+  private final InputMessageService inputMessageService;
 
   private final UserMessageService userMessageService;
 
@@ -31,7 +31,7 @@ public class MessageController {
   @PreAuthorize("@customUsrDetailsService.isChatOfUser(authentication, #messageRequestDto?.chatId)")
   public CompletableFuture<ResponseEntity<ChatResponseDto>> create(@RequestBody MessageRequestDto messageRequestDto) {
     try {
-      return messageService.buildResponse(messageRequestDto)
+      return inputMessageService.buildResponse(messageRequestDto)
         .thenApply(messages -> ResponseEntity.ok(new ChatResponseDto(
           messageRequestDto.getChatId(),
           null,

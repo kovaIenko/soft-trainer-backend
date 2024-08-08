@@ -6,6 +6,7 @@ import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Data
 public class UserMessageDto {
+
+  private String id;
+
+  @Column(name = "id_temp")
+  private String idTemp;
 
   @JsonProperty("timestamp")
   @JsonIgnore

@@ -22,7 +22,10 @@ public class UserLastSimulationMessage extends UserMessageDto {
   @JsonProperty("achieved_scores")
   private List<UserHyperParamResponseDto> hyperParams;
 
+  @Deprecated
   private String description;
+
+  private String content;
 
   private String title;
 

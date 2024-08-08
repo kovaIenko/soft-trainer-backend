@@ -10,6 +10,7 @@ import com.backend.softtrainer.dtos.auth.SignupRequestDto;
 import com.backend.softtrainer.entities.ContactInfo;
 import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
 import com.backend.softtrainer.repositories.ContactInfoRepository;
+import com.backend.softtrainer.services.UserDataExtractor;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import com.backend.softtrainer.services.auth.TokenService;
@@ -36,6 +37,7 @@ public class HomeController {
   private final AuthenticationManager authManager;
   private final CustomUsrDetailsService usrDetailsService;
   private final ContactInfoRepository contactInfoRepository;
+  private final UserDataExtractor userDataExtractor;
 
   @GetMapping("/health")
   //@PreAuthorize("hasAnyRole('ROLE_OWNER')")
@@ -59,12 +61,15 @@ public class HomeController {
     String access_token = tokenService.generateAccessToken(user);
     String refresh_token = tokenService.generateRefreshToken(user);
 
+    var isOnboarded = userDataExtractor.getFirstChatOfOnboarding(user.user()).isPresent();
     return ResponseEntity.ok(new LoginResponse(
       "User with email = " + request.email() + " successfully logined!",
       access_token,
       refresh_token,
       true,
-      "success"
+      "success",
+      user.user().getId(),
+      isOnboarded
     ));
   }
 

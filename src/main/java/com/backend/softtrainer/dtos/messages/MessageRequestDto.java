@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 
 import java.time.LocalDateTime;
 
@@ -16,10 +17,14 @@ import java.time.LocalDateTime;
   @JsonSubTypes.Type(value = SingleChoiceTaskAnswerMessageDto.class, name = "SingleChoiceTask"),
   @JsonSubTypes.Type(value = MultiChoiceTaskAnswerMessageDto.class, name = "MultiChoiceQuestion"),
   @JsonSubTypes.Type(value = LastSimulationMessageDto.class, name = "ResultSimulation"),
+  @JsonSubTypes.Type(value = HintMessageDto.class, name = "HintMessage")
 })
 @Data
 @NoArgsConstructor
 public class MessageRequestDto {
+
+  @NonNull
+  private String id;
 
   @JsonProperty("owner_id")
   private Long ownerId;

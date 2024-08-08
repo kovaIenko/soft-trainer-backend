@@ -20,5 +20,7 @@ public class UserSingleChoiceMessageDto extends UserMessageDto {
 
   private List<MessageAnswerOptionDto> options;
 
+  private String content;
+
 
 }

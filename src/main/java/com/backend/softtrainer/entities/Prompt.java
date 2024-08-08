@@ -30,4 +30,7 @@ public class Prompt {
   @Column(name = "is_on")
   private boolean isOn;
 
+  @Column(name = "assistant_id")
+  private String assistantId;
+
 }

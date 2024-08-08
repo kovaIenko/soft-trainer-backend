@@ -2,9 +2,13 @@ package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.ChatDto;
 import com.backend.softtrainer.dtos.MessageDto;
+import com.backend.softtrainer.entities.Prompt;
+import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
 import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
+import com.backend.softtrainer.entities.messages.HintMessage;
+import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
@@ -31,11 +35,19 @@ public interface ChatGptService {
                                                        final String onboardingExtraction);
 
   CompletableFuture<MessageDto> buildAfterwardSimulationRecommendation(final ChatDto chat,
-                                                                       final String promptTemplate,
+                                                                       final Prompt prompt,
                                                                        final Map<String, Double> params,
                                                                        final String skillName,
                                                                        final String onboardingExtraction) throws
                                                                                                           InterruptedException;
+
+  CompletableFuture<MessageDto> buildAfterwardActionableHintMessage(final ChatDto chat,
+                                                                    final List<Message> actionableMessages,
+                                                                    final Prompt prompt,
+                                                                    final Map<String, Double> params,
+                                                                    final String skillName,
+                                                                    final String onboardingExtraction) throws
+                                                                                                       InterruptedException;
 
   static void convert(StringBuilder chatHistory, final Message message) {
     if (message instanceof EnterTextAnswerMessage msg) {
@@ -45,23 +57,29 @@ public interface ChatGptService {
     } else if (message instanceof TextMessage msg) {
       chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(msg.getContent()).append("\n");
     } else if (message instanceof SingleChoiceQuestionMessage msg) {
-      var options = "Options are : " + msg.getOptions();
-      //chatHistory.append(" ").append(getCharacterName(msg)).append(": ").append(options);
+      var options = "Options are: " + msg.getOptions() + " and correct (indexes): " + msg.getCorrect();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options);
     } else if (message instanceof SingleChoiceAnswerMessage msg) {
-      var options = "Answers are: " + msg.getAnswer();
-      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(msg.getAnswer()).append("\n");
+      var options = "Answer is: " + msg.getAnswer();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options).append("\n");
     } else if (message instanceof SingleChoiceTaskQuestionMessage msg) {
-      var options = "Options are: " + msg.getOptions();
-      //chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options);
+      var options = "Options are: " + msg.getOptions() + " and correct (indexes): " + msg.getCorrect();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options);
     } else if (message instanceof SingleChoiceTaskAnswerMessage msg) {
-      var options = "Answers are: " + msg.getAnswer();
-      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(msg.getAnswer()).append("\n");
+      var options = "Answer is: " + msg.getAnswer();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options).append("\n");
     } else if (message instanceof MultiChoiceTaskQuestionMessage msg) {
-      var options = "Options are: " + msg.getOptions();
-      //chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options);
+      var options = "Options are: " + msg.getOptions() + " and correct (indexes): " + msg.getCorrect();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options);
     } else if (message instanceof MultiChoiceTaskAnswerMessage msg) {
-      var options = "Answers are: " + msg.getAnswer();
-      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(msg.getAnswer()).append("\n");
+      var options = "Answer is: " + msg.getAnswer();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options).append("\n");
+    } else if (message instanceof HintMessage msg) {
+      var options = "Підказка: " + msg.getContent();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options).append("\n");
+    } else if (message instanceof LastSimulationMessage msg) {
+      var options = "Результат: " + msg.getContent();
+      chatHistory.append(" - ").append(getCharacterName(msg)).append(": ").append(options).append("\n");
     } else if (message instanceof ContentMessage msg) {
       var img = new ChatMessage.UserMessage.UserMessageWithContentParts.ContentPart.ImageContentPart.ImageUrl(
         msg.getContent(),
@@ -81,6 +99,8 @@ public interface ChatGptService {
 
   static String getCharacterName(Message message) {
     if (Objects.isNull(message.getCharacter())) {
+      return "User";
+    } else if (message.getRole().equals(ChatRole.USER)) {
       return "User";
     } else {
       return message.getCharacter().getName();

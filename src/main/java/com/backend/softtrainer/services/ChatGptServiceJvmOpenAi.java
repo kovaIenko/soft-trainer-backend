@@ -2,6 +2,8 @@ package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.ChatDto;
 import com.backend.softtrainer.dtos.MessageDto;
+import com.backend.softtrainer.entities.Prompt;
+import com.backend.softtrainer.entities.messages.Message;
 import io.github.stefanbratanov.jvm.openai.Assistant;
 import io.github.stefanbratanov.jvm.openai.AssistantsClient;
 import io.github.stefanbratanov.jvm.openai.ChatClient;
@@ -141,8 +143,9 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
   }
 
 
+  @Override
   public CompletableFuture<MessageDto> buildAfterwardSimulationRecommendation(final ChatDto chat,
-                                                                              final String promptTemplate,
+                                                                              final Prompt prompt,
                                                                               final Map<String, Double> params,
                                                                               final String skillName,
                                                                               final String onboardingExtraction) throws
@@ -155,25 +158,26 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
       })
       .collect(Collectors.joining(" \n "));
 
-    System.out.println("user params: " + userParams);
+    log.info("user params: \n {}", userParams);
 
     var chatHistory = new StringBuilder();
     chat.messages().forEach(message -> ChatGptService.convert(chatHistory, message));
-    System.out.println("chat history: " + chatHistory);
+    log.info("chat history  \n {}", chatHistory);
 
     var promptMessage = String.format(
-      promptTemplate,
+      prompt.getPrompt(),
       onboardingExtraction,
       chatHistory
     );
 
-    System.out.println("The prompt with the populated values looks like " + promptMessage);
+    log.info("The prompt with the populated values looks like: \n {}", promptMessage);
 
     log.info("Start of requesting LLM date {}", LocalDateTime.now());
     CreateThreadRequest createThreadRequest = CreateThreadRequest.newBuilder().build();
     var thread = threadsClient.createThread(createThreadRequest);
 
-    Assistant assistant = assistantsClient.retrieveAssistant("asst_vVoj4x1xjspaQlmxrw7IbLIE");
+    //"asst_vVoj4x1xjspaQlmxrw7IbLIE"
+    Assistant assistant = assistantsClient.retrieveAssistant(prompt.getAssistantId());
 
     CreateRunRequest createRunRequest = CreateRunRequest.newBuilder()
       .assistantId(assistant.id())
@@ -185,7 +189,76 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
     ThreadRun retrievedRun = runsClient.retrieveRun(thread.id(), run.id());
     String status = retrievedRun.status();
     System.out.println("status: " + status);
-    Thread.sleep(5000);
+    Thread.sleep(3000);
+    MessagesClient.PaginatedThreadMessages paginatedMessages = messagesClient.listMessages(
+      thread.id(),
+      PaginationQueryParameters.none()
+    );
+    List<ThreadMessage> messagesResponse = paginatedMessages.data();
+
+    if (messagesResponse.isEmpty()) {
+      log.info("End of requesting LLM date {}", LocalDateTime.now());
+      log.info("we still waiting for the response");
+      return CompletableFuture.completedFuture(new MessageDto(""));
+    } else {
+
+      log.info("End of requesting LLM date {}", LocalDateTime.now());
+      var content = messagesResponse.get(0)
+        .content()
+        .stream()
+        .map(cnt -> ((ThreadMessage.Content.TextContent) cnt).text().value())
+        .collect(Collectors.joining(" "));
+
+      return CompletableFuture.completedFuture(new MessageDto(content));
+    }
+  }
+
+  @Override
+  public CompletableFuture<MessageDto> buildAfterwardActionableHintMessage(final ChatDto chat,
+                                                                           final List<Message> actionableMessages,
+                                                                           final Prompt prompt,
+                                                                           final Map<String, Double> params,
+                                                                           final String skillName,
+                                                                           final String onboardingExtraction) throws
+                                                                                                              InterruptedException {
+
+
+    var lastActionableMessage = new StringBuilder();
+    if (actionableMessages.isEmpty()) {
+      log.info("No actionable messages found in the chat, since we convert chat history {}", chat.messages());
+      chat.messages().forEach(msg -> ChatGptService.convert(lastActionableMessage, msg));
+    } else {
+      log.info("Actionable messages found in the chat, since we convert actionable messages {}", actionableMessages);
+      actionableMessages.subList(0, 2).forEach(msg -> ChatGptService.convert(lastActionableMessage, msg));
+    }
+    log.info("chat {}", lastActionableMessage);
+
+    var promptMessage = String.format(
+      prompt.getPrompt(),
+      onboardingExtraction,
+      lastActionableMessage
+    );
+
+    log.info("The prompt with the populated values looks like {}", promptMessage);
+
+    log.info("Start of requesting LLM date {}", LocalDateTime.now());
+
+    CreateThreadRequest createThreadRequest = CreateThreadRequest.newBuilder().build();
+    var thread = threadsClient.createThread(createThreadRequest);
+
+    Assistant assistant = assistantsClient.retrieveAssistant(prompt.getAssistantId());
+
+    CreateRunRequest createRunRequest = CreateRunRequest.newBuilder()
+      .assistantId(assistant.id())
+      .instructions(promptMessage)
+      .build();
+
+    ThreadRun run = runsClient.createRun(thread.id(), createRunRequest);
+
+    ThreadRun retrievedRun = runsClient.retrieveRun(thread.id(), run.id());
+    String status = retrievedRun.status();
+    System.out.println("status: " + status);
+    Thread.sleep(3000);
     MessagesClient.PaginatedThreadMessages paginatedMessages = messagesClient.listMessages(
       thread.id(),
       PaginationQueryParameters.none()
@@ -208,7 +281,6 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
       return CompletableFuture.completedFuture(new MessageDto(content));
 
     }
-
   }
 
 }

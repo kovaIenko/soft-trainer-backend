@@ -5,7 +5,9 @@ import com.backend.softtrainer.dtos.SimulationRequestDto;
 import com.backend.softtrainer.dtos.flow.ContentQuestionDto;
 import com.backend.softtrainer.dtos.flow.EnterTextQuestionDto;
 import com.backend.softtrainer.dtos.flow.FlowNodeDto;
+import com.backend.softtrainer.dtos.flow.HintMessageDto;
 import com.backend.softtrainer.dtos.flow.MultiChoiceTaskDto;
+import com.backend.softtrainer.dtos.flow.ResultSimulationDto;
 import com.backend.softtrainer.dtos.flow.SingleChoiceQuestionDto;
 import com.backend.softtrainer.dtos.flow.SingleChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.TextDto;
@@ -18,7 +20,9 @@ import com.backend.softtrainer.entities.enums.SimulationComplexity;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
+import com.backend.softtrainer.entities.flow.HintMessageNode;
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask;
+import com.backend.softtrainer.entities.flow.ResultSimulationNode;
 import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
 import com.backend.softtrainer.entities.flow.SingleChoiceTask;
 import com.backend.softtrainer.entities.flow.Text;
@@ -142,7 +146,7 @@ public class FlowService {
   }
 
   public boolean isLastNode(final FlowNode flowNode) {
-    return flowRepository.findAllBySimulationAndPreviousOrderNumber(flowNode.getSimulation().getId(), flowNode.getOrderNumber())
+    return flowRepository.findAllBySimulationIdAndPreviousOrderNumber(flowNode.getSimulation().getId(), flowNode.getOrderNumber())
       .isEmpty();
   }
 
@@ -160,7 +164,9 @@ public class FlowService {
       .map(prevOrderNumber -> convertFlow(flowRecordDto, prevOrderNumber, authorEntity, simulation));
   }
 
-  private FlowNode convertFlow(final FlowNodeDto flowRecordDto, final long previousMessageId, final Character authorEntity,
+  private FlowNode convertFlow(final FlowNodeDto flowRecordDto,
+                               final long previousMessageId,
+                               final Character authorEntity,
                                final Simulation simulation) {
 
     if (flowRecordDto instanceof ContentQuestionDto contentQuestionDto) {
@@ -226,8 +232,28 @@ public class FlowService {
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .simulation(simulation)
         .build();
+    } else if (flowRecordDto instanceof HintMessageDto hintMessageDto) {
+      return HintMessageNode.builder()
+        .orderNumber(flowRecordDto.getMessageId())
+        .showPredicate(flowRecordDto.getShowPredicate())
+        .character(authorEntity)
+        .prompt(hintMessageDto.getPrompt())
+        .previousOrderNumber(previousMessageId)
+        .messageType(MessageType.HINT_MESSAGE)
+        .simulation(simulation)
+        .build();
+    } else if (flowRecordDto instanceof ResultSimulationDto resultSimulationDto) {
+      return ResultSimulationNode.builder()
+        .orderNumber(flowRecordDto.getMessageId())
+        .showPredicate(flowRecordDto.getShowPredicate())
+        .character(authorEntity)
+        .prompt(resultSimulationDto.getPrompt())
+        .previousOrderNumber(previousMessageId)
+        .messageType(MessageType.RESULT_SIMULATION)
+        .simulation(simulation)
+        .build();
     }
-    throw new NoSuchElementException();
+    throw new NoSuchElementException("There is no such type of message type");
   }
 
   public List<FlowNode> getFirstFlowNodesUntilActionable(final Long simulationId) {
@@ -266,8 +292,8 @@ public class FlowService {
 //      .orElse(Collections.emptySet());
 //  }
 
-  public List<FlowNode> findAllByNameAndPreviousOrderNumber(final Long simulationId, final long previousOrderNumber) {
-    return flowRepository.findAllBySimulationAndPreviousOrderNumber(simulationId, previousOrderNumber);
+  public List<FlowNode> findAllBySimulationIdAndPreviousOrderNumber(final Long simulationId, final long previousOrderNumber) {
+    return flowRepository.findAllBySimulationIdAndPreviousOrderNumber(simulationId, previousOrderNumber);
   }
 
 }

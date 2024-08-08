@@ -16,9 +16,12 @@ public enum MessageType {
   SINGLE_CHOICE_TASK("SingleChoiceTask", true),
   MULTI_CHOICE_TASK("MultiChoiceQuestion", true),
   CONTENT_QUESTION("ContentQuestion", false),
+  IMAGES("Images", false),
   ENTER_TEXT_QUESTION("EnterTextQuestion", true),
 
   RESULT_SIMULATION("ResultSimulation", false),
+
+  HINT_MESSAGE("HintMessage", false),
 
   @Deprecated
   ENTER_TEXT_ANSWER("enterTextAnswer", false),

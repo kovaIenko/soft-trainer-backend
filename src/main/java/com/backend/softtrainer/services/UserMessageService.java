@@ -3,17 +3,18 @@ package com.backend.softtrainer.services;
 import com.backend.softtrainer.dtos.MessageAnswerOptionDto;
 import com.backend.softtrainer.dtos.client.UserContentMessageDto;
 import com.backend.softtrainer.dtos.client.UserEnterTextMessageDto;
+import com.backend.softtrainer.dtos.client.UserHintMessageDto;
 import com.backend.softtrainer.dtos.client.UserLastSimulationMessage;
 import com.backend.softtrainer.dtos.client.UserMessageDto;
 import com.backend.softtrainer.dtos.client.UserMultiChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
-import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
 import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
+import com.backend.softtrainer.entities.messages.HintMessage;
 import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
@@ -78,6 +79,8 @@ public class UserMessageService {
         .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), singleChoiceTaskAnswerMessage.getAnswer()))
         .timestamp(singleChoiceTaskAnswerMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .id(singleChoiceTaskAnswerMessage.getId())
+        .idTemp(singleChoiceTaskQuestionMessage.getId())
         .isVoted(true)
         .build();
     } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
@@ -86,7 +89,10 @@ public class UserMessageService {
         .answer(singleChoiceAnswerMessage.getAnswer())
         .options(convertOptions(singleChoiceQuestionMessage.getOptions(), singleChoiceAnswerMessage.getAnswer()))
         .timestamp(singleChoiceAnswerMessage.getTimestamp())
-        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .id(singleChoiceAnswerMessage.getId())
+        .idTemp(singleChoiceQuestionMessage.getId())
+        .content(singleChoiceAnswerMessage.getAnswer())
+        .messageType(MessageType.TEXT)
         .isVoted(true)
         .build();
     } else if (question instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage
@@ -96,24 +102,18 @@ public class UserMessageService {
         .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), multiChoiceTaskAnswerMessage.getAnswer()))
         .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
         .messageType(MessageType.MULTI_CHOICE_TASK)
+        .id(multiChoiceTaskAnswerMessage.getId())
+        .idTemp(multiChoiceTaskQuestionMessage.getId())
         .isVoted(true)
         .build();
     } else if (question instanceof EnterTextQuestionMessage enterQuestionTextMessage
       && answer instanceof EnterTextAnswerMessage enterAnswerTextMessage) {
       return UserEnterTextMessageDto.builder()
         .content(enterAnswerTextMessage.getContent())
+        .id(enterAnswerTextMessage.getId())
+        .idTemp(enterQuestionTextMessage.getId())
         .timestamp(enterAnswerTextMessage.getTimestamp())
-        .messageType(MessageType.ENTER_TEXT_QUESTION)
-        .isVoted(true)
-        .build();
-    } else if (question instanceof LastSimulationMessage lastSimulationMessage
-      && answer instanceof LastSimulationMessage lastSimulationMessage1) {
-      var usersResultMessage = lastSimulationMessage.getRole()
-        .equals(ChatRole.USER) ? lastSimulationMessage : lastSimulationMessage1;
-      return UserEnterTextMessageDto.builder()
-        .content(usersResultMessage.getContent())
-        .timestamp(usersResultMessage.getTimestamp())
-        .messageType(MessageType.RESULT_SIMULATION)
+        .messageType(MessageType.TEXT)
         .isVoted(true)
         .build();
     }
@@ -158,6 +158,7 @@ public class UserMessageService {
   public UserMessageDto convert(final Message message) {
     if (message instanceof TextMessage textMessage) {
       return UserTextMessageDto.builder()
+        .id(message.getId())
         .timestamp(textMessage.getTimestamp())
         .messageType(MessageType.TEXT)
         .content(textMessage.getContent())
@@ -167,15 +168,29 @@ public class UserMessageService {
       return UserLastSimulationMessage.builder()
         .timestamp(lastSimulationMessage.getTimestamp())
         .messageType(MessageType.RESULT_SIMULATION)
+        .id(message.getId())
 //        .nextSimulationId(lastSimulationMessage.getNextSimulationId())
         .hyperParams(lastSimulationMessage.getHyperParams())
         .description(lastSimulationMessage.getContent())
+        .character(lastSimulationMessage.getCharacter())
         .title(lastSimulationMessage.getTitle())
+        .build();
+    } else if (message instanceof HintMessage hintMessage) {
+      return UserHintMessageDto.builder()
+        .timestamp(hintMessage.getTimestamp())
+        .messageType(MessageType.HINT_MESSAGE)
+        .id(message.getId())
+        .character(hintMessage.getCharacter())
+//        .nextSimulationId(lastSimulationMessage.getNextSimulationId())
+        .content(hintMessage.getContent())
+        .description(hintMessage.getContent())
+        .title("Підказка")
         .build();
     } else if (message instanceof ContentMessage contentMessage) {
       return UserContentMessageDto.builder()
         .timestamp(contentMessage.getTimestamp())
-        .messageType(MessageType.CONTENT_QUESTION)
+        .messageType(MessageType.IMAGES)
+        .id(message.getId())
         .urls(Collections.singletonList(contentMessage.getContent()))
         .character(contentMessage.getCharacter())
         .build();
@@ -183,6 +198,7 @@ public class UserMessageService {
       return UserEnterTextMessageDto.builder()
         .timestamp(enterTextQuestionMessage.getTimestamp())
         .messageType(MessageType.ENTER_TEXT_QUESTION)
+        .id(message.getId())
         .character(enterTextQuestionMessage.getCharacter())
         .content(enterTextQuestionMessage.getContent())
         .build();
@@ -191,12 +207,14 @@ public class UserMessageService {
         .options(convertOptions(singleChoiceQuestionMessage.getOptions(), ""))
         .timestamp(singleChoiceQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .id(message.getId())
         .isVoted(false)
         .build();
     } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
       return UserSingleChoiceTaskMessageDto.builder()
         .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), ""))
         .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
+        .id(message.getId())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .isVoted(false)
         .build();
@@ -204,11 +222,12 @@ public class UserMessageService {
       return UserMultiChoiceTaskMessageDto.builder()
         .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), ""))
         .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
+        .id(message.getId())
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .isVoted(false)
         .build();
     }
-    throw new NoSuchElementException("The incorrect question type");
+    throw new NoSuchElementException("The incorrect question type " + message.getClass().getName());
   }
 
 }

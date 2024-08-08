@@ -9,7 +9,7 @@ import com.backend.softtrainer.repositories.SimulationRepository;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.FlowService;
-import com.backend.softtrainer.services.MessageService;
+import com.backend.softtrainer.services.InputMessageService;
 import com.backend.softtrainer.services.SkillService;
 import com.backend.softtrainer.services.UserMessageService;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
@@ -36,7 +36,7 @@ public class ChatController {
 
   private final FlowService flowService;
 
-  private final MessageService messageService;
+  private final InputMessageService inputMessageService;
 
   private final UserMessageService userMessageService;
 
@@ -61,7 +61,7 @@ public class ChatController {
     if (simulationOpt.isPresent()) {
       var simulation = simulationOpt.get();
 
-      if (userDetails.user().getRoles().stream().noneMatch(a -> a.getName().equals(StaticRole.ROLE_OWNER))) {
+      if (userDetails.user().getRoles().stream().noneMatch(a -> a.getName().equals(StaticRole.ROLE_USER))) {
         if (chatService.existsBy(userDetails.user(), chatRequestDto.getSimulationId())) {
           return ResponseEntity.ok(new ChatResponseDto(
             null,
@@ -81,7 +81,7 @@ public class ChatController {
       if (!flowTillActions.isEmpty()) {
         var createdChat = chatService.store(simulation, userDetails.user());
 
-        var messages = messageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
+        var messages = inputMessageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
         var combinedMessages = userMessageService.combineMessages(messages);
 
         //init default values to the hyper params for the user

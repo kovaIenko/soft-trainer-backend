@@ -15,6 +15,13 @@ import java.util.Optional;
 @Repository
 public interface MessageRepository extends JpaRepository<Message, String> {
 
+//  @QueryHints(value = {
+//    @QueryHint(name = "org.hibernate.cacheable", value = "false"),
+//    @QueryHint(name = "jakarta.persistence.cache.storeMode", value = CacheStoreMode.REFRESH.name())
+//  })
+//  @Override
+//  Optional<Message> findById(@Param("id") final String id);
+
   @Deprecated
   Optional<Message> getFirstByChatIdOrderByTimestampDesc(final Long chatId);
 
@@ -22,6 +29,11 @@ public interface MessageRepository extends JpaRepository<Message, String> {
     ":chatId ORDER BY m.timestamp DESC")
   List<Message> getActionableMessages(@Param("actionableMessageTypes") final List<String> actionableMessageTypes, @Param(
     "chatId") final Long chatId);
+
+//  @Override
+//  @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
+//  Message saveAndFlush(Message entity);
+
 
   @Deprecated
   @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.role = 'USER' and f.orderNumber = :orderNumber and m.chat.id" +
@@ -33,6 +45,13 @@ public interface MessageRepository extends JpaRepository<Message, String> {
     " = :chatId")
   Optional<Message> findQuestionUserMessagesByOrderNumber(@Param("chatId") final Long chatId,
                                                           @Param("orderNumber") final long orderNumber);
+
+//  @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
+  @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE f.orderNumber = :orderNumber and m.chat.id" +
+    " = :chatId")
+  List<Message> findMessagesByOrderNumber(@Param("chatId") final Long chatId,
+                                             @Param("orderNumber") final long orderNumber);
+
 
   @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.role = 'APP' and f.orderNumber = :orderNumber and m.chat.id " +
     "= :chatId")

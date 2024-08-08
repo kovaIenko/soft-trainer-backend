@@ -25,7 +25,6 @@ public class LastSimulationMessage extends Message {
 
   private String content;
 
-  @Transient
   private String title;
 
   @ManyToOne

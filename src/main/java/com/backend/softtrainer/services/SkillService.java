@@ -1,14 +1,12 @@
 package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
+import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Organization;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
-import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.repositories.ChatRepository;
-import com.backend.softtrainer.repositories.FlowRepository;
-import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
@@ -44,10 +42,6 @@ public class SkillService {
 
   private final ChatRepository chatRepository;
 
-  private final FlowRepository flowRepository;
-
-  private final MessageRepository messageRepository;
-
   public Set<Skill> getAvailableSkillByOrg(final String organization) {
 
     var optOrg = organizationRepository.getFirstByName(organization);
@@ -73,8 +67,7 @@ public class SkillService {
       var optOrg = Optional.ofNullable(userOpt.get().getOrganization());
       return getAvailableSkillsByOrgName(optOrg);
     } else {
-      var errorMessage = String.format("The user %s doesn't exist", username);
-      log.error(errorMessage);
+      log.error("The user {} doesn't exist", username);
       return new HashSet<>();
     }
   }
@@ -86,7 +79,7 @@ public class SkillService {
   public Set<SimulationAvailabilityStatusDto> findSimulationsBySkill(final User user, final Long skillId) {
     var optSkill = skillRepository.findById(skillId);
     if (optSkill.isPresent()) {
-      System.out.printf("Skill %s is present%n", skillId);
+      log.info("Skill {} is present ", skillId);
       var simulations = optSkill.get().getSimulations();
       var chats = chatRepository.findAllBySkillId(user, skillId);
       var chatBySimulationId = chats.stream().collect(Collectors.groupingBy(a -> a.getSimulation().getId()));
@@ -98,7 +91,12 @@ public class SkillService {
         .map(simulation -> {
           var chatsPerSimulation = chatBySimulationId.getOrDefault(simulation.getId(), List.of());
 
-          System.out.println("For simulation " + simulation.getId() + " with the order " + simulations.get(simulation) + " there are " + chatsPerSimulation.size() + " chats");
+          log.info(
+            "For simulation {} with the order {} there are {} chats",
+            simulation.getId(),
+            simulations.get(simulation),
+            chatsPerSimulation.size()
+          );
 
           if (chatsPerSimulation.isEmpty()) {
             if (isFirst.get()) {
@@ -112,32 +110,25 @@ public class SkillService {
           var atLeastOneCompleted = chatsPerSimulation.stream()
             .anyMatch(Chat::isFinished);
 
-          System.out.println("At least one completed chat: " + atLeastOneCompleted + " for simulation " + simulation.getId());
+          log.info(
+            "At least one completed chat: {} for simulation {}",
+            atLeastOneCompleted,
+            simulation.getId()
+          );
+
           if (atLeastOneCompleted) {
             return convertSimulation(simulation, true, true, simulations.get(simulation));
           } else {
             isFirst.set(false);
             return convertSimulation(simulation, true, false, simulations.get(simulation));
           }
-  //        return convertSimulation(simulation, true, false, simulations.get(simulation));
 
         })
         .sorted(Comparator.comparing(SimulationAvailabilityStatusDto::order))
-        .peek(simulation -> log.info(String.format("Simulation %s is available: %s", simulation.id(), simulation.available())))
+        .peek(simulation -> log.info("Simulation {} is available {}", simulation.id(), simulation.available()))
         .collect(Collectors.toCollection(LinkedHashSet::new));
     }
     throw new NoSuchElementException(String.format("There is no skills with id %s", skillId));
   }
-
-//  public boolean isSimulationAvailableForUser(final User user, final Simulation simulationInput) {
-//    return findSimulationsBySkill(
-//      user,
-//      simulationInput.getSkill()
-//        .getId()
-//    )
-//      .stream()
-//      .anyMatch(simulation -> simulation.id().equals(simulationInput.getId()) && simulation.available());
-//  }
-
 
 }
