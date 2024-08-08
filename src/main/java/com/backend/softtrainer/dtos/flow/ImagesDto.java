@@ -7,8 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Deprecated
-public class ContentQuestionDto extends FlowNodeDto {
+public class ImagesDto extends FlowNodeDto {
 
   private String url;
 

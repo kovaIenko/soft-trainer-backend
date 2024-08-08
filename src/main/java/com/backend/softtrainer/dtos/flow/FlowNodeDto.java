@@ -17,8 +17,8 @@ import java.util.List;
   @JsonSubTypes.Type(value = SingleChoiceQuestionDto.class, name = "SingleChoiceQuestion"),
   @JsonSubTypes.Type(value = SingleChoiceTaskDto.class, name = "SingleChoiceTask"),
   @JsonSubTypes.Type(value = MultiChoiceTaskDto.class, name = "MultiChoiceTask"),
-  @JsonSubTypes.Type(value = ContentQuestionDto.class, name = "Image"),
-  @JsonSubTypes.Type(value = ContentQuestionDto.class, name = "Video"),
+  @JsonSubTypes.Type(value = ImagesDto.class, name = "Image"),
+  @JsonSubTypes.Type(value = VideosDto.class, name = "Video"),
   @JsonSubTypes.Type(value = TextDto.class, name = "Text"),
   @JsonSubTypes.Type(value = HintMessageDto.class, name = "HintMessage"),
   @JsonSubTypes.Type(value = ResultSimulationDto.class, name = "ResultSimulation")

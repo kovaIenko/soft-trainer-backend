@@ -2,20 +2,21 @@ package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.CharacterDto;
 import com.backend.softtrainer.dtos.SimulationRequestDto;
-import com.backend.softtrainer.dtos.flow.ContentQuestionDto;
 import com.backend.softtrainer.dtos.flow.EnterTextQuestionDto;
 import com.backend.softtrainer.dtos.flow.FlowNodeDto;
 import com.backend.softtrainer.dtos.flow.HintMessageDto;
+import com.backend.softtrainer.dtos.flow.ImagesDto;
 import com.backend.softtrainer.dtos.flow.MultiChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.ResultSimulationDto;
 import com.backend.softtrainer.dtos.flow.SingleChoiceQuestionDto;
 import com.backend.softtrainer.dtos.flow.SingleChoiceTaskDto;
 import com.backend.softtrainer.dtos.flow.TextDto;
+import com.backend.softtrainer.dtos.flow.VideosDto;
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.HyperParameter;
 import com.backend.softtrainer.entities.Simulation;
-import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.Skill;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.enums.SimulationComplexity;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
@@ -150,7 +151,6 @@ public class FlowService {
       .isEmpty();
   }
 
-  //todo stupid violation of second SOLID
   private Stream<FlowNode> convert(final FlowNodeDto flowRecordDto,
                                    final Character authorEntity,
                                    final Simulation simulation) {
@@ -169,14 +169,25 @@ public class FlowService {
                                final Character authorEntity,
                                final Simulation simulation) {
 
-    if (flowRecordDto instanceof ContentQuestionDto contentQuestionDto) {
+    if (flowRecordDto instanceof ImagesDto imagesDto) {
       return ContentQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
-        .url(contentQuestionDto.getUrl())
+        .url(imagesDto.getUrl())
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
-        .messageType(MessageType.CONTENT_QUESTION)
+        .messageType(MessageType.IMAGES)
+        .simulation(simulation)
+        .build();
+    }
+    if (flowRecordDto instanceof VideosDto videosDto) {
+      return ContentQuestion.builder()
+        .orderNumber(flowRecordDto.getMessageId())
+        .showPredicate(flowRecordDto.getShowPredicate())
+        .url(videosDto.getUrl())
+        .character(authorEntity)
+        .previousOrderNumber(previousMessageId)
+        .messageType(MessageType.VIDEOS)
         .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof EnterTextQuestionDto enterTextQuestionDto) {
@@ -276,21 +287,6 @@ public class FlowService {
     }
     return result;
   }
-
-//  public Set<String> getAllSimulationNames() {
-//    return flowRepository.findAllNameFlows();
-//  }
-//
-//  public Set<String> getAllSimulationNames(final Long skillId) {
-//    //todo mailformed string input
-//    var optOrg = organizationRepository.getFirstByName(organization);
-//    return optOrg.map(value ->
-//                        value.get()
-//                          .stream()
-//                          .map(FlowNode::getName)
-//                          .collect(Collectors.toSet()))
-//      .orElse(Collections.emptySet());
-//  }
 
   public List<FlowNode> findAllBySimulationIdAndPreviousOrderNumber(final Long simulationId, final long previousOrderNumber) {
     return flowRepository.findAllBySimulationIdAndPreviousOrderNumber(simulationId, previousOrderNumber);

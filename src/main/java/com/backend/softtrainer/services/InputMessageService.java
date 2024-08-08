@@ -434,15 +434,7 @@ public class InputMessageService {
           alreadyStoredMessages.add(nextMessage);
           System.out.println("The orderNumber of current flowNode is " + nextFlowNode.getOrderNumber());
         } else {
-//          System.out.println("The orderNumber of current flowNode is " + nextFlowNode.getOrderNumber());
-
-//          log.info("Start building last message for the last simulation node id: {}", nextFlowNode.getId());
-//          var lastSimulationMessage = buildLastMessage(isOnboarding, chat);
-//          lastSimulationMessage.ifPresent(alreadyStoredMessages::add);
-//          lastSimulationMessage.ifPresent(msg -> log.info("Built message: {}", msg));
           chatRepository.updateIsFinished(chat.getId(), true);
-          log.info("The chat with id {} is finished", chat.getId());
-
           var t = chatRepository.findById(chat.getId());
           log.info("The chat with id {} is finished", t.get().isFinished());
           break;
@@ -510,7 +502,8 @@ public class InputMessageService {
       try {
         boolean isOnboarding = msg.getFlowNode().getSimulation().getName().equals("Onboarding");
 
-        var title = isOnboarding ? "Вперед до змін!" : "Твій результат";
+        var title = isOnboarding ? "Forward to changes!" : "Your result";
+
         var params = userHyperParameterService.findAllByChatId(chat.getId())
           .stream()
           .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
@@ -521,7 +514,7 @@ public class InputMessageService {
             msg,
             params,
             title,
-            "Раді познайомитися. Го відточувати реальні навички комунікації!",
+            "Nice to meet you. Let's go to hone real communication skills!",
             RESULT_SIMULATION_CACHE
           );
           return;
@@ -538,7 +531,7 @@ public class InputMessageService {
 
           log.info("The simulation recommendation we got from ai is {}", aiRecommendation.map(MessageDto::content));
           String content = aiRecommendation.map(MessageDto::content)
-            .orElse("Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills");
+            .orElse("Glad to see you're continuing to practice your soft-skills");
 
           messageService.updateResultSimulationMessage(
             msg,
@@ -558,7 +551,7 @@ public class InputMessageService {
             msg,
             params,
             title,
-            "Завжди є над чим працювати. Радий бачити, що ти продовжуєш тренувати свої soft-skills",
+            "Glad to see you're continuing to practice your soft-skills",
             RESULT_SIMULATION_CACHE
           );
         }
@@ -666,7 +659,7 @@ public class InputMessageService {
       return ContentMessage.builder()
         .id(UUID.randomUUID().toString())
         .chat(chat)
-        .messageType(MessageType.CONTENT_QUESTION)
+        .messageType(contentQuestion.getMessageType())
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .role(ChatRole.APP)

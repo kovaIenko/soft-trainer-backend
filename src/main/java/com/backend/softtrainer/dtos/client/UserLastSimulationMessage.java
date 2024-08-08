@@ -1,7 +1,6 @@
 package com.backend.softtrainer.dtos.client;
 
-import com.backend.softtrainer.dtos.UserHyperParamResponseDto;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.backend.softtrainer.dtos.innercontent.InnerContentMessage;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -15,18 +14,6 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class UserLastSimulationMessage extends UserMessageDto {
 
-  @Deprecated
-  @JsonProperty("next_simulation_id")
-  private Long nextSimulationId;
-
-  @JsonProperty("achieved_scores")
-  private List<UserHyperParamResponseDto> hyperParams;
-
-  @Deprecated
-  private String description;
-
-  private String content;
-
-  private String title;
+  private List<InnerContentMessage> contents;
 
 }

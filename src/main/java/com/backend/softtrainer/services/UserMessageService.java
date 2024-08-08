@@ -10,6 +10,10 @@ import com.backend.softtrainer.dtos.client.UserMultiChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
+import com.backend.softtrainer.dtos.innercontent.ChartInnerContent;
+import com.backend.softtrainer.dtos.innercontent.InnerContentMessage;
+import com.backend.softtrainer.dtos.innercontent.InnerContentMessageType;
+import com.backend.softtrainer.dtos.innercontent.TextInnerContent;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.ContentMessage;
 import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
@@ -27,6 +31,7 @@ import com.backend.softtrainer.entities.messages.TextMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -165,31 +170,56 @@ public class UserMessageService {
         .character(textMessage.getCharacter())
         .build();
     } else if (message instanceof LastSimulationMessage lastSimulationMessage) {
+
+      var contents = new ArrayList<InnerContentMessage>();
+
+      if (Objects.nonNull(lastSimulationMessage.getHyperParams()) && !lastSimulationMessage.getHyperParams().isEmpty()) {
+        var chartContent = ChartInnerContent.builder()
+          .type(InnerContentMessageType.CHART)
+          .values(lastSimulationMessage.getHyperParams())
+          .build();
+
+        contents.add(chartContent);
+      }
+
+      if (Objects.nonNull(lastSimulationMessage.getContent()) && !lastSimulationMessage.getContent().isEmpty()) {
+        var textContent = TextInnerContent.builder()
+          .type(InnerContentMessageType.TEXT)
+          .description(lastSimulationMessage.getContent())
+          .build();
+        contents.add(textContent);
+      }
+
       return UserLastSimulationMessage.builder()
         .timestamp(lastSimulationMessage.getTimestamp())
         .messageType(MessageType.RESULT_SIMULATION)
         .id(message.getId())
-//        .nextSimulationId(lastSimulationMessage.getNextSimulationId())
-        .hyperParams(lastSimulationMessage.getHyperParams())
-        .description(lastSimulationMessage.getContent())
         .character(lastSimulationMessage.getCharacter())
-        .title(lastSimulationMessage.getTitle())
+        .contents(contents)
         .build();
     } else if (message instanceof HintMessage hintMessage) {
+
+      var contents = new ArrayList<InnerContentMessage>();
+
+      if (Objects.nonNull(hintMessage.getContent()) && !hintMessage.getContent().isEmpty()) {
+        var textContent = TextInnerContent.builder()
+          .type(InnerContentMessageType.TEXT)
+          .title("Tip")
+          .description(hintMessage.getContent())
+          .build();
+        contents.add(textContent);
+      }
       return UserHintMessageDto.builder()
         .timestamp(hintMessage.getTimestamp())
         .messageType(MessageType.HINT_MESSAGE)
         .id(message.getId())
         .character(hintMessage.getCharacter())
-//        .nextSimulationId(lastSimulationMessage.getNextSimulationId())
-        .content(hintMessage.getContent())
-        .description(hintMessage.getContent())
-        .title("Підказка")
+        .contents(contents)
         .build();
     } else if (message instanceof ContentMessage contentMessage) {
       return UserContentMessageDto.builder()
         .timestamp(contentMessage.getTimestamp())
-        .messageType(MessageType.IMAGES)
+        .messageType(contentMessage.getMessageType())
         .id(message.getId())
         .urls(Collections.singletonList(contentMessage.getContent()))
         .character(contentMessage.getCharacter())
