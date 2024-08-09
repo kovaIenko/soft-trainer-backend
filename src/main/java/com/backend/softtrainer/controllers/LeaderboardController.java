@@ -1,8 +1,10 @@
 package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.AllColleaguesResponseDto;
+import com.backend.softtrainer.dtos.SumHyperParamDto;
 import com.backend.softtrainer.dtos.UserDto;
 import com.backend.softtrainer.services.UserDataExtractor;
+import com.backend.softtrainer.services.UserHyperParameterService;
 import com.backend.softtrainer.services.UserService;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
@@ -17,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Objects;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,21 +30,31 @@ public class LeaderboardController {
   private final CustomUsrDetailsService usrDetailsService;
   private final UserService userService;
   private final UserDataExtractor userDataExtractor;
+  private final UserHyperParameterService userHyperParameterService;
+
 
   @GetMapping
   public ResponseEntity<AllColleaguesResponseDto> getLeaderboard(final Authentication authentication) {
     try {
       var userDetails = (CustomUsrDetails) usrDetailsService.loadUserByUsername(authentication.getName());
       var user = userDetails.user();
-      var rand = new Random();
 
       var colleaguesDto = userService.findAllCollegues(user)
         .stream().map(usr -> {
-        //todo high load - bottleneck
+
+          var collectedData = userHyperParameterService.sumUpByUser(usr);
+
+          var sumUp = collectedData.stream()
+            .mapToDouble(SumHyperParamDto::value)
+            .sum();
+
+          //todo high load - bottleneck
           var userName = Objects.isNull(usr.getName()) || usr.getName().isBlank() ? userDataExtractor.extractUserName(user)
             .orElse(usr.getEmail()) : usr.getName();
-          return new UserDto(usr.getId(), usr.getDepartment(), userName, usr.getAvatar(), 1000 * rand.nextDouble());
+
+          return new UserDto(usr.getId(), usr.getDepartment(), userName, usr.getAvatar(), sumUp);
         })
+
         .sorted(Comparator.comparingDouble(UserDto::exp).reversed())
         .collect(Collectors.toList());
 

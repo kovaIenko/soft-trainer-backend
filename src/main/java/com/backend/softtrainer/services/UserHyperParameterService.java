@@ -1,5 +1,7 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.SumHyperParamDto;
+import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.UserHyperParameter;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import lombok.AllArgsConstructor;
@@ -47,6 +49,10 @@ public class UserHyperParameterService {
 
   public List<UserHyperParameter> findAllByChatId(final Long chatId) {
     return userHyperParameterRepository.findAllByChatId(chatId);
+  }
+
+  public List<SumHyperParamDto> sumUpByUser(final User user) {
+    return userHyperParameterRepository.sumUpByUser(user.getId());
   }
 
 }

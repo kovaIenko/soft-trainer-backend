@@ -436,7 +436,7 @@ public class InputMessageService {
         } else {
           chatRepository.updateIsFinished(chat.getId(), true);
           var t = chatRepository.findById(chat.getId());
-          log.info("The chat with id {} is finished", t.get().isFinished());
+          log.info("The chat with id {} is finished", t.get().getId());
           break;
         }
       }
@@ -719,7 +719,7 @@ public class InputMessageService {
         .chat(chat)
         .messageType(MessageType.HINT_MESSAGE)
         .flowNode(flowNode)
-        .title("Підказка")
+        .title("Tip")
         .character(flowNode.getCharacter())
         .role(ChatRole.APP)
         .timestamp(LocalDateTime.now())

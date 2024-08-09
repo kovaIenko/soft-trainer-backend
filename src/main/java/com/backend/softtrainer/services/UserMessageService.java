@@ -186,9 +186,12 @@ public class UserMessageService {
         var textContent = TextInnerContent.builder()
           .type(InnerContentMessageType.TEXT)
           .description(lastSimulationMessage.getContent())
+          .title(lastSimulationMessage.getTitle())
           .build();
         contents.add(textContent);
       }
+
+      log.info("Last simulation message content {}", contents);
 
       return UserLastSimulationMessage.builder()
         .timestamp(lastSimulationMessage.getTimestamp())
@@ -204,11 +207,14 @@ public class UserMessageService {
       if (Objects.nonNull(hintMessage.getContent()) && !hintMessage.getContent().isEmpty()) {
         var textContent = TextInnerContent.builder()
           .type(InnerContentMessageType.TEXT)
-          .title("Tip")
+          .title(hintMessage.getTitle())
           .description(hintMessage.getContent())
           .build();
         contents.add(textContent);
       }
+
+      log.info("Hint message content {}", contents);
+
       return UserHintMessageDto.builder()
         .timestamp(hintMessage.getTimestamp())
         .messageType(MessageType.HINT_MESSAGE)

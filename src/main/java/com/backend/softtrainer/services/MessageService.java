@@ -60,7 +60,7 @@ public class MessageService {
       log.info("Updating hint message for chat: {}, at {} with content {}", chat.getId(), LocalDateTime.now(), content);
       var msgs = messageRepository.findMessagesByOrderNumber(chat.getId(), hintNode.getOrderNumber());
 
-      var title = "Підказка";
+      var title = "Tip";
       if (!msgs.isEmpty()) {
         temp = (HintMessage) msgs.get(0);
         temp.setTitle(title);
