@@ -19,7 +19,7 @@ public enum MessageType {
   @Deprecated
   CONTENT_QUESTION("ContentQuestion", false),
   IMAGES("Images", false),
-  VIDEOS("VIDEOS", false),
+  VIDEOS("Videos", false),
 
   ENTER_TEXT_QUESTION("EnterTextQuestion", true),
 

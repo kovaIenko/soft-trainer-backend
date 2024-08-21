@@ -60,12 +60,14 @@ public class UserDataExtractor {
   }
 
   public Optional<String> extractUserName(final User user) {
-   var chatOpt = getFirstChatOfOnboarding(user);
+    log.info("Extracting user name for user.email: {}", user.getEmail());
+    var chatOpt = getFirstChatOfOnboarding(user);
     return chatOpt.flatMap(chat -> chat.getMessages().stream()
       .sorted(Comparator.comparing(Message::getTimestamp))
       .filter(msg -> msg instanceof EnterTextAnswerMessage)
       .map(msg -> (EnterTextAnswerMessage) msg)
       .map(EnterTextAnswerMessage::getContent)
+      .map(String::trim)
       .findFirst());
   }
 

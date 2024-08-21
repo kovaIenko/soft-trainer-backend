@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -49,8 +49,12 @@ public class LeaderboardController {
             .sum();
 
           //todo high load - bottleneck
-          var userName = Objects.isNull(usr.getName()) || usr.getName().isBlank() ? userDataExtractor.extractUserName(user)
-            .orElse(usr.getEmail()) : usr.getName();
+          var userName = Optional.ofNullable(usr.getName()).filter(name -> !name.isBlank())
+            .orElseGet(() -> userDataExtractor.extractUserName(usr)
+              .map(name -> {
+                log.info("Extracted name from the onboarding {} for the user.email {}", name, usr.getEmail());
+                return name;
+              }).orElse(usr.getEmail()));
 
           return new UserDto(usr.getId(), usr.getDepartment(), userName, usr.getAvatar(), sumUp);
         })

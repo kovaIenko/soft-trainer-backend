@@ -14,7 +14,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 public class ContentMessage extends Message {
 
-  @Column(length = 1000)
+  @Column(length = 3000)
   private String content;
 
 }

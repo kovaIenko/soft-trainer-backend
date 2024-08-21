@@ -32,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -227,7 +226,7 @@ public class UserMessageService {
         .timestamp(contentMessage.getTimestamp())
         .messageType(contentMessage.getMessageType())
         .id(message.getId())
-        .urls(Collections.singletonList(contentMessage.getContent()))
+        .urls(List.of(contentMessage.getContent().split(" || ")))
         .character(contentMessage.getCharacter())
         .build();
     } else if (message instanceof EnterTextQuestionMessage enterTextQuestionMessage) {
