@@ -23,6 +23,8 @@ public class HyperParameter {
 
   private String key;
 
+  private String description;
+
   @Column(name = "simulation_id")
   private Long simulationId;
 

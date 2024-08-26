@@ -14,7 +14,6 @@ public class SimulationRequestDto {
 
   private List<FlowNodeDto> flow;
 
-  //todo extract name of flow there
   private String name;
 
   private List<CharacterDto> characters;

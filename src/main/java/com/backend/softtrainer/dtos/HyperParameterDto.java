@@ -1,4 +1,4 @@
 package com.backend.softtrainer.dtos;
 
-public record HyperParameterDto(String key) {
+public record HyperParameterDto(String key, String description) {
 }

@@ -112,6 +112,7 @@ public class FlowService {
       List<HyperParameter> hyperParameters = flowRequestDto.getHyperparameters()
         .stream()
         .map(param -> HyperParameter.builder()
+          .description(param.description())
           .key(param.key())
           .simulationId(simulation.getId())
           .build())

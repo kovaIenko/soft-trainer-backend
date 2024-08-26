@@ -226,7 +226,7 @@ public class UserMessageService {
         .timestamp(contentMessage.getTimestamp())
         .messageType(contentMessage.getMessageType())
         .id(message.getId())
-        .urls(List.of(contentMessage.getContent().split(" || ")))
+        .urls(List.of(contentMessage.getContent().split(" \\|\\| ")))
         .character(contentMessage.getCharacter())
         .build();
     } else if (message instanceof EnterTextQuestionMessage enterTextQuestionMessage) {
