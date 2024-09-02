@@ -16,7 +16,9 @@ public class WebConfig implements WebMvcConfigurer {
         "https://app.thesofttrainer.com",
         "https://test-web-flutter-427fd.web.app/",
         "https://thesofttrainer.com",
-        "https://thesofttrainerdev.web.app"
+        "https://thesofttrainerdev.web.app",
+        "http://localhost:3000",
+        "https://master.dpkezokj5u56u.amplifyapp.com"
       )
       .allowedMethods("GET", "POST", "PUT", "DELETE")
       .allowedHeaders("*")

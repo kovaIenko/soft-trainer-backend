@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +40,44 @@ public class MessageController {
           "success",
           userMessageService.combineMessages(messages)
         )));
+    } catch (SendMessageConditionException e) {
+      log.error(e.getMessage());
+      return CompletableFuture.completedFuture(
+        ResponseEntity.ok(new ChatResponseDto(
+          messageRequestDto.getChatId(),
+          null,
+          false,
+          e.getMessage(),
+          Collections.emptyList()
+        )));
+    }
+  }
+
+  @PostMapping("/get")
+  @PreAuthorize("@customUsrDetailsService.isChatOfUser(authentication, #messageRequestDto?.chatId)")
+  public CompletableFuture<ResponseEntity<ChatResponseDto>> getHintMessage(@RequestBody MessageRequestDto messageRequestDto) {
+    try {
+      return inputMessageService.buildResponse(messageRequestDto)
+        .thenApply(messages -> {
+
+          log.info(
+            "The messages for the chat with the specific message looks like : {} when size is {}",
+            messages,
+            messages.size()
+          );
+
+          var combinedMessage = userMessageService.combineOneTypeMessages(messages);
+          var chat = new ChatResponseDto(
+            messageRequestDto.getChatId(),
+            null,
+            true,
+            "success",
+            combinedMessage
+          );
+
+          log.info("The chat with the specific message looks like : {} when combined messages: {}", chat, combinedMessage);
+          return ResponseEntity.ok(chat);
+        });
     } catch (SendMessageConditionException e) {
       log.error(e.getMessage());
       return CompletableFuture.completedFuture(

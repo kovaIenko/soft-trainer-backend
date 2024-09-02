@@ -17,5 +17,6 @@ public class EnterTextQuestionMessage extends Message {
   @Column(length = 700)
   private String content;
 
+  private String answer;
 
 }

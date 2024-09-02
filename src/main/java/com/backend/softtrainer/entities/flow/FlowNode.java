@@ -33,7 +33,6 @@ public class FlowNode {
   @Column(name = "order_number", nullable = false)
   private Long orderNumber;
 
-
   @Column(name = "previous_order_number", nullable = false)
   private Long previousOrderNumber = 0L;
 
@@ -49,5 +48,7 @@ public class FlowNode {
 
   @ManyToOne(fetch = FetchType.EAGER)
   private Simulation simulation;
+
+  private boolean hasHint;
 
 }

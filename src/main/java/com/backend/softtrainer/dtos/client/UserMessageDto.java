@@ -47,4 +47,10 @@ public class UserMessageDto {
   @Enumerated(EnumType.STRING)
   private ChatRole role;
 
+  @JsonProperty("has_hint")
+  private boolean hasHint;
+
+  @JsonProperty("hint_message")
+  private UserHintMessageDto hintMessage;
+
 }

@@ -16,6 +16,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -69,5 +70,13 @@ public class Message {
   @JsonIgnore
   @Version
   private Integer version;
+
+  //todo temporary
+  @Transient
+  private boolean hasHint;
+
+  @Transient
+  private HintMessage hintMessage;
+
 
 }

@@ -17,4 +17,6 @@ public class ContentMessage extends Message {
   @Column(length = 3000)
   private String content;
 
+  private String preview;
+
 }

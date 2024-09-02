@@ -21,4 +21,7 @@ public class SingleChoiceTaskQuestionMessage extends Message {
   @Column(length = 700)
   private String options;
 
+  @Column(length = 700)
+  private String answer;
+
 }

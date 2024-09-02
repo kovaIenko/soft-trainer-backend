@@ -11,4 +11,6 @@ public class VideosDto extends FlowNodeDto {
 
   private String url;
 
+  private String preview;
+
 }

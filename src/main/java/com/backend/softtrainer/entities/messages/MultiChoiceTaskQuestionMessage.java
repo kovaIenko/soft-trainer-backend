@@ -24,4 +24,6 @@ public class MultiChoiceTaskQuestionMessage extends Message {
   @JsonProperty("is_voted")
   private boolean isVoted;
 
+  private String answer;
+
 }

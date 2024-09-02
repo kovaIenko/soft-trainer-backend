@@ -48,4 +48,7 @@ public abstract class FlowNodeDto {
   @JsonProperty("character_id")
   private long author;
 
+  @JsonProperty("has_hint")
+  private boolean hasHint;
+
 }

@@ -62,6 +62,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -99,11 +100,12 @@ public class InputMessageService {
     var messageOpt = allMessagesByChat.stream().filter(msg -> msg.getId().equals(messageRequestDto.getId())).findFirst();
 
     if (messageOpt.isEmpty()) {
-      throw new NoSuchElementException(String.format(
-        "There is no such message %s in the chat %s",
+      log.error(
+        "There is no such message {} in the chat {}",
         messageRequestDto.getId(),
         messageRequestDto.getChatId()
-      ));
+      );
+      return CompletableFuture.completedFuture(allMessagesByChat);
     }
 
     var message = messageOpt.get();
@@ -121,7 +123,10 @@ public class InputMessageService {
     Message message;
 
     var alreadyStoredMessagesAfterCurrent = getMessagesAfter(alreadyStoredMessages, currentMessage);
+
     if (messageRequestDto instanceof SingleChoiceAnswerMessageDto singleChoiceAnswerMessageDto) {
+
+      //todo Deprecated
       message = SingleChoiceAnswerMessage.builder()
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .role(ChatRole.USER)
@@ -133,15 +138,25 @@ public class InputMessageService {
         .build();
 
       var answer = messageService.save(message);
+
+      // todo  ----------
+
+      //update the already existing msg
+      var currentMsg = (SingleChoiceQuestionMessage) currentMessage;
+      currentMsg.setInteracted(true);
+      currentMsg.setAnswer(singleChoiceAnswerMessageDto.getAnswer());
+//      currentMsg.setRole(ChatRole.USER);
+      messageService.save(currentMsg);
+
       alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
-        currentMessage,
+        currentMessage.getFlowNode(),
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMessage.getFlowNode(), chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
@@ -158,15 +173,23 @@ public class InputMessageService {
         .build();
 
       var answer = messageService.save(message);
+
+      //update the already existing msg
+      var currentMsg = (SingleChoiceTaskQuestionMessage) currentMessage;
+      currentMsg.setInteracted(true);
+      currentMsg.setAnswer(singleChoiceTaskAnswerMessageDto.getAnswer());
+//      currentMsg.setRole(ChatRole.USER);
+      messageService.save(currentMsg);
+
       alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
-        currentMessage,
+        currentMessage.getFlowNode(),
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMessage.getFlowNode(), chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
@@ -179,20 +202,26 @@ public class InputMessageService {
         .answer(multiChoiceAnswerMessageDto.getAnswer())
         .options(multiChoiceAnswerMessageDto.getOptions())
         .interacted(true)
-        .correct(multiChoiceAnswerMessageDto.getAnswer())
         .build();
 
       var answer = messageService.save(message);
+
+      //update the already existing msg
+      var currentMsg = (MultiChoiceTaskQuestionMessage) currentMessage;
+      currentMsg.setInteracted(true);
+      currentMsg.setAnswer(multiChoiceAnswerMessageDto.getAnswer());
+//      currentMsg.setRole(ChatRole.USER);
+      messageService.save(currentMsg);
 
       alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
-        currentMessage,
+        currentMessage.getFlowNode(),
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMessage.getFlowNode(), chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
@@ -203,35 +232,41 @@ public class InputMessageService {
         .chat(chat)
         .interacted(true)
         .flowNode(currentMessage.getFlowNode())
+        .answer(enterTextAnswerMessageDto.getAnswer())
         .content(enterTextAnswerMessageDto.getAnswer())
         .build();
 
       var answer = messageService.save(message);
+
+      //update the already existing msg
+      var currentMsg = (EnterTextQuestionMessage) currentMessage;
+      currentMsg.setInteracted(true);
+      currentMsg.setAnswer(enterTextAnswerMessageDto.getAnswer());
+//      currentMsg.setRole(ChatRole.USER);
+
+      messageService.save(currentMsg);
+
       alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
-        currentMessage,
+        currentMessage.getFlowNode(),
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMessage.getFlowNode(), chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof LastSimulationMessageDto lastSimulationMessageDto) {
 
       waitForAiMsg(currentMessage);
-
+      log.info("The hint message looks like {}", currentMessage);
       return CompletableFuture.completedFuture(List.of(currentMessage));
     } else if (messageRequestDto instanceof HintMessageDto hintMessageDto) {
 
       waitForAiMsg(currentMessage);
-
-      return figureOutNextMessagesWith(
-        chat,
-        currentMessage,
-        alreadyStoredMessagesAfterCurrent
-      );
+      log.info("The result message looks like {}", currentMessage);
+      return CompletableFuture.completedFuture(List.of(currentMessage));
     } else {
       throw new SendMessageConditionException(
         "Send message has incorrect message type. It should be one of the actionable message type");
@@ -330,45 +365,81 @@ public class InputMessageService {
 
 
   public void whetherItStartsGenerationHint(final List<Message> actionableMessages,
-                                            final FlowNode actionableFlowNode,
+                                            final Message currentMessage,
                                             final Chat chat) {
-    CompletableFuture.runAsync(() -> {
-      try {
-        var hintNodes = flowService.findAllBySimulationIdAndPreviousOrderNumber(
-          actionableFlowNode.getSimulation().getId(),
-          actionableFlowNode.getOrderNumber()
+    var actionableFlowNode = currentMessage.getFlowNode();
+
+    Supplier<Optional<FlowNode>> nextHintNode = () -> getFollowingHintNode(actionableFlowNode);
+    if (actionableFlowNode.isHasHint() || nextHintNode.get().isPresent()) {
+
+      var hintNodeOpt = nextHintNode.get();
+
+      if (hintNodeOpt.isEmpty()) {
+        log.info(
+          "There is not actual hint node when the actionable message has_hint = true and id {} and message_type {}",
+          actionableFlowNode.getId(),
+          actionableFlowNode.getMessageType()
         );
-        var hintNodeOpt = hintNodes.stream()
-          .filter(node -> node.getMessageType().equals(MessageType.HINT_MESSAGE))
-          .findFirst();
+        return;
+      }
 
-        if (hintNodeOpt.isPresent()) {
-          log.info(
-            "There is hint message after that node {} and simulation {}",
-            actionableFlowNode.getOrderNumber(),
-            actionableFlowNode.getSimulation().getId()
-          );
+      log.info(
+        "There is hint message after that node {} and simulation {}",
+        actionableFlowNode.getOrderNumber(),
+        actionableFlowNode.getSimulation().getId()
+      );
 
+      var hintMessageId = UUID.randomUUID().toString();
+      log.info("Generate uid for the hint message {}", hintMessageId);
+      //todo temporary
+      currentMessage.setHintMessage(HintMessage.builder()
+                                      .id(hintMessageId)
+                                      .chat(chat)
+                                      .messageType(MessageType.HINT_MESSAGE)
+                                      .flowNode(hintNodeOpt.get())
+                                      .character(hintNodeOpt.get().getCharacter())
+                                      .role(ChatRole.APP)
+                                      .timestamp(LocalDateTime.now())
+                                      .build());
+
+      currentMessage.setHasHint(true);
+
+      CompletableFuture.runAsync(() -> {
+        try {
           log.info(
             "Begin the generation of the content for hint message with order number {}",
             actionableFlowNode.getOrderNumber()
           );
-          generateHint(actionableMessages, hintNodeOpt.get(), chat);
+
+          generateHintMessage(hintMessageId, actionableMessages, hintNodeOpt.get(), chat);
           log.info("The result of hint generation was updated in the db at {}", LocalDateTime.now());
 
-        } else {
-          log.info(
-            "There is no hint message after that node {} and simulation {}",
-            actionableFlowNode.getOrderNumber(),
-            actionableFlowNode.getSimulation().getId()
-          );
+        } catch (Exception e) {
+          log.error("Error while generation of the hint message", e);
         }
-      } catch (Exception e) {
-        log.error("Error while generation of the hint message", e);
-      }
-    });
+      });
 
-    log.info("We are completed with the generation of the hint message at {} for chat {}", LocalDateTime.now(), chat.getId());
+      log.info("We are completed with the generation of the hint message at {} for chat {}", LocalDateTime.now(), chat.getId());
+
+    } else {
+      log.info(
+        "There is no hint message after that node {} and simulation {}",
+        actionableFlowNode.getOrderNumber(),
+        actionableFlowNode.getSimulation().getId()
+      );
+    }
+
+  }
+
+  private @NotNull Optional<FlowNode> getFollowingHintNode(final FlowNode actionableFlowNode) {
+    var hintNodes = flowService.findAllBySimulationIdAndPreviousOrderNumber(
+      actionableFlowNode.getSimulation().getId(),
+      actionableFlowNode.getOrderNumber()
+    );
+    var hintNodeOpt = hintNodes.stream()
+      .filter(node -> node.getMessageType().equals(MessageType.HINT_MESSAGE))
+      .findFirst();
+    return hintNodeOpt;
   }
 
   @Deprecated
@@ -376,9 +447,9 @@ public class InputMessageService {
     if (messages.size() > 1) {
       var last = messages.get(messages.size() - 1);
 
-      if (last.getMessageType().equals(MessageType.HINT_MESSAGE)) {
-        return true;
-      }
+//      if (last.getMessageType().equals(MessageType.HINT_MESSAGE)) {
+//        return true;
+//      }
       var previousLast = messages.get(messages.size() - 2);
       return last.getMessageType().equals(previousLast.getMessageType());
       //last hint message with recommendation
@@ -391,16 +462,15 @@ public class InputMessageService {
 
   @NotNull
   private CompletableFuture<List<Message>> figureOutNextMessagesWith(final Chat chat,
-                                                                     final Message currentMessage,
+                                                                     final FlowNode flowNode,
                                                                      final List<Message> alreadyStoredMessages) throws
                                                                                                                 SendMessageConditionException {
 
-    var flowNode = currentMessage.getFlowNode();
-    boolean lastActionableMsgInteracted = isLastActionableMessageInteracted(alreadyStoredMessages);
-
-    if (!lastActionableMsgInteracted) {
-      return CompletableFuture.completedFuture(alreadyStoredMessages);
-    }
+//    boolean lastActionableMsgInteracted = isLastActionableMessageInteracted(alreadyStoredMessages);
+//
+//    if (!lastActionableMsgInteracted) {
+//      return CompletableFuture.completedFuture(alreadyStoredMessages);
+//    }
 
     Long previousOrderNumber = flowNode.getOrderNumber();
 
@@ -412,16 +482,24 @@ public class InputMessageService {
       var nextFlowNode = nextFlowNodeOptional.get();
       var nextMessage = convert(nextFlowNode, chat);
 
-      nextMessage = messageService.save(nextMessage);
-      alreadyStoredMessages.add(nextMessage);
+      //todo remove it
+      if (!nextFlowNode.getMessageType().equals(MessageType.HINT_MESSAGE)) {
+        nextMessage = messageService.save(nextMessage);
+
+        alreadyStoredMessages.add(nextMessage);
+      }
 
       while (!MessageType.getActionableMessageTypes().contains(nextFlowNode.getMessageType().name())) {
         nextFlowNodeOptional = getNextFlowNode(chat.getId(), nextFlowNode.getOrderNumber(), simulationId);
         if (nextFlowNodeOptional.isPresent()) {
           nextFlowNode = nextFlowNodeOptional.get();
+
           nextMessage = convert(nextFlowNode, chat);
 
-          nextMessage = messageService.save(nextMessage);
+          //todo remove it
+          if (!nextFlowNode.getMessageType().equals(MessageType.HINT_MESSAGE)) {
+            nextMessage = messageService.save(nextMessage);
+          }
 
           //todo temporary
           if (nextMessage.getMessageType().equals(MessageType.RESULT_SIMULATION)) {
@@ -444,7 +522,8 @@ public class InputMessageService {
     return CompletableFuture.completedFuture(alreadyStoredMessages);
   }
 
-  public void generateHint(final List<Message> actionableMsgs, final FlowNode hintNode, final Chat chat) {
+  public void generateHintMessage(final String hintMessageId, final List<Message> actionableMsgs, final FlowNode hintNode,
+                                  final Chat chat) {
     log.info("Try to got necessary info for generating hint");
     try {
 
@@ -454,7 +533,7 @@ public class InputMessageService {
 
       log.info("The prompt for hint message is working {}", simulationHintPrompt.isOn());
 
-      var mockContent = "Так тримати";
+      var mockContent = "Glad to see you're continuing to practice your soft-skills";
 
       if (simulationHintPrompt.isOn()) {
         var updatedChat = chatRepository.findByIdWithMessages(chat.getId()).orElseThrow();
@@ -467,6 +546,7 @@ public class InputMessageService {
               .orElse(mockContent);
 
             messageService.updateOrCreateHintMessage(
+              hintMessageId,
               hintNode,
               chat,
               content,
@@ -477,6 +557,7 @@ public class InputMessageService {
         log.info("The async future is completed {}", LocalDateTime.now());
       } else {
         messageService.updateOrCreateHintMessage(
+          hintMessageId,
           hintNode,
           chat,
           mockContent,
@@ -659,6 +740,7 @@ public class InputMessageService {
       return ContentMessage.builder()
         .id(UUID.randomUUID().toString())
         .chat(chat)
+        .preview(contentQuestion.getPreview())
         .messageType(contentQuestion.getMessageType())
         .flowNode(flowNode)
         .character(flowNode.getCharacter())

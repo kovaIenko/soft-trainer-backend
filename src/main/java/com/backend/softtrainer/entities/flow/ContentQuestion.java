@@ -15,4 +15,6 @@ public class ContentQuestion extends FlowNode {
 
   private String url;
 
+  private String preview;
+
 }

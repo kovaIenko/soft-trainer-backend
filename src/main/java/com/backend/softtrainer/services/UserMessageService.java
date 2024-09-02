@@ -10,6 +10,7 @@ import com.backend.softtrainer.dtos.client.UserMultiChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserTextMessageDto;
+import com.backend.softtrainer.dtos.client.VideoObjDto;
 import com.backend.softtrainer.dtos.innercontent.ChartInnerContent;
 import com.backend.softtrainer.dtos.innercontent.InnerContentMessage;
 import com.backend.softtrainer.dtos.innercontent.InnerContentMessageType;
@@ -32,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -85,6 +87,8 @@ public class UserMessageService {
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .id(singleChoiceTaskAnswerMessage.getId())
         .idTemp(singleChoiceTaskQuestionMessage.getId())
+        .hasHint(singleChoiceTaskAnswerMessage.isHasHint())
+        .hintMessage(getHitMessage(singleChoiceTaskAnswerMessage))
         .isVoted(true)
         .build();
     } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
@@ -96,6 +100,8 @@ public class UserMessageService {
         .id(singleChoiceAnswerMessage.getId())
         .idTemp(singleChoiceQuestionMessage.getId())
         .content(singleChoiceAnswerMessage.getAnswer())
+        .hasHint(singleChoiceAnswerMessage.isHasHint())
+        .hintMessage(getHitMessage(singleChoiceAnswerMessage))
         .messageType(MessageType.TEXT)
         .isVoted(true)
         .build();
@@ -108,6 +114,8 @@ public class UserMessageService {
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .id(multiChoiceTaskAnswerMessage.getId())
         .idTemp(multiChoiceTaskQuestionMessage.getId())
+        .hasHint(multiChoiceTaskAnswerMessage.isHasHint())
+        .hintMessage(getHitMessage(multiChoiceTaskAnswerMessage))
         .isVoted(true)
         .build();
     } else if (question instanceof EnterTextQuestionMessage enterQuestionTextMessage
@@ -126,6 +134,44 @@ public class UserMessageService {
   }
 
   public List<UserMessageDto> combineMessages(final List<Message> messages) {
+
+    var messagesGroupedByFlowNodes = messages.stream()
+      .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
+
+    return messagesGroupedByFlowNodes.values().stream()
+      .map(collection -> {
+        if (collection.size() == 2) {
+          return QUESTION_CLASSES.contains(collection.get(0).getClass()) ?
+            combine(collection.get(0), collection.get(1)) : combine(collection.get(1), collection.get(0));
+        } else if (collection.size() == 1) {
+          //todo temp
+          if (collection.get(0).getMessageType().equals(MessageType.HINT_MESSAGE)) {
+            return null;
+          }
+          return convert(collection.get(0));
+        } else {
+          log.info(String.format(
+            "Collection size while combining messages by flow node is %s, the collection is %s",
+            collection.size(),
+            collection
+          ));
+          return null;
+        }
+      })
+      .filter(Objects::nonNull)
+      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
+      .peek(msg -> {
+        //todo the stupid thing
+        if (Objects.nonNull(msg.getCharacter())) {
+          if (msg.getCharacter().getFlowCharacterId() == -1) {
+            msg.setCharacter(null);
+          }
+        }
+      })
+      .collect(Collectors.toList());
+  }
+
+  public List<UserMessageDto> combineOneTypeMessages(final List<Message> messages) {
 
     var messagesGroupedByFlowNodes = messages.stream()
       .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
@@ -160,6 +206,11 @@ public class UserMessageService {
   }
 
   public UserMessageDto convert(final Message message) {
+
+    if (Objects.isNull(message)) {
+      return null;
+    }
+
     if (message instanceof TextMessage textMessage) {
       return UserTextMessageDto.builder()
         .id(message.getId())
@@ -198,6 +249,7 @@ public class UserMessageService {
         .id(message.getId())
         .character(lastSimulationMessage.getCharacter())
         .contents(contents)
+        .hasHint(false)
         .build();
     } else if (message instanceof HintMessage hintMessage) {
 
@@ -220,13 +272,35 @@ public class UserMessageService {
         .id(message.getId())
         .character(hintMessage.getCharacter())
         .contents(contents)
+        .hasHint(false)
         .build();
     } else if (message instanceof ContentMessage contentMessage) {
+
+      List<VideoObjDto> videoObjects = new ArrayList<>();
+
+      //todo temporary
+      if (contentMessage.getMessageType().equals(MessageType.VIDEOS)) {
+
+        List<String> previews = Objects.nonNull(contentMessage.getPreview()) ? List.of(contentMessage.getPreview()
+                                                                                         .split(" \\|\\| ")) :
+          Collections.emptyList();
+        List<String> urls = Objects.nonNull(contentMessage.getContent()) ? List.of(contentMessage.getContent()
+                                                                                     .split(" \\|\\| ")) :
+          Collections.emptyList();
+
+        urls.forEach(url -> {
+          String pr = previews.size() > urls.indexOf(url) ? previews.get(urls.indexOf(url)) : null;
+          videoObjects.add(new VideoObjDto(url, pr));
+        });
+      }
       return UserContentMessageDto.builder()
         .timestamp(contentMessage.getTimestamp())
         .messageType(contentMessage.getMessageType())
+//        .previews(Objects.nonNull(contentMessage.getPreview()) ?
+//                    List.of(contentMessage.getPreview().split(" \\|\\| ")) : Collections.emptyList())
         .id(message.getId())
         .urls(List.of(contentMessage.getContent().split(" \\|\\| ")))
+        .videos(videoObjects)
         .character(contentMessage.getCharacter())
         .build();
     } else if (message instanceof EnterTextQuestionMessage enterTextQuestionMessage) {
@@ -243,6 +317,8 @@ public class UserMessageService {
         .timestamp(singleChoiceQuestionMessage.getTimestamp())
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .id(message.getId())
+        .hasHint(singleChoiceQuestionMessage.isHasHint())
+        .hintMessage(getHitMessage(singleChoiceQuestionMessage))
         .isVoted(false)
         .build();
     } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
@@ -251,6 +327,8 @@ public class UserMessageService {
         .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
         .id(message.getId())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
+        .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
         .isVoted(false)
         .build();
     } else if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage) {
@@ -259,10 +337,26 @@ public class UserMessageService {
         .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
         .id(message.getId())
         .messageType(MessageType.MULTI_CHOICE_TASK)
+        .hasHint(multiChoiceTaskQuestionMessage.isHasHint())
+        .hintMessage(getHitMessage(multiChoiceTaskQuestionMessage))
         .isVoted(false)
         .build();
     }
     throw new NoSuchElementException("The incorrect question type " + message.getClass().getName());
+  }
+
+
+  private UserHintMessageDto getHitMessage(final Message message) {
+    if (message.isHasHint()) {
+      var converted = convert(message.getHintMessage());
+      if (Objects.isNull(converted)) {
+        return null;
+      } else {
+        return (UserHintMessageDto) converted;
+      }
+    } else {
+      return null;
+    }
   }
 
 }

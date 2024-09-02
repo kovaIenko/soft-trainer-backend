@@ -13,4 +13,8 @@ public class UserContentMessageDto extends UserMessageDto {
 
   private List<String> urls;
 
+  private List<String> previews;
+
+  private List<VideoObjDto> videos;
+
 }

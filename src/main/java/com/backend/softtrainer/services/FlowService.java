@@ -178,6 +178,7 @@ public class FlowService {
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.IMAGES)
+        .hasHint(imagesDto.isHasHint())
         .simulation(simulation)
         .build();
     }
@@ -189,6 +190,8 @@ public class FlowService {
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.VIDEOS)
+        .preview(videosDto.getPreview())
+        .hasHint(videosDto.isHasHint())
         .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof EnterTextQuestionDto enterTextQuestionDto) {
@@ -199,6 +202,7 @@ public class FlowService {
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.ENTER_TEXT_QUESTION)
+        .hasHint(enterTextQuestionDto.isHasHint())
         .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof TextDto textDto) {
@@ -209,6 +213,7 @@ public class FlowService {
         .character(authorEntity)
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.TEXT)
+        .hasHint(textDto.isHasHint())
         .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof SingleChoiceTaskDto singleChoiceTaskDto) {
@@ -220,6 +225,7 @@ public class FlowService {
         .options(String.join(" || ", singleChoiceTaskDto.getOptions()))
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.SINGLE_CHOICE_TASK)
+        .hasHint(singleChoiceTaskDto.isHasHint())
         .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof SingleChoiceQuestionDto singleChoiceQuestionDto) {
@@ -231,6 +237,7 @@ public class FlowService {
         .options(String.join(" || ", singleChoiceQuestionDto.getOptions()))
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .hasHint(singleChoiceQuestionDto.isHasHint())
         .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof MultiChoiceTaskDto multipleChoiceQuestionDto) {
@@ -243,6 +250,7 @@ public class FlowService {
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .simulation(simulation)
+        .hasHint(multipleChoiceQuestionDto.isHasHint())
         .build();
     } else if (flowRecordDto instanceof HintMessageDto hintMessageDto) {
       return HintMessageNode.builder()
@@ -252,6 +260,7 @@ public class FlowService {
         .prompt(hintMessageDto.getPrompt())
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.HINT_MESSAGE)
+        .hasHint(false)
         .simulation(simulation)
         .build();
     } else if (flowRecordDto instanceof ResultSimulationDto resultSimulationDto) {
@@ -262,6 +271,7 @@ public class FlowService {
         .prompt(resultSimulationDto.getPrompt())
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.RESULT_SIMULATION)
+        .hasHint(false)
         .simulation(simulation)
         .build();
     }

@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -45,45 +44,48 @@ public class MessageService {
       .findFirst();
   }
 
-//  public Optional<Message> findMessageById(final String messageId) {
-//    return Optional.ofNullable(entityManager.find(Message.class, messageId));
-//  }
-
   @Transactional(isolation = Isolation.READ_UNCOMMITTED)
-  public void updateOrCreateHintMessage(final FlowNode hintNode,
+  public void updateOrCreateHintMessage(final String hintMessageId,
+                                        final FlowNode hintNode,
                                         final Chat chat,
                                         final String content,
                                         final Map<String, String> hintCache) {
 
     HintMessage temp = null;
     try {
-      log.info("Updating hint message for chat: {}, at {} with content {}", chat.getId(), LocalDateTime.now(), content);
-      var msgs = messageRepository.findMessagesByOrderNumber(chat.getId(), hintNode.getOrderNumber());
+      log.info(
+        "Updating or creation hint message for chat: {}, at {} with content {}",
+        chat.getId(),
+        LocalDateTime.now(),
+        content
+      );
+//      var msgs = messageRepository.findMessagesByOrderNumber(chat.getId(), hintNode.getOrderNumber());
 
       var title = "Tip";
-      if (!msgs.isEmpty()) {
-        temp = (HintMessage) msgs.get(0);
-        temp.setTitle(title);
-        temp.setContent(content);
-        temp.setInteracted(true);
-        log.info("The hint message is updated: {}, at {}, and version {}", temp, LocalDateTime.now(), temp.getVersion());
-      } else {
-        temp = HintMessage.builder()
-          .id(UUID.randomUUID().toString())
-          .chat(chat)
-          .flowNode(hintNode)
-          .messageType(MessageType.HINT_MESSAGE)
-          .role(ChatRole.APP)
-          .content(content)
-          .title(title)
-          .interacted(true)
-          .build();
-      }
+//      if (!msgs.isEmpty()) {
+//        temp = (HintMessage) msgs.get(0);
+//        temp.setTitle(title);
+//        temp.setContent(content);
+//        temp.setInteracted(true);
+//        log.info("The hint message is updated: {}, at {}, and version {}", temp, LocalDateTime.now(), temp.getVersion());
+//      } else {
+      temp = HintMessage.builder()
+        .id(hintMessageId)
+        .chat(chat)
+        .flowNode(hintNode)
+        .messageType(MessageType.HINT_MESSAGE)
+        .role(ChatRole.APP)
+        .content(content)
+        .title(title)
+        .interacted(true)
+        .build();
+//      }
       hintCache.put(temp.getId(), content);
       log.info("Try to store temp message: {}", temp);
       temp = entityManager.merge(temp);
 
       log.info("Hint message is stored: {}, at {}, version {}", temp, LocalDateTime.now(), temp.getVersion());
+
     } catch (Exception e) {
       log.error("Error while updating hint message: {}", temp, e);
     }

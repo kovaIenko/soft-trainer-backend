@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 @NoArgsConstructor
 @SuperBuilder
-public class MultiChoiceTaskAnswerMessage extends Message{
+public class MultiChoiceTaskAnswerMessage extends Message {
 
   @Column(length = 700)
   private String answer;
