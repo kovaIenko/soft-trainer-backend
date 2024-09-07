@@ -1,6 +1,7 @@
 package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.MessageAnswerOptionDto;
+import com.backend.softtrainer.dtos.client.CorrectnessState;
 import com.backend.softtrainer.dtos.client.UserContentMessageDto;
 import com.backend.softtrainer.dtos.client.UserEnterTextMessageDto;
 import com.backend.softtrainer.dtos.client.UserHintMessageDto;
@@ -35,10 +36,12 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -76,10 +79,72 @@ public class UserMessageService {
       .toList();
   }
 
-  public UserMessageDto combine(final Message question, final Message answer) {
+  private CorrectnessState resolveCorrectnessState(HashSet<String> correct,
+                                                   HashSet<String> userAnswer) {
+// If both sets are exactly equal
+    if (correct.equals(userAnswer)) {
+      return CorrectnessState.CORRECT;
+    }
 
+    // Create a copy of the correct set to calculate intersection
+    Set<String> intersection = new java.util.HashSet<>(correct);
+    intersection.retainAll(userAnswer);  // Keep only elements that are in both sets
+
+    // If there are no common elements, it's incorrect
+    if (intersection.isEmpty()) {
+      return CorrectnessState.INCORRECT;
+    }
+
+    // Calculate the size of the intersection (correct matches)
+    int correctMatches = intersection.size();
+    int correctSize = correct.size();
+
+    // Calculate the match percentage
+    double matchPercentage = (double) correctMatches / correctSize;
+
+    // If the match percentage is 50% or more, it's partially correct
+    if (matchPercentage >= 0.5) {
+      return CorrectnessState.PARTIALLY_CORRECT;
+    } else {
+      // Otherwise, it's partially incorrect
+      return CorrectnessState.PARTIALLY_INCORRECT;
+    }
+  }
+
+  private List<String> split(final String text) {
+    return Stream.of(text.split("\\|\\|"))
+      .map(String::trim)
+      .collect(Collectors.toList());
+  }
+
+  private HashSet<String> splitToSet(final String text) {
+    return Stream.of(text.split("\\|\\|"))
+      .map(String::trim)
+      .collect(Collectors.toCollection(HashSet::new));
+  }
+
+  private List<Integer> splitCorrectAnswer(final String text) {
+    return Stream.of(text.split("\\|\\|"))
+      .map(Integer::parseInt)
+      .collect(Collectors.toList());
+  }
+
+  private HashSet<String> getCorrectAnswerStr(final List<String> options,
+                                              final List<Integer> correctAnswer) {
+    return correctAnswer.stream()
+      .map(options::get)
+      .collect(Collectors.toCollection(HashSet::new));
+  }
+
+  public UserMessageDto combine(final Message question, final Message answer) {
     if (question instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage
       && answer instanceof SingleChoiceTaskAnswerMessage singleChoiceTaskAnswerMessage) {
+      var options = split(singleChoiceTaskQuestionMessage.getOptions());
+      var userAnswer = splitToSet(singleChoiceTaskAnswerMessage.getAnswer());
+      var correctAnswer = splitCorrectAnswer(singleChoiceTaskQuestionMessage.getCorrect());
+      var answerOptions = getCorrectAnswerStr(options, correctAnswer);
+      var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
+
       return UserSingleChoiceTaskMessageDto.builder()
         .answer(singleChoiceTaskAnswerMessage.getAnswer())
         .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), singleChoiceTaskAnswerMessage.getAnswer()))
@@ -89,10 +154,18 @@ public class UserMessageService {
         .idTemp(singleChoiceTaskQuestionMessage.getId())
         .hasHint(singleChoiceTaskAnswerMessage.isHasHint())
         .hintMessage(getHitMessage(singleChoiceTaskAnswerMessage))
+        .correctness(correctnessState)
         .isVoted(true)
         .build();
     } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
       && answer instanceof SingleChoiceAnswerMessage singleChoiceAnswerMessage) {
+
+      var options = split(singleChoiceQuestionMessage.getOptions());
+      var userAnswer = splitToSet(singleChoiceAnswerMessage.getAnswer());
+      var correctAnswer = splitCorrectAnswer(singleChoiceQuestionMessage.getCorrect());
+      var answerOptions = getCorrectAnswerStr(options, correctAnswer);
+      var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
+
       return UserSingleChoiceMessageDto.builder()
         .answer(singleChoiceAnswerMessage.getAnswer())
         .options(convertOptions(singleChoiceQuestionMessage.getOptions(), singleChoiceAnswerMessage.getAnswer()))
@@ -102,11 +175,18 @@ public class UserMessageService {
         .content(singleChoiceAnswerMessage.getAnswer())
         .hasHint(singleChoiceAnswerMessage.isHasHint())
         .hintMessage(getHitMessage(singleChoiceAnswerMessage))
+        .correctness(correctnessState)
         .messageType(MessageType.TEXT)
         .isVoted(true)
         .build();
     } else if (question instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage
       && answer instanceof MultiChoiceTaskAnswerMessage multiChoiceTaskAnswerMessage) {
+      var options = split(multiChoiceTaskQuestionMessage.getOptions());
+      var userAnswer = splitToSet(multiChoiceTaskAnswerMessage.getAnswer());
+      var correctAnswer = splitCorrectAnswer(multiChoiceTaskQuestionMessage.getCorrect());
+      var answerOptions = getCorrectAnswerStr(options, correctAnswer);
+      var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
+
       return UserMultiChoiceTaskMessageDto.builder()
         .answer(multiChoiceTaskAnswerMessage.getAnswer())
         .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), multiChoiceTaskAnswerMessage.getAnswer()))
@@ -116,6 +196,7 @@ public class UserMessageService {
         .idTemp(multiChoiceTaskQuestionMessage.getId())
         .hasHint(multiChoiceTaskAnswerMessage.isHasHint())
         .hintMessage(getHitMessage(multiChoiceTaskAnswerMessage))
+        .correctness(correctnessState)
         .isVoted(true)
         .build();
     } else if (question instanceof EnterTextQuestionMessage enterQuestionTextMessage
@@ -125,6 +206,7 @@ public class UserMessageService {
         .id(enterAnswerTextMessage.getId())
         .idTemp(enterQuestionTextMessage.getId())
         .timestamp(enterAnswerTextMessage.getTimestamp())
+        .correctness(CorrectnessState.UNDEFINED)
         .messageType(MessageType.TEXT)
         .isVoted(true)
         .build();
@@ -309,6 +391,7 @@ public class UserMessageService {
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .id(message.getId())
         .character(enterTextQuestionMessage.getCharacter())
+        .correctness(CorrectnessState.UNDEFINED)
         .content(enterTextQuestionMessage.getContent())
         .build();
     } else if (message instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage) {
@@ -318,6 +401,7 @@ public class UserMessageService {
         .messageType(MessageType.SINGLE_CHOICE_QUESTION)
         .id(message.getId())
         .hasHint(singleChoiceQuestionMessage.isHasHint())
+        .correctness(CorrectnessState.UNDEFINED)
         .hintMessage(getHitMessage(singleChoiceQuestionMessage))
         .isVoted(false)
         .build();
@@ -328,6 +412,7 @@ public class UserMessageService {
         .id(message.getId())
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
+        .correctness(CorrectnessState.UNDEFINED)
         .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
         .isVoted(false)
         .build();
@@ -337,6 +422,7 @@ public class UserMessageService {
         .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
         .id(message.getId())
         .messageType(MessageType.MULTI_CHOICE_TASK)
+        .correctness(CorrectnessState.UNDEFINED)
         .hasHint(multiChoiceTaskQuestionMessage.isHasHint())
         .hintMessage(getHitMessage(multiChoiceTaskQuestionMessage))
         .isVoted(false)

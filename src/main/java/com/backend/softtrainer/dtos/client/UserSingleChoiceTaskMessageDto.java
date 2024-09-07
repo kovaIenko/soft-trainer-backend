@@ -13,14 +13,13 @@ import java.util.List;
 @NoArgsConstructor
 public class UserSingleChoiceTaskMessageDto extends UserMessageDto {
 
-//  @JsonIgnore
-//  private String correct;
-
   private String answer;
 
   @JsonProperty("is_voted")
   private boolean isVoted;
 
   private List<MessageAnswerOptionDto> options;
+
+  private CorrectnessState correctness;
 
 }

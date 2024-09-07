@@ -22,5 +22,6 @@ public class UserSingleChoiceMessageDto extends UserMessageDto {
 
   private String content;
 
+  private CorrectnessState correctness;
 
 }

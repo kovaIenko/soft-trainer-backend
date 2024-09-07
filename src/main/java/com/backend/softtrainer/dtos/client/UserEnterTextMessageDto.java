@@ -15,4 +15,6 @@ public class UserEnterTextMessageDto extends UserMessageDto {
   @JsonProperty("is_voted")
   private boolean isVoted;
 
+  private CorrectnessState correctness;
+
 }

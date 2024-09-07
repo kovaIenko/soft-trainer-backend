@@ -20,4 +20,6 @@ public class UserMultiChoiceTaskMessageDto extends UserMessageDto {
 
   private List<MessageAnswerOptionDto> options;
 
+  private CorrectnessState correctness;
+
 }
