@@ -125,6 +125,7 @@ public class UserMessageService {
 
   private List<Integer> splitCorrectAnswer(final String text) {
     return Stream.of(text.split("\\|\\|"))
+      .map(String::trim)
       .map(Integer::parseInt)
       .collect(Collectors.toList());
   }
@@ -132,8 +133,8 @@ public class UserMessageService {
   private HashSet<String> getCorrectAnswerStr(final List<String> options,
                                               final List<Integer> correctAnswer) {
     return correctAnswer.stream()
-      .map(options::get)
-      .collect(Collectors.toCollection(HashSet::new));
+      .map(index -> options.get(index - 1))
+        .collect(Collectors.toCollection(HashSet::new));
   }
 
   public UserMessageDto combine(final Message question, final Message answer) {

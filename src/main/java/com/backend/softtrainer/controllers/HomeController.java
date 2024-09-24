@@ -62,6 +62,8 @@ public class HomeController {
     String refresh_token = tokenService.generateRefreshToken(user);
 
     var isOnboarded = userDataExtractor.getFirstChatOfOnboarding(user.user()).isPresent();
+
+    var org = user.user().getOrganization();
     return ResponseEntity.ok(new LoginResponse(
       "User with email = " + request.email() + " successfully logined!",
       access_token,
@@ -69,7 +71,8 @@ public class HomeController {
       true,
       "success",
       user.user().getId(),
-      isOnboarded
+      isOnboarded,
+      org.getLocalization()
     ));
   }
 

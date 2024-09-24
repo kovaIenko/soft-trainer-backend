@@ -52,6 +52,8 @@ public class MessageService {
                                         final Map<String, String> hintCache) {
 
     HintMessage temp = null;
+
+    var title = "Tip";
     try {
       log.info(
         "Updating or creation hint message for chat: {}, at {} with content {}",
@@ -59,31 +61,28 @@ public class MessageService {
         LocalDateTime.now(),
         content
       );
-//      var msgs = messageRepository.findMessagesByOrderNumber(chat.getId(), hintNode.getOrderNumber());
-
-      var title = "Tip";
-//      if (!msgs.isEmpty()) {
-//        temp = (HintMessage) msgs.get(0);
-//        temp.setTitle(title);
-//        temp.setContent(content);
-//        temp.setInteracted(true);
-//        log.info("The hint message is updated: {}, at {}, and version {}", temp, LocalDateTime.now(), temp.getVersion());
-//      } else {
-      temp = HintMessage.builder()
-        .id(hintMessageId)
-        .chat(chat)
-        .flowNode(hintNode)
-        .messageType(MessageType.HINT_MESSAGE)
-        .role(ChatRole.APP)
-        .content(content)
-        .title(title)
-        .interacted(true)
-        .build();
-//      }
+      var msg = messageRepository.findById(hintMessageId);
+      if (msg.isPresent()) {
+        temp = (HintMessage) msg.get();
+        temp.setTitle(title);
+        temp.setContent(content);
+        temp.setInteracted(true);
+        log.info("The hint message is updated: {}, at {}, and version {}", temp, LocalDateTime.now(), temp.getVersion());
+      } else {
+        temp = HintMessage.builder()
+          .id(hintMessageId)
+          .chat(chat)
+          .flowNode(hintNode)
+          .messageType(MessageType.HINT_MESSAGE)
+          .role(ChatRole.APP)
+          .content(content)
+          .title(title)
+          .interacted(true)
+          .build();
+      }
       hintCache.put(temp.getId(), content);
-      log.info("Try to store temp message: {}", temp);
+      log.info("Save or update to store hint message with content: {}", temp);
       temp = entityManager.merge(temp);
-
       log.info("Hint message is stored: {}, at {}, version {}", temp, LocalDateTime.now(), temp.getVersion());
 
     } catch (Exception e) {

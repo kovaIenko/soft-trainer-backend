@@ -8,5 +8,6 @@ public record LoginResponse(String message,
                             boolean success,
                             @JsonProperty("error_message") String errorMessage,
                             @JsonProperty("user_id") Long userId,
-                            @JsonProperty("is_onboarded") boolean isOnboarded){
+                            @JsonProperty("is_onboarded") boolean isOnboarded,
+                            String localization){
 };

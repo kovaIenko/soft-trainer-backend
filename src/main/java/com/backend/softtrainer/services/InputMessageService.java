@@ -62,7 +62,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,6 +104,7 @@ public class InputMessageService {
         messageRequestDto.getId(),
         messageRequestDto.getChatId()
       );
+
       return CompletableFuture.completedFuture(allMessagesByChat);
     }
 
@@ -369,12 +369,10 @@ public class InputMessageService {
                                             final Chat chat) {
     var actionableFlowNode = currentMessage.getFlowNode();
 
-    Supplier<Optional<FlowNode>> nextHintNode = () -> getFollowingHintNode(actionableFlowNode);
-    if (actionableFlowNode.isHasHint() || nextHintNode.get().isPresent()) {
+Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
+    if (actionableFlowNode.isHasHint() || nextHintNode.isPresent()) {
 
-      var hintNodeOpt = nextHintNode.get();
-
-      if (hintNodeOpt.isEmpty()) {
+      if (nextHintNode.isEmpty()) {
         log.info(
           "There is not actual hint node when the actionable message has_hint = true and id {} and message_type {}",
           actionableFlowNode.getId(),
@@ -392,15 +390,20 @@ public class InputMessageService {
       var hintMessageId = UUID.randomUUID().toString();
       log.info("Generate uid for the hint message {}", hintMessageId);
       //todo temporary
-      currentMessage.setHintMessage(HintMessage.builder()
-                                      .id(hintMessageId)
-                                      .chat(chat)
-                                      .messageType(MessageType.HINT_MESSAGE)
-                                      .flowNode(hintNodeOpt.get())
-                                      .character(hintNodeOpt.get().getCharacter())
-                                      .role(ChatRole.APP)
-                                      .timestamp(LocalDateTime.now())
-                                      .build());
+
+      var hintMessage = HintMessage.builder()
+        .id(hintMessageId)
+        .chat(chat)
+        .messageType(MessageType.HINT_MESSAGE)
+        .flowNode(nextHintNode.get())
+        .character(nextHintNode.get().getCharacter())
+        .role(ChatRole.APP)
+        .timestamp(LocalDateTime.now())
+        .build();
+
+      messageService.save(hintMessage);
+
+      currentMessage.setHintMessage(hintMessage);
 
       currentMessage.setHasHint(true);
 
@@ -411,7 +414,7 @@ public class InputMessageService {
             actionableFlowNode.getOrderNumber()
           );
 
-          generateHintMessage(hintMessageId, actionableMessages, hintNodeOpt.get(), chat);
+          generateHintMessage(hintMessageId, actionableMessages, nextHintNode.get(), chat);
           log.info("The result of hint generation was updated in the db at {}", LocalDateTime.now());
 
         } catch (Exception e) {

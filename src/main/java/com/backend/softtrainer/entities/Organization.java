@@ -1,6 +1,7 @@
 package com.backend.softtrainer.entities;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -40,5 +41,8 @@ public class Organization {
 
   @OneToMany(fetch = FetchType.LAZY, mappedBy = "organization", cascade = CascadeType.ALL)
   private List<User> employees;
+
+  @Column(name = "localization")
+  private String localization;
 
 }
