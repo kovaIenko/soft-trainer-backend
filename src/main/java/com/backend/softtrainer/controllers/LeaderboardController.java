@@ -53,6 +53,7 @@ public class LeaderboardController {
             .orElseGet(() -> userDataExtractor.extractUserName(usr)
               .map(name -> {
                 log.info("Extracted name from the onboarding {} for the user.email {}", name, usr.getEmail());
+                userService.updateName(usr, name);
                 return name;
               }).orElse(usr.getEmail()));
 

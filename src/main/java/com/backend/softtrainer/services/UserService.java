@@ -15,6 +15,10 @@ public class UserService {
 
   public List<User> findAllCollegues(final User user){
     return userRepository.findAllByOrganizations(user.getOrganization());
-
   }
+
+  public void updateName(final User user, final String name){
+    userRepository.updateName(user, name);
+  }
+
 }
