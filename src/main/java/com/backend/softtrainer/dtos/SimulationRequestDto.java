@@ -16,6 +16,8 @@ public class SimulationRequestDto {
 
   private String name;
 
+  private Double hearts;
+
   private List<CharacterDto> characters;
 
   private List<HyperParameterDto> hyperparameters;

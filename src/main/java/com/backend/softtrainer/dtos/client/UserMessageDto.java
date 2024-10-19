@@ -5,6 +5,7 @@ import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.enums.ChatRole;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
@@ -52,5 +53,9 @@ public class UserMessageDto {
 
   @JsonProperty("hint_message")
   private UserHintMessageDto hintMessage;
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonProperty("response_time_limit")
+  private Long responseTimeLimit;
 
 }

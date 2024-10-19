@@ -21,6 +21,7 @@ public class Converter {
       .user(user)
       .simulation(simulation)
       .skill(simulation.getSkill())
+      .hearts(simulation.getHearts())
       .build();
   }
 

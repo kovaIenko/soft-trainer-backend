@@ -1,5 +1,6 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.ChatParams;
 import com.backend.softtrainer.dtos.MessageAnswerOptionDto;
 import com.backend.softtrainer.dtos.client.CorrectnessState;
 import com.backend.softtrainer.dtos.client.UserContentMessageDto;
@@ -31,6 +32,7 @@ import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -134,10 +136,31 @@ public class UserMessageService {
                                               final List<Integer> correctAnswer) {
     return correctAnswer.stream()
       .map(index -> options.get(index - 1))
-        .collect(Collectors.toCollection(HashSet::new));
+      .collect(Collectors.toCollection(HashSet::new));
   }
 
-  public UserMessageDto combine(final Message question, final Message answer) {
+  private void adjustHeartsToCorrectnessOfAnswer(CorrectnessState correctnessState, ChatParams chatParams) {
+    if (Objects.nonNull(chatParams.getHearts())) {
+      switch (correctnessState) {
+        case CORRECT:
+//          chatParams.setHearts(chatParams.getHearts() + 1);
+          break;
+        case PARTIALLY_CORRECT:
+//          chatParams.setHearts(chatParams.getHearts() + 0.5);
+          break;
+        case INCORRECT:
+          chatParams.setHearts(chatParams.getHearts() - 1);
+          break;
+        case PARTIALLY_INCORRECT:
+          chatParams.setHearts(chatParams.getHearts() - 0.5);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  public Stream<UserMessageDto> combine(final Message question, final Message answer, final ChatParams chatParams) {
     if (question instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage
       && answer instanceof SingleChoiceTaskAnswerMessage singleChoiceTaskAnswerMessage) {
       var options = split(singleChoiceTaskQuestionMessage.getOptions());
@@ -146,18 +169,23 @@ public class UserMessageService {
       var answerOptions = getCorrectAnswerStr(options, correctAnswer);
       var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
 
-      return UserSingleChoiceTaskMessageDto.builder()
-        .answer(singleChoiceTaskAnswerMessage.getAnswer())
-        .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), singleChoiceTaskAnswerMessage.getAnswer()))
-        .timestamp(singleChoiceTaskAnswerMessage.getTimestamp())
-        .messageType(MessageType.SINGLE_CHOICE_TASK)
-        .id(singleChoiceTaskAnswerMessage.getId())
-        .idTemp(singleChoiceTaskQuestionMessage.getId())
-        .hasHint(singleChoiceTaskAnswerMessage.isHasHint())
-        .hintMessage(getHitMessage(singleChoiceTaskAnswerMessage))
-        .correctness(correctnessState)
-        .isVoted(true)
-        .build();
+      adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+
+      return Stream.of(UserSingleChoiceTaskMessageDto.builder()
+                         .answer(singleChoiceTaskAnswerMessage.getAnswer())
+                         .options(convertOptions(
+                           singleChoiceTaskQuestionMessage.getOptions(),
+                           singleChoiceTaskAnswerMessage.getAnswer()
+                         ))
+                         .timestamp(singleChoiceTaskAnswerMessage.getTimestamp())
+                         .messageType(MessageType.SINGLE_CHOICE_TASK)
+                         .id(singleChoiceTaskAnswerMessage.getId())
+                         .idTemp(singleChoiceTaskQuestionMessage.getId())
+                         .hasHint(singleChoiceTaskAnswerMessage.isHasHint())
+                         .hintMessage(getHitMessage(singleChoiceTaskAnswerMessage))
+                         .correctness(correctnessState)
+                         .isVoted(true)
+                         .build());
     } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
       && answer instanceof SingleChoiceAnswerMessage singleChoiceAnswerMessage) {
 
@@ -167,19 +195,21 @@ public class UserMessageService {
       var answerOptions = getCorrectAnswerStr(options, correctAnswer);
       var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
 
-      return UserSingleChoiceMessageDto.builder()
-        .answer(singleChoiceAnswerMessage.getAnswer())
-        .options(convertOptions(singleChoiceQuestionMessage.getOptions(), singleChoiceAnswerMessage.getAnswer()))
-        .timestamp(singleChoiceAnswerMessage.getTimestamp())
-        .id(singleChoiceAnswerMessage.getId())
-        .idTemp(singleChoiceQuestionMessage.getId())
-        .content(singleChoiceAnswerMessage.getAnswer())
-        .hasHint(singleChoiceAnswerMessage.isHasHint())
-        .hintMessage(getHitMessage(singleChoiceAnswerMessage))
-        .correctness(correctnessState)
-        .messageType(MessageType.TEXT)
-        .isVoted(true)
-        .build();
+      adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+
+      return Stream.of(UserSingleChoiceMessageDto.builder()
+                         .answer(singleChoiceAnswerMessage.getAnswer())
+                         .options(convertOptions(singleChoiceQuestionMessage.getOptions(), singleChoiceAnswerMessage.getAnswer()))
+                         .timestamp(singleChoiceAnswerMessage.getTimestamp())
+                         .id(singleChoiceAnswerMessage.getId())
+                         .idTemp(singleChoiceQuestionMessage.getId())
+                         .content(singleChoiceAnswerMessage.getAnswer())
+                         .hasHint(singleChoiceAnswerMessage.isHasHint())
+                         .hintMessage(getHitMessage(singleChoiceAnswerMessage))
+                         .correctness(correctnessState)
+                         .messageType(MessageType.TEXT)
+                         .isVoted(true)
+                         .build());
     } else if (question instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage
       && answer instanceof MultiChoiceTaskAnswerMessage multiChoiceTaskAnswerMessage) {
       var options = split(multiChoiceTaskQuestionMessage.getOptions());
@@ -188,59 +218,43 @@ public class UserMessageService {
       var answerOptions = getCorrectAnswerStr(options, correctAnswer);
       var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
 
-      return UserMultiChoiceTaskMessageDto.builder()
-        .answer(multiChoiceTaskAnswerMessage.getAnswer())
-        .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), multiChoiceTaskAnswerMessage.getAnswer()))
-        .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
-        .messageType(MessageType.MULTI_CHOICE_TASK)
-        .id(multiChoiceTaskAnswerMessage.getId())
-        .idTemp(multiChoiceTaskQuestionMessage.getId())
-        .hasHint(multiChoiceTaskAnswerMessage.isHasHint())
-        .hintMessage(getHitMessage(multiChoiceTaskAnswerMessage))
-        .correctness(correctnessState)
-        .isVoted(true)
-        .build();
+      adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+
+      return userAnswer.stream()
+        .filter(answerOption -> Objects.nonNull(answerOption) && !answerOption.isBlank())
+        .map(userAnswerOption ->
+               UserSingleChoiceMessageDto.builder()
+                 .content(userAnswerOption)
+                 .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
+                 .messageType(MessageType.TEXT)
+                 .id(multiChoiceTaskAnswerMessage.getId())
+                 .hasHint(multiChoiceTaskAnswerMessage.isHasHint())
+                 .hintMessage(getHitMessage(multiChoiceTaskAnswerMessage))
+                 .correctness(resolveCorrectnessState(answerOptions, splitToSet(userAnswerOption)))
+                 .isVoted(true)
+                 .build());
     } else if (question instanceof EnterTextQuestionMessage enterQuestionTextMessage
       && answer instanceof EnterTextAnswerMessage enterAnswerTextMessage) {
-      return UserEnterTextMessageDto.builder()
-        .content(enterAnswerTextMessage.getContent())
-        .id(enterAnswerTextMessage.getId())
-        .idTemp(enterQuestionTextMessage.getId())
-        .timestamp(enterAnswerTextMessage.getTimestamp())
-        .correctness(CorrectnessState.UNDEFINED)
-        .messageType(MessageType.TEXT)
-        .isVoted(true)
-        .build();
+      return Stream.of(UserEnterTextMessageDto.builder()
+                         .content(enterAnswerTextMessage.getContent())
+                         .id(enterAnswerTextMessage.getId())
+                         .idTemp(enterQuestionTextMessage.getId())
+                         .timestamp(enterAnswerTextMessage.getTimestamp())
+                         .correctness(CorrectnessState.UNDEFINED)
+                         .messageType(MessageType.TEXT)
+                         .isVoted(true)
+                         .build());
     }
     throw new NoSuchElementException("The incorrect pair of question and answer for chat " + question.getChat()
       .getId() + " Question " + question.getMessageType() + " id: " + question.getId() + " , answer " + answer.getMessageType() + " id: " + answer.getId());
   }
 
-  public List<UserMessageDto> combineMessages(final List<Message> messages) {
+  public List<UserMessageDto> combineMessages(final List<Message> messages, final ChatParams chatParams) {
 
     var messagesGroupedByFlowNodes = messages.stream()
       .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
 
-    return messagesGroupedByFlowNodes.values().stream()
-      .map(collection -> {
-        if (collection.size() == 2) {
-          return QUESTION_CLASSES.contains(collection.get(0).getClass()) ?
-            combine(collection.get(0), collection.get(1)) : combine(collection.get(1), collection.get(0));
-        } else if (collection.size() == 1) {
-          //todo temp
-          if (collection.get(0).getMessageType().equals(MessageType.HINT_MESSAGE)) {
-            return null;
-          }
-          return convert(collection.get(0));
-        } else {
-          log.info(String.format(
-            "Collection size while combining messages by flow node is %s, the collection is %s",
-            collection.size(),
-            collection
-          ));
-          return null;
-        }
-      })
+    return messagesGroupedByFlowNodes.values().stream().flatMap(collection -> sortCombinedMessages(chatParams, collection))
       .filter(Objects::nonNull)
       .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
       .peek(msg -> {
@@ -254,18 +268,42 @@ public class UserMessageService {
       .collect(Collectors.toList());
   }
 
-  public List<UserMessageDto> combineOneTypeMessages(final List<Message> messages) {
+  private @Nullable Stream<UserMessageDto> sortCombinedMessages(final ChatParams chatParams, final List<Message> collection) {
+    if (collection.size() == 2) {
+      return QUESTION_CLASSES.contains(collection.get(0).getClass()) ?
+        combine(collection.get(0), collection.get(1), chatParams) : combine(collection.get(1), collection.get(0), chatParams);
+    } else if (collection.size() == 1) {
+      //todo temp
+      if (collection.get(0).getMessageType().equals(MessageType.HINT_MESSAGE)) {
+        return null;
+      }
+      return Stream.of(convert(collection.get(0)));
+    } else {
+      log.info(String.format(
+        "Collection size while combining messages by flow node is %s, the collection is %s",
+        collection.size(),
+        collection
+      ));
+      return null;
+    }
+  }
+
+  public List<UserMessageDto> combineOneTypeMessages(final List<Message> messages, ChatParams chatParams) {
 
     var messagesGroupedByFlowNodes = messages.stream()
       .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
 
     return messagesGroupedByFlowNodes.values().stream()
-      .map(collection -> {
+      .flatMap(collection -> {
         if (collection.size() == 2) {
           return QUESTION_CLASSES.contains(collection.get(0).getClass()) ?
-            combine(collection.get(0), collection.get(1)) : combine(collection.get(1), collection.get(0));
+            combine(collection.get(0), collection.get(1), chatParams) : combine(
+            collection.get(1),
+            collection.get(0),
+            chatParams
+          );
         } else if (collection.size() == 1) {
-          return convert(collection.get(0));
+          return Stream.of(convert(collection.get(0)));
         } else {
           log.info(String.format(
             "Collection size while combining messages by flow node is %s, the collection is %s",
@@ -393,7 +431,9 @@ public class UserMessageService {
         .id(message.getId())
         .character(enterTextQuestionMessage.getCharacter())
         .correctness(CorrectnessState.UNDEFINED)
+        .responseTimeLimit(enterTextQuestionMessage.getResponseTimeLimit())
         .content(enterTextQuestionMessage.getContent())
+        .isVoted(false)
         .build();
     } else if (message instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage) {
       return UserSingleChoiceMessageDto.builder()
@@ -404,6 +444,7 @@ public class UserMessageService {
         .hasHint(singleChoiceQuestionMessage.isHasHint())
         .correctness(CorrectnessState.UNDEFINED)
         .hintMessage(getHitMessage(singleChoiceQuestionMessage))
+        .responseTimeLimit(singleChoiceQuestionMessage.getResponseTimeLimit())
         .isVoted(false)
         .build();
     } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
@@ -415,6 +456,7 @@ public class UserMessageService {
         .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
         .correctness(CorrectnessState.UNDEFINED)
         .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
+        .responseTimeLimit(singleChoiceTaskQuestionMessage.getResponseTimeLimit())
         .isVoted(false)
         .build();
     } else if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage) {
@@ -425,13 +467,48 @@ public class UserMessageService {
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .correctness(CorrectnessState.UNDEFINED)
         .hasHint(multiChoiceTaskQuestionMessage.isHasHint())
+        .responseTimeLimit(multiChoiceTaskQuestionMessage.getResponseTimeLimit())
         .hintMessage(getHitMessage(multiChoiceTaskQuestionMessage))
+
         .isVoted(false)
         .build();
     }
     throw new NoSuchElementException("The incorrect question type " + message.getClass().getName());
   }
 
+//  private UserLastSimulationMessage createDumpLastSimulationMessage(){
+//
+//    var contents = new ArrayList<InnerContentMessage>();
+//
+//    if (Objects.nonNull(lastSimulationMessage.getHyperParams()) && !lastSimulationMessage.getHyperParams().isEmpty()) {
+//      var chartContent = ChartInnerContent.builder()
+//        .type(InnerContentMessageType.CHART)
+//        .values(lastSimulationMessage.getHyperParams())
+//        .build();
+//
+//      contents.add(chartContent);
+//    }
+//
+//    if (Objects.nonNull(lastSimulationMessage.getContent()) && !lastSimulationMessage.getContent().isEmpty()) {
+//      var textContent = TextInnerContent.builder()
+//        .type(InnerContentMessageType.TEXT)
+//        .description(lastSimulationMessage.getContent())
+//        .title(lastSimulationMessage.getTitle())
+//        .build();
+//      contents.add(textContent);
+//    }
+//
+//    log.info("Last simulation message content {}", contents);
+//
+//    return UserLastSimulationMessage.builder()
+//      .timestamp(LocalDateTime.now())
+//      .messageType(MessageType.RESULT_SIMULATION)
+//      .id(message.getId())
+//      .character(lastSimulationMessage.getCharacter())
+//      .contents(contents)
+//      .hasHint(false)
+//      .build();
+//  }
 
   private UserHintMessageDto getHitMessage(final Message message) {
     if (message.isHasHint()) {

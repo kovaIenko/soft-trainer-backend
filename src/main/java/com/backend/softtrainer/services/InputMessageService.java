@@ -1,5 +1,7 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.ChatDataDto;
+import com.backend.softtrainer.dtos.ChatParams;
 import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.dtos.UserHyperParamResponseDto;
 import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
@@ -39,6 +41,7 @@ import com.backend.softtrainer.entities.messages.TextMessage;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
 import com.backend.softtrainer.interpreter.InterpreterMessageMapper;
 import com.backend.softtrainer.repositories.ChatRepository;
+import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.repositories.PromptRepository;
 import com.backend.softtrainer.utils.Converter;
 import com.oruel.conditionscript.libs.MessageManagerLib;
@@ -86,9 +89,10 @@ public class InputMessageService {
   private final Map<String, String> HINT_CACHE = new ConcurrentHashMap<>();
 
   private final Map<String, String> RESULT_SIMULATION_CACHE = new ConcurrentHashMap<>();
+  private final MessageRepository messageRepository;
 
-  public CompletableFuture<List<Message>> buildResponse(final MessageRequestDto messageRequestDto) throws
-                                                                                                   SendMessageConditionException {
+  public CompletableFuture<ChatDataDto> buildResponse(final MessageRequestDto messageRequestDto) throws
+                                                                                                 SendMessageConditionException {
     var chatOpt = chatRepository.findByIdWithMessages(messageRequestDto.getChatId());
     if (chatOpt.isEmpty()) {
       throw new NoSuchElementException(String.format("There is no such chat %s", messageRequestDto.getChatId()));
@@ -105,7 +109,8 @@ public class InputMessageService {
         messageRequestDto.getChatId()
       );
 
-      return CompletableFuture.completedFuture(allMessagesByChat);
+      return CompletableFuture.completedFuture(
+        new ChatDataDto(allMessagesByChat, new ChatParams(chat.getHearts())));
     }
 
     var message = messageOpt.get();
@@ -115,11 +120,11 @@ public class InputMessageService {
     return findOutTheListOfMessagesBasedOnUserActionableMessage(messageRequestDto, chat, allMessagesByChat, message);
   }
 
-  private @NotNull CompletableFuture<List<Message>> findOutTheListOfMessagesBasedOnUserActionableMessage(final MessageRequestDto messageRequestDto,
-                                                                                                         final Chat chat,
-                                                                                                         final List<Message> alreadyStoredMessages,
-                                                                                                         Message currentMessage) throws
-                                                                                                                                 SendMessageConditionException {
+  private @NotNull CompletableFuture<ChatDataDto> findOutTheListOfMessagesBasedOnUserActionableMessage(final MessageRequestDto messageRequestDto,
+                                                                                                       final Chat chat,
+                                                                                                       final List<Message> alreadyStoredMessages,
+                                                                                                       Message currentMessage) throws
+                                                                                                                               SendMessageConditionException {
     Message message;
 
     var alreadyStoredMessagesAfterCurrent = getMessagesAfter(alreadyStoredMessages, currentMessage);
@@ -134,6 +139,7 @@ public class InputMessageService {
         .chat(chat)
         .flowNode(currentMessage.getFlowNode())
         .interacted(true)
+        .userResponseTime(messageRequestDto.getUserResponseTime())
         .answer(singleChoiceAnswerMessageDto.getAnswer())
         .build();
 
@@ -145,6 +151,7 @@ public class InputMessageService {
       var currentMsg = (SingleChoiceQuestionMessage) currentMessage;
       currentMsg.setInteracted(true);
       currentMsg.setAnswer(singleChoiceAnswerMessageDto.getAnswer());
+      currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
 //      currentMsg.setRole(ChatRole.USER);
       messageService.save(currentMsg);
 
@@ -168,6 +175,7 @@ public class InputMessageService {
         .flowNode(currentMessage.getFlowNode())
         .answer(singleChoiceTaskAnswerMessageDto.getAnswer())
         .correct(singleChoiceTaskAnswerMessageDto.getCorrect())
+        .userResponseTime(messageRequestDto.getUserResponseTime())
         .interacted(true)
         .options(singleChoiceTaskAnswerMessageDto.getOptions())
         .build();
@@ -177,8 +185,8 @@ public class InputMessageService {
       //update the already existing msg
       var currentMsg = (SingleChoiceTaskQuestionMessage) currentMessage;
       currentMsg.setInteracted(true);
+      currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
       currentMsg.setAnswer(singleChoiceTaskAnswerMessageDto.getAnswer());
-//      currentMsg.setRole(ChatRole.USER);
       messageService.save(currentMsg);
 
       alreadyStoredMessagesAfterCurrent.add(answer);
@@ -199,6 +207,7 @@ public class InputMessageService {
         .id(UUID.randomUUID().toString())
         .chat(chat)
         .flowNode(currentMessage.getFlowNode())
+        .userResponseTime(messageRequestDto.getUserResponseTime())
         .answer(multiChoiceAnswerMessageDto.getAnswer())
         .options(multiChoiceAnswerMessageDto.getOptions())
         .interacted(true)
@@ -209,6 +218,7 @@ public class InputMessageService {
       //update the already existing msg
       var currentMsg = (MultiChoiceTaskQuestionMessage) currentMessage;
       currentMsg.setInteracted(true);
+      currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
       currentMsg.setAnswer(multiChoiceAnswerMessageDto.getAnswer());
 //      currentMsg.setRole(ChatRole.USER);
       messageService.save(currentMsg);
@@ -230,6 +240,7 @@ public class InputMessageService {
         .role(ChatRole.USER)
         .id(UUID.randomUUID().toString())
         .chat(chat)
+        .userResponseTime(messageRequestDto.getUserResponseTime())
         .interacted(true)
         .flowNode(currentMessage.getFlowNode())
         .answer(enterTextAnswerMessageDto.getAnswer())
@@ -240,6 +251,7 @@ public class InputMessageService {
 
       //update the already existing msg
       var currentMsg = (EnterTextQuestionMessage) currentMessage;
+      currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
       currentMsg.setInteracted(true);
       currentMsg.setAnswer(enterTextAnswerMessageDto.getAnswer());
 //      currentMsg.setRole(ChatRole.USER);
@@ -259,14 +271,18 @@ public class InputMessageService {
       return nextMessages;
     } else if (messageRequestDto instanceof LastSimulationMessageDto lastSimulationMessageDto) {
 
-      waitForAiMsg(currentMessage);
+      var resultMessage = (LastSimulationMessage) currentMessage;
+      if (resultMessage.getContent().isBlank()) {
+        waitForAiMsg(currentMessage);
+      }
+
       log.info("The hint message looks like {}", currentMessage);
-      return CompletableFuture.completedFuture(List.of(currentMessage));
+      return CompletableFuture.completedFuture(new ChatDataDto(List.of(currentMessage), new ChatParams(null)));
     } else if (messageRequestDto instanceof HintMessageDto hintMessageDto) {
 
       waitForAiMsg(currentMessage);
       log.info("The result message looks like {}", currentMessage);
-      return CompletableFuture.completedFuture(List.of(currentMessage));
+      return CompletableFuture.completedFuture(new ChatDataDto(List.of(currentMessage), new ChatParams(null)));
     } else {
       throw new SendMessageConditionException(
         "Send message has incorrect message type. It should be one of the actionable message type");
@@ -369,7 +385,7 @@ public class InputMessageService {
                                             final Chat chat) {
     var actionableFlowNode = currentMessage.getFlowNode();
 
-Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
+    Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
     if (actionableFlowNode.isHasHint() || nextHintNode.isPresent()) {
 
       if (nextHintNode.isEmpty()) {
@@ -445,35 +461,11 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
     return hintNodeOpt;
   }
 
-  @Deprecated
-  private boolean isLastActionableMessageInteracted(final List<Message> messages) {
-    if (messages.size() > 1) {
-      var last = messages.get(messages.size() - 1);
-
-//      if (last.getMessageType().equals(MessageType.HINT_MESSAGE)) {
-//        return true;
-//      }
-      var previousLast = messages.get(messages.size() - 2);
-      return last.getMessageType().equals(previousLast.getMessageType());
-      //last hint message with recommendation
-    } else if (messages.size() == 1 && messages.get(0).getMessageType().equals(MessageType.HINT_MESSAGE)) {
-      return true;
-    } else {
-      return messages.isEmpty();
-    }
-  }
-
   @NotNull
-  private CompletableFuture<List<Message>> figureOutNextMessagesWith(final Chat chat,
-                                                                     final FlowNode flowNode,
-                                                                     final List<Message> alreadyStoredMessages) throws
-                                                                                                                SendMessageConditionException {
-
-//    boolean lastActionableMsgInteracted = isLastActionableMessageInteracted(alreadyStoredMessages);
-//
-//    if (!lastActionableMsgInteracted) {
-//      return CompletableFuture.completedFuture(alreadyStoredMessages);
-//    }
+  private CompletableFuture<ChatDataDto> figureOutNextMessagesWith(Chat chat,
+                                                                   final FlowNode flowNode,
+                                                                   final List<Message> alreadyStoredMessages) throws
+                                                                                                              SendMessageConditionException {
 
     Long previousOrderNumber = flowNode.getOrderNumber();
 
@@ -513,16 +505,20 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
             );
           }
           alreadyStoredMessages.add(nextMessage);
-          System.out.println("The orderNumber of current flowNode is " + nextFlowNode.getOrderNumber());
+          log.info("The orderNumber of current flowNode is {}", nextFlowNode.getOrderNumber());
         } else {
           chatRepository.updateIsFinished(chat.getId(), true);
-          var t = chatRepository.findById(chat.getId());
-          log.info("The chat with id {} is finished", t.get().getId());
+          var chatOptional = chatRepository.findById(chat.getId());
+
+          if (chatOptional.isPresent()) {
+            chat = chatOptional.get();
+          }
+          log.info("The chat with id {} is finished", chat.getId());
           break;
         }
       }
     }
-    return CompletableFuture.completedFuture(alreadyStoredMessages);
+    return CompletableFuture.completedFuture(new ChatDataDto(alreadyStoredMessages, new ChatParams(chat.getHearts())));
   }
 
   public void generateHintMessage(final String hintMessageId, final List<Message> actionableMsgs, final FlowNode hintNode,
@@ -747,6 +743,7 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
         .messageType(contentQuestion.getMessageType())
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
+        .responseTimeLimit(contentQuestion.getResponseTimeLimit())
         .role(ChatRole.APP)
         .timestamp(LocalDateTime.now())
         .content(contentQuestion.getUrl())
@@ -761,6 +758,7 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
         .character(flowNode.getCharacter())
         .timestamp(LocalDateTime.now())
         .options(singleChoiceQuestion.getOptions())
+        .responseTimeLimit(singleChoiceQuestion.getResponseTimeLimit())
         .correct(singleChoiceQuestion.getCorrect())
         .build();
     } else if (flowNode instanceof EnterTextQuestion enterTextQuestion) {
@@ -771,6 +769,7 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
+        .responseTimeLimit(enterTextQuestion.getResponseTimeLimit())
         .timestamp(LocalDateTime.now())
         .content(enterTextQuestion.getPrompt())
         .build();
@@ -783,6 +782,7 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .timestamp(LocalDateTime.now())
+        .responseTimeLimit(singleChoiceTask.getResponseTimeLimit())
         .options(singleChoiceTask.getOptions())
         .correct(singleChoiceTask.getCorrect())
         .build();
@@ -794,6 +794,7 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .role(ChatRole.APP)
+        .responseTimeLimit(multipleChoiceQuestion.getResponseTimeLimit())
         .timestamp(LocalDateTime.now())
         .options(multipleChoiceQuestion.getOptions())
         .correct(multipleChoiceQuestion.getCorrect())
@@ -813,6 +814,7 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
       return LastSimulationMessage.builder()
         .id(UUID.randomUUID().toString())
         .chat(chat)
+        .responseTimeLimit(resultSimulationNode.getResponseTimeLimit())
         .messageType(MessageType.RESULT_SIMULATION)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
@@ -822,6 +824,22 @@ Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
     }
 
     throw new RuntimeException("Please add converting type of messages from the flow");
+  }
+
+  public LastSimulationMessage generateLastSimulationMessage(Chat chat) {
+    var lastMessage = LastSimulationMessage.builder()
+      .id(UUID.randomUUID().toString())
+      .chat(chat)
+      .messageType(MessageType.RESULT_SIMULATION)
+//      .character(flowNode.getCharacter())
+      .content("Unfortunately, you have exhausted all possible attempts. Try again.")
+      .title("Your result")
+      .role(ChatRole.APP)
+      .timestamp(LocalDateTime.now())
+      .build();
+
+    messageRepository.save(lastMessage);
+    return lastMessage;
   }
 
   public List<Message> getAndStoreMessageByFlow(final List<FlowNode> flowNodes, final Chat chat) {

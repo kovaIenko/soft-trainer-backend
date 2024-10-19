@@ -78,5 +78,12 @@ public class Message {
   @Transient
   private HintMessage hintMessage;
 
+  @JsonProperty("response_time_limit")
+  @Column(name = "response_time_limit", nullable = true)
+  private Long responseTimeLimit;
+
+  @JsonProperty("user_response_time")
+  @Column(name = "user_response_time", nullable = true)
+  private Long userResponseTime;
 
 }

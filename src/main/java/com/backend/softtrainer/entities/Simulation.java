@@ -59,4 +59,6 @@ public class Simulation {
   @Column(name = "is_open")
   private boolean isOpen;
 
+  private Double hearts;
+
 }

@@ -1,5 +1,6 @@
 package com.backend.softtrainer.controllers;
 
+import com.backend.softtrainer.dtos.ChatParams;
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
 import com.backend.softtrainer.dtos.StaticRole;
@@ -72,6 +73,7 @@ public class ChatController {
               userDetails.user().getId(),
               chatRequestDto.getSimulationId()
             ),
+            null,
             null
           ));
         }
@@ -82,19 +84,27 @@ public class ChatController {
         var createdChat = chatService.store(simulation, userDetails.user());
 
         var messages = inputMessageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
-        var combinedMessages = userMessageService.combineMessages(messages);
+
+        var chatParams = new ChatParams(createdChat.getHearts());
+        var combinedMessages = userMessageService.combineMessages(messages, chatParams);
 
         //init default values to the hyper params for the user
         initUserDefaultHyperParams(simulation.getId(), createdChat.getId(), userDetails.user().getId());
 
-        log.info("Chat {} created for user {} and simulation {}", createdChat.getId(), userDetails.user().getId(), simulation.getId());
+        log.info(
+          "Chat {} created for user {} and simulation {}",
+          createdChat.getId(),
+          userDetails.user().getId(),
+          simulation.getId()
+        );
 
         return ResponseEntity.ok(new ChatResponseDto(
           createdChat.getId(),
           chatRequestDto.getSkillId(),
           true,
           "success",
-          combinedMessages
+          combinedMessages,
+          chatParams
         ));
 
       } else {
@@ -103,6 +113,7 @@ public class ChatController {
           chatRequestDto.getSkillId(),
           false,
           String.format("The is no flow nodes to display for simulation %s", chatRequestDto.getSimulationId()),
+          null,
           null
         ));
       }
@@ -112,6 +123,7 @@ public class ChatController {
         null,
         false,
         String.format("No simulation %s", chatRequestDto.getSimulationId()),
+        null,
         null
       ));
     }
@@ -136,19 +148,24 @@ public class ChatController {
           authentication.getName(),
           simulationId
         ),
+        null,
         null
       ));
     }
 
     var chat = chatOptional.get();
     var messages = chat.getMessages().stream().toList();
-    var combinedMessages = userMessageService.combineMessages(messages);
+
+    var chatParams = new ChatParams(chat.getHearts());
+
+    var combinedMessages = userMessageService.combineMessages(messages, chatParams);
     return ResponseEntity.ok(new ChatResponseDto(
       chat.getId(),
       null,
       true,
       "success",
-      combinedMessages
+      combinedMessages,
+      chatParams
     ));
   }
 
@@ -169,19 +186,24 @@ public class ChatController {
           chatId,
           authentication.getName()
         ),
+        null,
         null
       ));
     }
 
     var chat = chatOptional.get();
     var messages = chat.getMessages().stream().toList();
-    var combinedMessages = userMessageService.combineMessages(messages);
+
+    var chatParams = new ChatParams(chat.getHearts());
+
+    var combinedMessages = userMessageService.combineMessages(messages, chatParams);
     return ResponseEntity.ok(new ChatResponseDto(
       chat.getId(),
       null,
       true,
       "success",
-      combinedMessages
+      combinedMessages,
+      chatParams
     ));
   }
 

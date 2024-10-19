@@ -3,6 +3,7 @@ package com.backend.softtrainer.entities.flow;
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.enums.MessageType;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -50,5 +51,9 @@ public class FlowNode {
   private Simulation simulation;
 
   private boolean hasHint;
+
+  @JsonProperty("response_time_limit")
+  @Column(name = "response_time_limit")
+  private Long responseTimeLimit;
 
 }

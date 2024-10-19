@@ -57,4 +57,9 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
   @Query("update chats c set c.isFinished = :isFinished where c.id = :chatId")
   void updateIsFinished(@Param("chatId") final Long chatId, @Param("isFinished") final boolean isFinished);
 
+  @Modifying
+  @Transactional
+  @Query("update chats c set c.hearts = :hearts where c.id = :chatId")
+  void updateHearts(@Param("chatId") final Long chatId, @Param("hearts") final double hearts);
+
 }

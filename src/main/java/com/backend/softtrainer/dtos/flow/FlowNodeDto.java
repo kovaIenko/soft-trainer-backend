@@ -51,4 +51,7 @@ public abstract class FlowNodeDto {
   @JsonProperty("has_hint")
   private boolean hasHint;
 
+  @JsonProperty("response_time_limit")
+  private long responseTimeLimit;
+
 }

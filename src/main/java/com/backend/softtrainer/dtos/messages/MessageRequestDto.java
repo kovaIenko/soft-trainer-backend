@@ -38,4 +38,7 @@ public class MessageRequestDto {
   @JsonProperty("message_type")
   private MessageType messageType;
 
+  @JsonProperty("user_response_time")
+  private long userResponseTime;
+
 }

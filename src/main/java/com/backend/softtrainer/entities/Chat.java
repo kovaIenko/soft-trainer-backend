@@ -52,4 +52,6 @@ public class Chat {
 
   private boolean isFinished = false;
 
+  private Double hearts;
+
 }
