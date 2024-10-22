@@ -388,6 +388,8 @@ public class InputMessageService {
     Optional<FlowNode> nextHintNode = getFollowingHintNode(actionableFlowNode);
     if (actionableFlowNode.isHasHint() || nextHintNode.isPresent()) {
 
+      currentMessage.setHasHint(true);
+
       if (nextHintNode.isEmpty()) {
         log.info(
           "There is not actual hint node when the actionable message has_hint = true and id {} and message_type {}",
@@ -420,8 +422,6 @@ public class InputMessageService {
       messageService.save(hintMessage);
 
       currentMessage.setHintMessage(hintMessage);
-
-      currentMessage.setHasHint(true);
 
       CompletableFuture.runAsync(() -> {
         try {
@@ -580,9 +580,14 @@ public class InputMessageService {
   private void generateResultSimulationMessage(final Message msg, final Chat chat) {
     CompletableFuture.runAsync(() -> {
       try {
+        var local = chat.getUser().getOrganization().getLocalization();
+        var language = Objects.isNull(local) || local.isBlank() ? "UA" : local;
+
         boolean isOnboarding = msg.getFlowNode().getSimulation().getName().equals("Onboarding");
 
-        var title = isOnboarding ? "Forward to changes!" : "Your result";
+        var onboardingTitle = language.equalsIgnoreCase("UA") ? "Вперед до змін!" : "Forward to changes!";
+        var simulationTitle = language.equalsIgnoreCase("UA") ? "Ваш результат" : "Your result";
+        var title = isOnboarding ? onboardingTitle : simulationTitle;
 
         var params = userHyperParameterService.findAllByChatId(chat.getId())
           .stream()
@@ -594,7 +599,9 @@ public class InputMessageService {
             msg,
             params,
             title,
-            "Nice to meet you. Let's go to hone real communication skills!",
+            language.equalsIgnoreCase("UA") ?
+              "Приємно познайомитися. Йдемо відточувати навички справжнього спілкування!" :
+              "Nice to meet you. Let's go to hone real communication skills!",
             RESULT_SIMULATION_CACHE
           );
           return;
@@ -611,7 +618,9 @@ public class InputMessageService {
 
           log.info("The simulation recommendation we got from ai is {}", aiRecommendation.map(MessageDto::content));
           String content = aiRecommendation.map(MessageDto::content)
-            .orElse("Glad to see you're continuing to practice your soft-skills");
+            .orElse(language.equalsIgnoreCase("UA") ?
+                      "Радий бачити, що ви продовжуєте практикувати свої soft-skills" :
+                      "Glad to see you're continuing to practice your soft-skills!");
 
           messageService.updateResultSimulationMessage(
             msg,
@@ -631,7 +640,9 @@ public class InputMessageService {
             msg,
             params,
             title,
-            "Glad to see you're continuing to practice your soft-skills",
+            language.equalsIgnoreCase("UA") ?
+              "Радий бачити, що ви продовжуєте практикувати свої soft-skills" :
+              "Glad to see you're continuing to practice your soft-skills!",
             RESULT_SIMULATION_CACHE
           );
         }
@@ -757,6 +768,7 @@ public class InputMessageService {
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .timestamp(LocalDateTime.now())
+        .hasHint(singleChoiceQuestion.isHasHint())
         .options(singleChoiceQuestion.getOptions())
         .responseTimeLimit(singleChoiceQuestion.getResponseTimeLimit())
         .correct(singleChoiceQuestion.getCorrect())
@@ -769,6 +781,7 @@ public class InputMessageService {
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
+        .hasHint(enterTextQuestion.isHasHint())
         .responseTimeLimit(enterTextQuestion.getResponseTimeLimit())
         .timestamp(LocalDateTime.now())
         .content(enterTextQuestion.getPrompt())
@@ -782,6 +795,7 @@ public class InputMessageService {
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .timestamp(LocalDateTime.now())
+        .hasHint(singleChoiceTask.isHasHint())
         .responseTimeLimit(singleChoiceTask.getResponseTimeLimit())
         .options(singleChoiceTask.getOptions())
         .correct(singleChoiceTask.getCorrect())
@@ -797,15 +811,19 @@ public class InputMessageService {
         .responseTimeLimit(multipleChoiceQuestion.getResponseTimeLimit())
         .timestamp(LocalDateTime.now())
         .options(multipleChoiceQuestion.getOptions())
+        .hasHint(multipleChoiceQuestion.isHasHint())
         .correct(multipleChoiceQuestion.getCorrect())
         .build();
     } else if (flowNode instanceof HintMessageNode hintMessageNode) {
+      var local = chat.getUser().getOrganization().getLocalization();
+      var language = Objects.isNull(local) || local.isBlank() ? "UA" : local;
+      var title = language.equalsIgnoreCase("UA")? "Лови підказку!": "Tip";
       return HintMessage.builder()
         .id(UUID.randomUUID().toString())
         .chat(chat)
         .messageType(MessageType.HINT_MESSAGE)
         .flowNode(flowNode)
-        .title("Tip")
+        .title(title)
         .character(flowNode.getCharacter())
         .role(ChatRole.APP)
         .timestamp(LocalDateTime.now())
@@ -827,13 +845,18 @@ public class InputMessageService {
   }
 
   public LastSimulationMessage generateLastSimulationMessage(Chat chat) {
+
+    var local = chat.getUser().getOrganization().getLocalization();
+    var language = Objects.isNull(local) || local.isBlank() ? "UA" : local;
     var lastMessage = LastSimulationMessage.builder()
       .id(UUID.randomUUID().toString())
       .chat(chat)
       .messageType(MessageType.RESULT_SIMULATION)
 //      .character(flowNode.getCharacter())
-      .content("Unfortunately, you have exhausted all possible attempts. Try again.")
-      .title("Your result")
+      .content(language.equalsIgnoreCase("UA") ?
+                 "На жаль, ви вичерпали всі можливі спроби. Спробуйте знову." :
+                 "Unfortunately, you have exhausted all possible attempts. Try again.")
+      .title(language.equalsIgnoreCase("UA") ? "Результат" : "Your result")
       .role(ChatRole.APP)
       .timestamp(LocalDateTime.now())
       .build();
@@ -877,7 +900,8 @@ public class InputMessageService {
             messageHintPrompt,
             null,
             updatedChat.getSkill().getName(),
-            onboardingStr
+            onboardingStr,
+            updatedChat.getUser().getOrganization().getLocalization()
           ).thenApply(Optional::ofNullable);
         } catch (Exception e) {
           log.error("Error while generating AI hint", e);
@@ -899,7 +923,8 @@ public class InputMessageService {
           UserHyperParamResponseDto::value
         )),
         updatedChat.getSkill().getName(),
-        onboardingExtraction
+        onboardingExtraction,
+        updatedChat.getUser().getOrganization().getLocalization()
       ).get();
       log.error("everything is fine {} ", summary.content());
       //promptService.validateSimulationSummary(summary.content(), userName);

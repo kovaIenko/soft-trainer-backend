@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -52,8 +53,10 @@ public class MessageService {
                                         final Map<String, String> hintCache) {
 
     HintMessage temp = null;
+    var local = chat.getUser().getOrganization().getLocalization();
+    var language = Objects.isNull(local) || local.isBlank() ? "UA" : local;
 
-    var title = "Tip";
+    var title = language.equalsIgnoreCase("UA")? "Лови підказку!": "Tip";
     try {
       log.info(
         "Updating or creation hint message for chat: {}, at {} with content {}",

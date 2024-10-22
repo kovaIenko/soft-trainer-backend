@@ -169,7 +169,9 @@ public class UserMessageService {
       var answerOptions = getCorrectAnswerStr(options, correctAnswer);
       var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
 
-      adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+      if (singleChoiceTaskAnswerMessage.isHasHint()) {
+        adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+      }
 
       return Stream.of(UserSingleChoiceTaskMessageDto.builder()
                          .answer(singleChoiceTaskAnswerMessage.getAnswer())
@@ -195,7 +197,9 @@ public class UserMessageService {
       var answerOptions = getCorrectAnswerStr(options, correctAnswer);
       var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
 
-      adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+      if (singleChoiceAnswerMessage.isHasHint()) {
+        adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+      }
 
       return Stream.of(UserSingleChoiceMessageDto.builder()
                          .answer(singleChoiceAnswerMessage.getAnswer())
@@ -218,9 +222,11 @@ public class UserMessageService {
       var answerOptions = getCorrectAnswerStr(options, correctAnswer);
       var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
 
-      adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+      if (multiChoiceTaskAnswerMessage.isHasHint()) {
+        adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+      }
 
-      return userAnswer.stream()
+      var msgs = userAnswer.stream()
         .filter(answerOption -> Objects.nonNull(answerOption) && !answerOption.isBlank())
         .map(userAnswerOption ->
                UserSingleChoiceMessageDto.builder()
@@ -228,11 +234,20 @@ public class UserMessageService {
                  .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
                  .messageType(MessageType.TEXT)
                  .id(multiChoiceTaskAnswerMessage.getId())
-                 .hasHint(multiChoiceTaskAnswerMessage.isHasHint())
-                 .hintMessage(getHitMessage(multiChoiceTaskAnswerMessage))
                  .correctness(resolveCorrectnessState(answerOptions, splitToSet(userAnswerOption)))
                  .isVoted(true)
-                 .build());
+                 .build())
+        .map(msg -> (UserMessageDto) msg)
+        .toList();
+      if (!msgs.isEmpty()) {
+        var lastMsg = msgs.get(msgs.size() - 1);
+
+        if (multiChoiceTaskAnswerMessage.isHasHint()) {
+          lastMsg.setHintMessage(getHitMessage(multiChoiceTaskAnswerMessage));
+          lastMsg.setHasHint(multiChoiceTaskAnswerMessage.isHasHint());
+        }
+      }
+      return msgs.stream();
     } else if (question instanceof EnterTextQuestionMessage enterQuestionTextMessage
       && answer instanceof EnterTextAnswerMessage enterAnswerTextMessage) {
       return Stream.of(UserEnterTextMessageDto.builder()
@@ -247,25 +262,6 @@ public class UserMessageService {
     }
     throw new NoSuchElementException("The incorrect pair of question and answer for chat " + question.getChat()
       .getId() + " Question " + question.getMessageType() + " id: " + question.getId() + " , answer " + answer.getMessageType() + " id: " + answer.getId());
-  }
-
-  public List<UserMessageDto> combineMessages(final List<Message> messages, final ChatParams chatParams) {
-
-    var messagesGroupedByFlowNodes = messages.stream()
-      .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
-
-    return messagesGroupedByFlowNodes.values().stream().flatMap(collection -> sortCombinedMessages(chatParams, collection))
-      .filter(Objects::nonNull)
-      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
-      .peek(msg -> {
-        //todo the stupid thing
-        if (Objects.nonNull(msg.getCharacter())) {
-          if (msg.getCharacter().getFlowCharacterId() == -1) {
-            msg.setCharacter(null);
-          }
-        }
-      })
-      .collect(Collectors.toList());
   }
 
   private @Nullable Stream<UserMessageDto> sortCombinedMessages(final ChatParams chatParams, final List<Message> collection) {
@@ -313,6 +309,26 @@ public class UserMessageService {
           return null;
         }
       })
+      .filter(Objects::nonNull)
+      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
+      .peek(msg -> {
+        //todo the stupid thing
+        if (Objects.nonNull(msg.getCharacter())) {
+          if (msg.getCharacter().getFlowCharacterId() == -1) {
+            msg.setCharacter(null);
+          }
+        }
+      })
+      .collect(Collectors.toList());
+  }
+
+  public List<UserMessageDto> combineMessages(final List<Message> messages, final ChatParams chatParams) {
+
+    var messagesGroupedByFlowNodes = messages.stream()
+      .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
+
+    return messagesGroupedByFlowNodes.values().stream()
+      .flatMap(collection -> sortCombinedMessages(chatParams, collection))
       .filter(Objects::nonNull)
       .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
       .peek(msg -> {
@@ -475,40 +491,6 @@ public class UserMessageService {
     }
     throw new NoSuchElementException("The incorrect question type " + message.getClass().getName());
   }
-
-//  private UserLastSimulationMessage createDumpLastSimulationMessage(){
-//
-//    var contents = new ArrayList<InnerContentMessage>();
-//
-//    if (Objects.nonNull(lastSimulationMessage.getHyperParams()) && !lastSimulationMessage.getHyperParams().isEmpty()) {
-//      var chartContent = ChartInnerContent.builder()
-//        .type(InnerContentMessageType.CHART)
-//        .values(lastSimulationMessage.getHyperParams())
-//        .build();
-//
-//      contents.add(chartContent);
-//    }
-//
-//    if (Objects.nonNull(lastSimulationMessage.getContent()) && !lastSimulationMessage.getContent().isEmpty()) {
-//      var textContent = TextInnerContent.builder()
-//        .type(InnerContentMessageType.TEXT)
-//        .description(lastSimulationMessage.getContent())
-//        .title(lastSimulationMessage.getTitle())
-//        .build();
-//      contents.add(textContent);
-//    }
-//
-//    log.info("Last simulation message content {}", contents);
-//
-//    return UserLastSimulationMessage.builder()
-//      .timestamp(LocalDateTime.now())
-//      .messageType(MessageType.RESULT_SIMULATION)
-//      .id(message.getId())
-//      .character(lastSimulationMessage.getCharacter())
-//      .contents(contents)
-//      .hasHint(false)
-//      .build();
-//  }
 
   private UserHintMessageDto getHitMessage(final Message message) {
     if (message.isHasHint()) {

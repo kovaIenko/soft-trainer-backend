@@ -46,7 +46,7 @@ public class MessageController {
         .thenApply(chatData -> {
 
           var prevHearts = chatData.params().getHearts();
-          var combinedMessage = userMessageService.combineOneTypeMessages(chatData.messages(), chatData.params());
+          var combinedMessage = userMessageService.combineMessages(chatData.messages(), chatData.params());
 
           if (Objects.nonNull(prevHearts) && !Objects.equals(prevHearts, chatData.params().getHearts())) {
             chatRepository.updateHearts(messageRequestDto.getChatId(), chatData.params().getHearts());
@@ -55,7 +55,6 @@ public class MessageController {
           var chatOptional = chatRepository.findById(messageRequestDto.getChatId());
 
           chatOptional.ifPresent(chat -> {
-
             if (Objects.nonNull(chatData.params().getHearts()) && chatData.params().getHearts() <= 0.0) {
               log.info("Remove all non-interacted messages for the chat {}", chat.getId());
               removeNonInteractedMessages(combinedMessage);

@@ -44,4 +44,7 @@ public class Skill {
   @CreationTimestamp(source = SourceType.DB)
   private LocalDateTime timestamp;
 
+  @Column(length = 1000)
+  private String description;
+
 }

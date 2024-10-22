@@ -9,6 +9,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SourceType;
+
+import java.time.LocalDateTime;
 
 @Entity(name = "contact_info")
 @Data
@@ -27,5 +31,9 @@ public class ContactInfo {
 
   @Column(length = 1000)
   private String request;
+
+  @Column(insertable = false, updatable = false)
+  @CreationTimestamp(source = SourceType.DB)
+  private LocalDateTime timestamp;
 
 }

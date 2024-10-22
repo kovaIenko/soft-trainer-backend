@@ -74,7 +74,7 @@ public class ChatController {
               chatRequestDto.getSimulationId()
             ),
             null,
-            null
+            new ChatParams(null)
           ));
         }
       }
@@ -114,7 +114,7 @@ public class ChatController {
           false,
           String.format("The is no flow nodes to display for simulation %s", chatRequestDto.getSimulationId()),
           null,
-          null
+          new ChatParams(null)
         ));
       }
     } else {
@@ -124,7 +124,7 @@ public class ChatController {
         false,
         String.format("No simulation %s", chatRequestDto.getSimulationId()),
         null,
-        null
+        new ChatParams(null)
       ));
     }
   }
@@ -149,7 +149,7 @@ public class ChatController {
           simulationId
         ),
         null,
-        null
+        new ChatParams(null)
       ));
     }
 
@@ -187,7 +187,7 @@ public class ChatController {
           authentication.getName()
         ),
         null,
-        null
+        new ChatParams(null)
       ));
     }
 
