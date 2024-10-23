@@ -120,7 +120,7 @@ public class MessageService {
   }
 
   @NotNull
-  public Optional<Message> findQuestionUserMessageByOrderNumber(final Long chatId, final long orderNumber) {
+  public List<Message> findQuestionUserMessageByOrderNumber(final Long chatId, final long orderNumber) {
     return messageRepository.findQuestionUserMessagesByOrderNumber(chatId, orderNumber);
   }
 

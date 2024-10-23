@@ -19,20 +19,15 @@ import com.backend.softtrainer.dtos.innercontent.InnerContentMessageType;
 import com.backend.softtrainer.dtos.innercontent.TextInnerContent;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.ContentMessage;
-import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
 import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
 import com.backend.softtrainer.entities.messages.HintMessage;
 import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
-import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -42,7 +37,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -51,13 +45,6 @@ import java.util.stream.Stream;
 @Service
 @Slf4j
 public class UserMessageService {
-
-  private static List<Class<? extends Message>> QUESTION_CLASSES = List.of(
-    SingleChoiceTaskQuestionMessage.class,
-    SingleChoiceQuestionMessage.class,
-    MultiChoiceTaskQuestionMessage.class,
-    EnterTextQuestionMessage.class
-  );
 
   private List<MessageAnswerOptionDto> convertOptions(String options, final String answer) {
     var answers = Stream.of(answer.split("\\|\\|"))
@@ -83,7 +70,6 @@ public class UserMessageService {
 
   private CorrectnessState resolveCorrectnessState(HashSet<String> correct,
                                                    HashSet<String> userAnswer) {
-// If both sets are exactly equal
     if (correct.equals(userAnswer)) {
       return CorrectnessState.CORRECT;
     }
@@ -160,212 +146,44 @@ public class UserMessageService {
     }
   }
 
-  public Stream<UserMessageDto> combine(final Message question, final Message answer, final ChatParams chatParams) {
-    if (question instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage
-      && answer instanceof SingleChoiceTaskAnswerMessage singleChoiceTaskAnswerMessage) {
-      var options = split(singleChoiceTaskQuestionMessage.getOptions());
-      var userAnswer = splitToSet(singleChoiceTaskAnswerMessage.getAnswer());
-      var correctAnswer = splitCorrectAnswer(singleChoiceTaskQuestionMessage.getCorrect());
-      var answerOptions = getCorrectAnswerStr(options, correctAnswer);
-      var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
-
-      if (singleChoiceTaskAnswerMessage.isHasHint()) {
-        adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
-      }
-
-      return Stream.of(UserSingleChoiceTaskMessageDto.builder()
-                         .answer(singleChoiceTaskAnswerMessage.getAnswer())
-                         .options(convertOptions(
-                           singleChoiceTaskQuestionMessage.getOptions(),
-                           singleChoiceTaskAnswerMessage.getAnswer()
-                         ))
-                         .timestamp(singleChoiceTaskAnswerMessage.getTimestamp())
-                         .messageType(MessageType.SINGLE_CHOICE_TASK)
-                         .id(singleChoiceTaskAnswerMessage.getId())
-                         .idTemp(singleChoiceTaskQuestionMessage.getId())
-                         .hasHint(singleChoiceTaskAnswerMessage.isHasHint())
-                         .hintMessage(getHitMessage(singleChoiceTaskAnswerMessage))
-                         .correctness(correctnessState)
-                         .isVoted(true)
-                         .build());
-    } else if (question instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage
-      && answer instanceof SingleChoiceAnswerMessage singleChoiceAnswerMessage) {
-
-      var options = split(singleChoiceQuestionMessage.getOptions());
-      var userAnswer = splitToSet(singleChoiceAnswerMessage.getAnswer());
-      var correctAnswer = splitCorrectAnswer(singleChoiceQuestionMessage.getCorrect());
-      var answerOptions = getCorrectAnswerStr(options, correctAnswer);
-      var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
-
-      if (singleChoiceAnswerMessage.isHasHint()) {
-        adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
-      }
-
-      return Stream.of(UserSingleChoiceMessageDto.builder()
-                         .answer(singleChoiceAnswerMessage.getAnswer())
-                         .options(convertOptions(singleChoiceQuestionMessage.getOptions(), singleChoiceAnswerMessage.getAnswer()))
-                         .timestamp(singleChoiceAnswerMessage.getTimestamp())
-                         .id(singleChoiceAnswerMessage.getId())
-                         .idTemp(singleChoiceQuestionMessage.getId())
-                         .content(singleChoiceAnswerMessage.getAnswer())
-                         .hasHint(singleChoiceAnswerMessage.isHasHint())
-                         .hintMessage(getHitMessage(singleChoiceAnswerMessage))
-                         .correctness(correctnessState)
-                         .messageType(MessageType.TEXT)
-                         .isVoted(true)
-                         .build());
-    } else if (question instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage
-      && answer instanceof MultiChoiceTaskAnswerMessage multiChoiceTaskAnswerMessage) {
-      var options = split(multiChoiceTaskQuestionMessage.getOptions());
-      var userAnswer = splitToSet(multiChoiceTaskAnswerMessage.getAnswer());
-      var correctAnswer = splitCorrectAnswer(multiChoiceTaskQuestionMessage.getCorrect());
-      var answerOptions = getCorrectAnswerStr(options, correctAnswer);
-      var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
-
-      if (multiChoiceTaskAnswerMessage.isHasHint()) {
-        adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
-      }
-
-      var msgs = userAnswer.stream()
-        .filter(answerOption -> Objects.nonNull(answerOption) && !answerOption.isBlank())
-        .map(userAnswerOption ->
-               UserSingleChoiceMessageDto.builder()
-                 .content(userAnswerOption)
-                 .timestamp(multiChoiceTaskAnswerMessage.getTimestamp())
-                 .messageType(MessageType.TEXT)
-                 .id(multiChoiceTaskAnswerMessage.getId())
-                 .correctness(resolveCorrectnessState(answerOptions, splitToSet(userAnswerOption)))
-                 .isVoted(true)
-                 .build())
-        .map(msg -> (UserMessageDto) msg)
-        .toList();
-      if (!msgs.isEmpty()) {
-        var lastMsg = msgs.get(msgs.size() - 1);
-
-        if (multiChoiceTaskAnswerMessage.isHasHint()) {
-          lastMsg.setHintMessage(getHitMessage(multiChoiceTaskAnswerMessage));
-          lastMsg.setHasHint(multiChoiceTaskAnswerMessage.isHasHint());
-        }
-      }
-      return msgs.stream();
-    } else if (question instanceof EnterTextQuestionMessage enterQuestionTextMessage
-      && answer instanceof EnterTextAnswerMessage enterAnswerTextMessage) {
-      return Stream.of(UserEnterTextMessageDto.builder()
-                         .content(enterAnswerTextMessage.getContent())
-                         .id(enterAnswerTextMessage.getId())
-                         .idTemp(enterQuestionTextMessage.getId())
-                         .timestamp(enterAnswerTextMessage.getTimestamp())
-                         .correctness(CorrectnessState.UNDEFINED)
-                         .messageType(MessageType.TEXT)
-                         .isVoted(true)
-                         .build());
-    }
-    throw new NoSuchElementException("The incorrect pair of question and answer for chat " + question.getChat()
-      .getId() + " Question " + question.getMessageType() + " id: " + question.getId() + " , answer " + answer.getMessageType() + " id: " + answer.getId());
-  }
-
-  private @Nullable Stream<UserMessageDto> sortCombinedMessages(final ChatParams chatParams, final List<Message> collection) {
-    if (collection.size() == 2) {
-      return QUESTION_CLASSES.contains(collection.get(0).getClass()) ?
-        combine(collection.get(0), collection.get(1), chatParams) : combine(collection.get(1), collection.get(0), chatParams);
-    } else if (collection.size() == 1) {
-      //todo temp
-      if (collection.get(0).getMessageType().equals(MessageType.HINT_MESSAGE)) {
-        return null;
-      }
-      return Stream.of(convert(collection.get(0)));
-    } else {
-      log.info(String.format(
-        "Collection size while combining messages by flow node is %s, the collection is %s",
-        collection.size(),
-        collection
-      ));
-      return null;
-    }
-  }
-
-  public List<UserMessageDto> combineOneTypeMessages(final List<Message> messages, ChatParams chatParams) {
-
-    var messagesGroupedByFlowNodes = messages.stream()
-      .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
-
-    return messagesGroupedByFlowNodes.values().stream()
-      .flatMap(collection -> {
-        if (collection.size() == 2) {
-          return QUESTION_CLASSES.contains(collection.get(0).getClass()) ?
-            combine(collection.get(0), collection.get(1), chatParams) : combine(
-            collection.get(1),
-            collection.get(0),
-            chatParams
-          );
-        } else if (collection.size() == 1) {
-          return Stream.of(convert(collection.get(0)));
-        } else {
-          log.info(String.format(
-            "Collection size while combining messages by flow node is %s, the collection is %s",
-            collection.size(),
-            collection
-          ));
-          return null;
-        }
-      })
-      .filter(Objects::nonNull)
-      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
-      .peek(msg -> {
-        //todo the stupid thing
-        if (Objects.nonNull(msg.getCharacter())) {
-          if (msg.getCharacter().getFlowCharacterId() == -1) {
-            msg.setCharacter(null);
-          }
-        }
-      })
-      .collect(Collectors.toList());
-  }
-
   public List<UserMessageDto> combineMessages(final List<Message> messages, final ChatParams chatParams) {
-
-    var messagesGroupedByFlowNodes = messages.stream()
-      .collect(Collectors.groupingBy(message -> Optional.ofNullable(message.getFlowNode())));
-
-    return messagesGroupedByFlowNodes.values().stream()
-      .flatMap(collection -> sortCombinedMessages(chatParams, collection))
+    return messages.stream()
+      .flatMap(msg -> convert(msg, chatParams))
       .filter(Objects::nonNull)
-      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
+      .filter(msg -> !msg.getMessageType().equals(MessageType.HINT_MESSAGE))
       .peek(msg -> {
-        //todo the stupid thing
-        if (Objects.nonNull(msg.getCharacter())) {
-          if (msg.getCharacter().getFlowCharacterId() == -1) {
-            msg.setCharacter(null);
-          }
+        if (Objects.nonNull(msg.getCharacter()) && msg.getCharacter().getFlowCharacterId() == -1) {
+          msg.setCharacter(null);
         }
       })
+      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
       .collect(Collectors.toList());
   }
 
-  public UserMessageDto convert(final Message message) {
+  public Stream<UserMessageDto> convert(final Message message, final ChatParams chatParams) {
 
     if (Objects.isNull(message)) {
-      return null;
+      return Stream.empty();
     }
 
     if (message instanceof TextMessage textMessage) {
-      return UserTextMessageDto.builder()
-        .id(message.getId())
-        .timestamp(textMessage.getTimestamp())
-        .messageType(MessageType.TEXT)
-        .content(textMessage.getContent())
-        .character(textMessage.getCharacter())
-        .build();
+      return Stream.of(UserTextMessageDto.builder()
+                         .id(message.getId())
+                         .timestamp(textMessage.getTimestamp())
+                         .messageType(MessageType.TEXT)
+                         .content(textMessage.getContent())
+                         .character(textMessage.getCharacter())
+                         .build());
     } else if (message instanceof LastSimulationMessage lastSimulationMessage) {
 
       var contents = new ArrayList<InnerContentMessage>();
 
       if (Objects.nonNull(lastSimulationMessage.getHyperParams()) && !lastSimulationMessage.getHyperParams().isEmpty()) {
+
         var chartContent = ChartInnerContent.builder()
           .type(InnerContentMessageType.CHART)
           .values(lastSimulationMessage.getHyperParams())
           .build();
-
         contents.add(chartContent);
       }
 
@@ -380,14 +198,14 @@ public class UserMessageService {
 
       log.info("Last simulation message content {}", contents);
 
-      return UserLastSimulationMessage.builder()
-        .timestamp(lastSimulationMessage.getTimestamp())
-        .messageType(MessageType.RESULT_SIMULATION)
-        .id(message.getId())
-        .character(lastSimulationMessage.getCharacter())
-        .contents(contents)
-        .hasHint(false)
-        .build();
+      return Stream.of(UserLastSimulationMessage.builder()
+                         .timestamp(lastSimulationMessage.getTimestamp())
+                         .messageType(MessageType.RESULT_SIMULATION)
+                         .id(message.getId())
+                         .character(lastSimulationMessage.getCharacter())
+                         .contents(contents)
+                         .hasHint(false)
+                         .build());
     } else if (message instanceof HintMessage hintMessage) {
 
       var contents = new ArrayList<InnerContentMessage>();
@@ -403,14 +221,14 @@ public class UserMessageService {
 
       log.info("Hint message content {}", contents);
 
-      return UserHintMessageDto.builder()
-        .timestamp(hintMessage.getTimestamp())
-        .messageType(MessageType.HINT_MESSAGE)
-        .id(message.getId())
-        .character(hintMessage.getCharacter())
-        .contents(contents)
-        .hasHint(false)
-        .build();
+      return Stream.of(UserHintMessageDto.builder()
+                         .timestamp(hintMessage.getTimestamp())
+                         .messageType(MessageType.HINT_MESSAGE)
+                         .id(message.getId())
+                         .character(hintMessage.getCharacter())
+                         .contents(contents)
+                         .hasHint(false)
+                         .build());
     } else if (message instanceof ContentMessage contentMessage) {
 
       List<VideoObjDto> videoObjects = new ArrayList<>();
@@ -430,75 +248,184 @@ public class UserMessageService {
           videoObjects.add(new VideoObjDto(url, pr));
         });
       }
-      return UserContentMessageDto.builder()
-        .timestamp(contentMessage.getTimestamp())
-        .messageType(contentMessage.getMessageType())
+      return Stream.of(UserContentMessageDto.builder()
+                         .timestamp(contentMessage.getTimestamp())
+                         .messageType(contentMessage.getMessageType())
 //        .previews(Objects.nonNull(contentMessage.getPreview()) ?
 //                    List.of(contentMessage.getPreview().split(" \\|\\| ")) : Collections.emptyList())
-        .id(message.getId())
-        .urls(List.of(contentMessage.getContent().split(" \\|\\| ")))
-        .videos(videoObjects)
-        .character(contentMessage.getCharacter())
-        .build();
+                         .id(message.getId())
+                         .urls(List.of(contentMessage.getContent().split(" \\|\\| ")))
+                         .videos(videoObjects)
+                         .character(contentMessage.getCharacter())
+                         .build());
     } else if (message instanceof EnterTextQuestionMessage enterTextQuestionMessage) {
-      return UserEnterTextMessageDto.builder()
-        .timestamp(enterTextQuestionMessage.getTimestamp())
-        .messageType(MessageType.ENTER_TEXT_QUESTION)
-        .id(message.getId())
-        .character(enterTextQuestionMessage.getCharacter())
-        .correctness(CorrectnessState.UNDEFINED)
-        .responseTimeLimit(enterTextQuestionMessage.getResponseTimeLimit())
-        .content(enterTextQuestionMessage.getContent())
-        .isVoted(false)
-        .build();
+      if (Objects.nonNull(enterTextQuestionMessage.getAnswer()) && !enterTextQuestionMessage.getAnswer().isBlank()) {
+        return Stream.of(UserEnterTextMessageDto.builder()
+                           .content(enterTextQuestionMessage.getContent())
+                           .id(enterTextQuestionMessage.getId())
+                           .idTemp(enterTextQuestionMessage.getId())
+                           .timestamp(enterTextQuestionMessage.getTimestamp())
+                           .correctness(CorrectnessState.UNDEFINED)
+                           .messageType(MessageType.TEXT)
+                           .isVoted(true)
+                           .build());
+      } else {
+        return Stream.of(UserEnterTextMessageDto.builder()
+                           .timestamp(enterTextQuestionMessage.getTimestamp())
+                           .messageType(MessageType.ENTER_TEXT_QUESTION)
+                           .id(message.getId())
+                           .character(enterTextQuestionMessage.getCharacter())
+                           .correctness(CorrectnessState.UNDEFINED)
+                           .responseTimeLimit(enterTextQuestionMessage.getResponseTimeLimit())
+                           .content(enterTextQuestionMessage.getContent())
+                           .isVoted(false)
+                           .build());
+      }
     } else if (message instanceof SingleChoiceQuestionMessage singleChoiceQuestionMessage) {
-      return UserSingleChoiceMessageDto.builder()
-        .options(convertOptions(singleChoiceQuestionMessage.getOptions(), ""))
-        .timestamp(singleChoiceQuestionMessage.getTimestamp())
-        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
-        .id(message.getId())
-        .hasHint(singleChoiceQuestionMessage.isHasHint())
-        .correctness(CorrectnessState.UNDEFINED)
-        .hintMessage(getHitMessage(singleChoiceQuestionMessage))
-        .responseTimeLimit(singleChoiceQuestionMessage.getResponseTimeLimit())
-        .isVoted(false)
-        .build();
-    } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
-      return UserSingleChoiceTaskMessageDto.builder()
-        .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), ""))
-        .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
-        .id(message.getId())
-        .messageType(MessageType.SINGLE_CHOICE_TASK)
-        .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
-        .correctness(CorrectnessState.UNDEFINED)
-        .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
-        .responseTimeLimit(singleChoiceTaskQuestionMessage.getResponseTimeLimit())
-        .isVoted(false)
-        .build();
-    } else if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage) {
-      return UserMultiChoiceTaskMessageDto.builder()
-        .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), ""))
-        .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
-        .id(message.getId())
-        .messageType(MessageType.MULTI_CHOICE_TASK)
-        .correctness(CorrectnessState.UNDEFINED)
-        .hasHint(multiChoiceTaskQuestionMessage.isHasHint())
-        .responseTimeLimit(multiChoiceTaskQuestionMessage.getResponseTimeLimit())
-        .hintMessage(getHitMessage(multiChoiceTaskQuestionMessage))
 
-        .isVoted(false)
-        .build();
+      if (Objects.nonNull(singleChoiceQuestionMessage.getAnswer()) && !singleChoiceQuestionMessage.getAnswer().isBlank()) {
+        var options = split(singleChoiceQuestionMessage.getOptions());
+        var userAnswer = splitToSet(singleChoiceQuestionMessage.getAnswer());
+        var correctAnswer = splitCorrectAnswer(singleChoiceQuestionMessage.getCorrect());
+        var answerOptions = getCorrectAnswerStr(options, correctAnswer);
+        var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
+
+        if (singleChoiceQuestionMessage.isHasHint()) {
+          adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+        }
+        return Stream.of(UserSingleChoiceMessageDto.builder()
+                           .answer(singleChoiceQuestionMessage.getAnswer())
+                           .options(convertOptions(
+                             singleChoiceQuestionMessage.getOptions(),
+                             singleChoiceQuestionMessage.getAnswer()
+                           ))
+                           .timestamp(singleChoiceQuestionMessage.getTimestamp())
+                           .id(singleChoiceQuestionMessage.getId())
+                           .idTemp(singleChoiceQuestionMessage.getId())
+                           .content(singleChoiceQuestionMessage.getAnswer())
+                           .hasHint(singleChoiceQuestionMessage.isHasHint())
+                           .hintMessage(getHitMessage(singleChoiceQuestionMessage))
+                           .correctness(correctnessState)
+                           .messageType(MessageType.TEXT)
+                           .isVoted(true)
+                           .build());
+      } else {
+        return Stream.of(UserSingleChoiceMessageDto.builder()
+                           .options(convertOptions(singleChoiceQuestionMessage.getOptions(), ""))
+                           .timestamp(singleChoiceQuestionMessage.getTimestamp())
+                           .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+                           .id(message.getId())
+                           .hasHint(singleChoiceQuestionMessage.isHasHint())
+                           .correctness(CorrectnessState.UNDEFINED)
+                           .hintMessage(getHitMessage(singleChoiceQuestionMessage))
+                           .responseTimeLimit(singleChoiceQuestionMessage.getResponseTimeLimit())
+                           .isVoted(false)
+                           .build());
+      }
+    } else if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskQuestionMessage) {
+
+      if (Objects.nonNull(singleChoiceTaskQuestionMessage.getAnswer()) && !singleChoiceTaskQuestionMessage.getAnswer()
+        .isBlank()) {
+        var options = split(singleChoiceTaskQuestionMessage.getOptions());
+        var userAnswer = splitToSet(singleChoiceTaskQuestionMessage.getAnswer());
+        var correctAnswer = splitCorrectAnswer(singleChoiceTaskQuestionMessage.getCorrect());
+        var answerOptions = getCorrectAnswerStr(options, correctAnswer);
+        var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
+
+        if (singleChoiceTaskQuestionMessage.isHasHint()) {
+          adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+        }
+
+        return Stream.of(UserSingleChoiceTaskMessageDto.builder()
+                           .options(convertOptions(
+                             singleChoiceTaskQuestionMessage.getOptions(),
+                             singleChoiceTaskQuestionMessage.getAnswer()
+                           ))
+                           .answer(singleChoiceTaskQuestionMessage.getAnswer())
+                           .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
+                           .id(message.getId())
+                           .messageType(MessageType.SINGLE_CHOICE_TASK)
+                           .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
+                           .correctness(correctnessState)
+                           .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
+                           .responseTimeLimit(singleChoiceTaskQuestionMessage.getResponseTimeLimit())
+                           .isVoted(true)
+                           .build());
+      } else {
+        return Stream.of(UserSingleChoiceTaskMessageDto.builder()
+                           .options(convertOptions(singleChoiceTaskQuestionMessage.getOptions(), ""))
+                           .timestamp(singleChoiceTaskQuestionMessage.getTimestamp())
+                           .id(message.getId())
+                           .messageType(MessageType.SINGLE_CHOICE_TASK)
+                           .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
+                           .correctness(CorrectnessState.UNDEFINED)
+                           .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
+                           .responseTimeLimit(singleChoiceTaskQuestionMessage.getResponseTimeLimit())
+                           .isVoted(false)
+                           .build());
+
+      }
+    } else if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceTaskQuestionMessage) {
+
+      if (Objects.nonNull(multiChoiceTaskQuestionMessage.getAnswer()) && !multiChoiceTaskQuestionMessage.getAnswer().isBlank()) {
+
+        var options = split(multiChoiceTaskQuestionMessage.getOptions());
+        var userAnswer = splitToSet(multiChoiceTaskQuestionMessage.getAnswer());
+        var correctAnswer = splitCorrectAnswer(multiChoiceTaskQuestionMessage.getCorrect());
+        var answerOptions = getCorrectAnswerStr(options, correctAnswer);
+        var correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
+
+        if (multiChoiceTaskQuestionMessage.isHasHint()) {
+          adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+        }
+
+        var msgs = userAnswer.stream()
+          .filter(answerOption -> Objects.nonNull(answerOption) && !answerOption.isBlank())
+          .map(userAnswerOption ->
+                 UserSingleChoiceMessageDto.builder()
+                   .content(userAnswerOption)
+                   .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
+                   .messageType(MessageType.TEXT)
+                   .id(multiChoiceTaskQuestionMessage.getId())
+                   .correctness(resolveCorrectnessState(answerOptions, splitToSet(userAnswerOption)))
+                   .isVoted(true)
+                   .build())
+          .map(a -> (UserMessageDto) a)
+          .toList();
+        if (!msgs.isEmpty()) {
+          var lastMsg = msgs.get(msgs.size() - 1);
+
+          if (multiChoiceTaskQuestionMessage.isHasHint()) {
+            lastMsg.setHintMessage(getHitMessage(multiChoiceTaskQuestionMessage));
+            lastMsg.setHasHint(multiChoiceTaskQuestionMessage.isHasHint());
+          }
+        }
+        return msgs.stream();
+      } else {
+        return Stream.of(UserMultiChoiceTaskMessageDto.builder()
+                           .options(convertOptions(multiChoiceTaskQuestionMessage.getOptions(), ""))
+                           .timestamp(multiChoiceTaskQuestionMessage.getTimestamp())
+                           .id(message.getId())
+                           .messageType(MessageType.MULTI_CHOICE_TASK)
+                           .correctness(CorrectnessState.UNDEFINED)
+                           .hasHint(multiChoiceTaskQuestionMessage.isHasHint())
+                           .responseTimeLimit(multiChoiceTaskQuestionMessage.getResponseTimeLimit())
+                           .hintMessage(getHitMessage(multiChoiceTaskQuestionMessage))
+                           .isVoted(false)
+                           .build());
+      }
     }
     throw new NoSuchElementException("The incorrect question type " + message.getClass().getName());
   }
 
   private UserHintMessageDto getHitMessage(final Message message) {
     if (message.isHasHint()) {
-      var converted = convert(message.getHintMessage());
-      if (Objects.isNull(converted)) {
+      var converted = convert(message.getHintMessage(), null).toList();
+      log.info("The hint message for the message {} is {}", message.getId(), converted);
+      if (converted.isEmpty()) {
         return null;
       } else {
-        return (UserHintMessageDto) converted;
+        return (UserHintMessageDto) converted.get(0);
       }
     } else {
       return null;

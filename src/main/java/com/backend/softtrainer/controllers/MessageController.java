@@ -60,9 +60,9 @@ public class MessageController {
               removeNonInteractedMessages(combinedMessage);
               log.info("User {} has used already all the hearts for chat {}", chat.getUser().getId(), chat.getId());
               var resultMsg = inputMessageService.generateLastSimulationMessage(chat);
-              var userResultMsg = userMessageService.convert(resultMsg);
+              var userResultMsg = userMessageService.convert(resultMsg, null);
               log.info("The last message for the chat with the specific message looks like : {}", userResultMsg);
-              combinedMessage.add(userResultMsg);
+              combinedMessage.addAll(userResultMsg.toList());
             }
           });
 
@@ -104,7 +104,7 @@ public class MessageController {
 
           var prevHearts = chatData.params().getHearts();
 
-          var combinedMessage = userMessageService.combineOneTypeMessages(chatData.messages(), chatData.params());
+          var combinedMessage = userMessageService.combineMessages(chatData.messages(), chatData.params());
 
           if (!Objects.equals(prevHearts, chatData.params().getHearts())) {
             chatRepository.updateHearts(messageRequestDto.getChatId(), chatData.params().getHearts());

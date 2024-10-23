@@ -41,9 +41,10 @@ public interface MessageRepository extends JpaRepository<Message, String> {
   List<Message> findAllUserMessagesByOrderNumber(@Param("chatId") final Long chatId,
                                                  @Param("orderNumber") final long orderNumber);
 
-  @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.role = 'USER' and f.orderNumber = :orderNumber and m.chat.id" +
+  //m.role = 'USER' and
+  @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE f.orderNumber = :orderNumber and m.chat.id" +
     " = :chatId")
-  Optional<Message> findQuestionUserMessagesByOrderNumber(@Param("chatId") final Long chatId,
+  List<Message> findQuestionUserMessagesByOrderNumber(@Param("chatId") final Long chatId,
                                                           @Param("orderNumber") final long orderNumber);
 
 //  @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)

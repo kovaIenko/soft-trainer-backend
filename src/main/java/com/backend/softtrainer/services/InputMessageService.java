@@ -26,16 +26,12 @@ import com.backend.softtrainer.entities.flow.SingleChoiceQuestion;
 import com.backend.softtrainer.entities.flow.SingleChoiceTask;
 import com.backend.softtrainer.entities.flow.Text;
 import com.backend.softtrainer.entities.messages.ContentMessage;
-import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
 import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
 import com.backend.softtrainer.entities.messages.HintMessage;
 import com.backend.softtrainer.entities.messages.LastSimulationMessage;
 import com.backend.softtrainer.entities.messages.Message;
-import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
-import com.backend.softtrainer.entities.messages.SingleChoiceTaskAnswerMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
@@ -98,7 +94,6 @@ public class InputMessageService {
       throw new NoSuchElementException(String.format("There is no such chat %s", messageRequestDto.getChatId()));
     }
     var chat = chatOpt.get();
-
     var allMessagesByChat = chat.getMessages().stream().sorted(Comparator.comparing(Message::getTimestamp)).toList();
     var messageOpt = allMessagesByChat.stream().filter(msg -> msg.getId().equals(messageRequestDto.getId())).findFirst();
 
@@ -114,7 +109,6 @@ public class InputMessageService {
     }
 
     var message = messageOpt.get();
-
     verifyUserAnswer(message, messageRequestDto);
 
     return findOutTheListOfMessagesBasedOnUserActionableMessage(messageRequestDto, chat, allMessagesByChat, message);
@@ -125,37 +119,16 @@ public class InputMessageService {
                                                                                                        final List<Message> alreadyStoredMessages,
                                                                                                        Message currentMessage) throws
                                                                                                                                SendMessageConditionException {
-    Message message;
-
     var alreadyStoredMessagesAfterCurrent = getMessagesAfter(alreadyStoredMessages, currentMessage);
 
     if (messageRequestDto instanceof SingleChoiceAnswerMessageDto singleChoiceAnswerMessageDto) {
 
-      //todo Deprecated
-      message = SingleChoiceAnswerMessage.builder()
-        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
-        .role(ChatRole.USER)
-        .id(UUID.randomUUID().toString())
-        .chat(chat)
-        .flowNode(currentMessage.getFlowNode())
-        .interacted(true)
-        .userResponseTime(messageRequestDto.getUserResponseTime())
-        .answer(singleChoiceAnswerMessageDto.getAnswer())
-        .build();
-
-      var answer = messageService.save(message);
-
-      // todo  ----------
-
-      //update the already existing msg
       var currentMsg = (SingleChoiceQuestionMessage) currentMessage;
       currentMsg.setInteracted(true);
       currentMsg.setAnswer(singleChoiceAnswerMessageDto.getAnswer());
       currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
-//      currentMsg.setRole(ChatRole.USER);
+      currentMsg.setRole(ChatRole.USER);
       messageService.save(currentMsg);
-
-      alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
@@ -163,33 +136,17 @@ public class InputMessageService {
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMsg, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTaskAnswerMessageDto) {
-      message = SingleChoiceTaskAnswerMessage.builder()
-        .messageType(MessageType.SINGLE_CHOICE_TASK)
-        .role(ChatRole.USER)
-        .id(UUID.randomUUID().toString())
-        .chat(chat)
-        .flowNode(currentMessage.getFlowNode())
-        .answer(singleChoiceTaskAnswerMessageDto.getAnswer())
-        .correct(singleChoiceTaskAnswerMessageDto.getCorrect())
-        .userResponseTime(messageRequestDto.getUserResponseTime())
-        .interacted(true)
-        .options(singleChoiceTaskAnswerMessageDto.getOptions())
-        .build();
 
-      var answer = messageService.save(message);
-
-      //update the already existing msg
       var currentMsg = (SingleChoiceTaskQuestionMessage) currentMessage;
       currentMsg.setInteracted(true);
       currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
       currentMsg.setAnswer(singleChoiceTaskAnswerMessageDto.getAnswer());
+      currentMsg.setRole(ChatRole.USER);
       messageService.save(currentMsg);
-
-      alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
@@ -197,33 +154,17 @@ public class InputMessageService {
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMessage, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof MultiChoiceTaskAnswerMessageDto multiChoiceAnswerMessageDto) {
-      message = MultiChoiceTaskAnswerMessage.builder()
-        .messageType(MessageType.MULTI_CHOICE_TASK)
-        .role(ChatRole.USER)
-        .id(UUID.randomUUID().toString())
-        .chat(chat)
-        .flowNode(currentMessage.getFlowNode())
-        .userResponseTime(messageRequestDto.getUserResponseTime())
-        .answer(multiChoiceAnswerMessageDto.getAnswer())
-        .options(multiChoiceAnswerMessageDto.getOptions())
-        .interacted(true)
-        .build();
 
-      var answer = messageService.save(message);
-
-      //update the already existing msg
       var currentMsg = (MultiChoiceTaskQuestionMessage) currentMessage;
       currentMsg.setInteracted(true);
       currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
       currentMsg.setAnswer(multiChoiceAnswerMessageDto.getAnswer());
-//      currentMsg.setRole(ChatRole.USER);
+      currentMsg.setRole(ChatRole.USER);
       messageService.save(currentMsg);
-
-      alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
@@ -231,34 +172,18 @@ public class InputMessageService {
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMsg, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof EnterTextAnswerMessageDto enterTextAnswerMessageDto) {
-      message = EnterTextAnswerMessage.builder()
-        .messageType(MessageType.ENTER_TEXT_QUESTION)
-        .role(ChatRole.USER)
-        .id(UUID.randomUUID().toString())
-        .chat(chat)
-        .userResponseTime(messageRequestDto.getUserResponseTime())
-        .interacted(true)
-        .flowNode(currentMessage.getFlowNode())
-        .answer(enterTextAnswerMessageDto.getAnswer())
-        .content(enterTextAnswerMessageDto.getAnswer())
-        .build();
-
-      var answer = messageService.save(message);
-
-      //update the already existing msg
       var currentMsg = (EnterTextQuestionMessage) currentMessage;
       currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
       currentMsg.setInteracted(true);
       currentMsg.setAnswer(enterTextAnswerMessageDto.getAnswer());
-//      currentMsg.setRole(ChatRole.USER);
+      currentMsg.setContent(enterTextAnswerMessageDto.getAnswer());
+      currentMsg.setRole(ChatRole.USER);
 
       messageService.save(currentMsg);
-
-      alreadyStoredMessagesAfterCurrent.add(answer);
 
       var nextMessages = figureOutNextMessagesWith(
         chat,
@@ -266,18 +191,27 @@ public class InputMessageService {
         alreadyStoredMessagesAfterCurrent
       );
 
-      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, answer, chat);
+      whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMsg, chat);
 
       return nextMessages;
     } else if (messageRequestDto instanceof LastSimulationMessageDto lastSimulationMessageDto) {
 
       var resultMessage = (LastSimulationMessage) currentMessage;
+
+      var params = userHyperParameterService.findAllByChatId(chat.getId())
+        .stream()
+        .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
+        .toList();
+      log.info("The params we got from user hyper parameters are {} and it size it {}", params, params.size());
+
+      resultMessage.setHyperParams(params);
+
       if (resultMessage.getContent().isBlank()) {
-        waitForAiMsg(currentMessage);
+        waitForAiMsg(resultMessage);
       }
 
-      log.info("The hint message looks like {}", currentMessage);
-      return CompletableFuture.completedFuture(new ChatDataDto(List.of(currentMessage), new ChatParams(null)));
+      log.info("The hint message looks like {}", resultMessage);
+      return CompletableFuture.completedFuture(new ChatDataDto(List.of(resultMessage), new ChatParams(null)));
     } else if (messageRequestDto instanceof HintMessageDto hintMessageDto) {
 
       waitForAiMsg(currentMessage);
@@ -331,7 +265,6 @@ public class InputMessageService {
           );
 
           Thread.sleep(delay);
-
           currentMessage = messageService.findMessageById(currentMessage.getId()).orElse(null);
 
           if (Objects.isNull(currentMessage)) {
@@ -455,10 +388,9 @@ public class InputMessageService {
       actionableFlowNode.getSimulation().getId(),
       actionableFlowNode.getOrderNumber()
     );
-    var hintNodeOpt = hintNodes.stream()
+    return hintNodes.stream()
       .filter(node -> node.getMessageType().equals(MessageType.HINT_MESSAGE))
       .findFirst();
-    return hintNodeOpt;
   }
 
   @NotNull
@@ -480,7 +412,6 @@ public class InputMessageService {
       //todo remove it
       if (!nextFlowNode.getMessageType().equals(MessageType.HINT_MESSAGE)) {
         nextMessage = messageService.save(nextMessage);
-
         alreadyStoredMessages.add(nextMessage);
       }
 
@@ -589,15 +520,10 @@ public class InputMessageService {
         var simulationTitle = language.equalsIgnoreCase("UA") ? "Ваш результат" : "Your result";
         var title = isOnboarding ? onboardingTitle : simulationTitle;
 
-        var params = userHyperParameterService.findAllByChatId(chat.getId())
-          .stream()
-          .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
-          .toList();
-
         if (isOnboarding) {
           messageService.updateResultSimulationMessage(
             msg,
-            params,
+            null,
             title,
             language.equalsIgnoreCase("UA") ?
               "Приємно познайомитися. Йдемо відточувати навички справжнього спілкування!" :
@@ -612,6 +538,13 @@ public class InputMessageService {
         Prompt simulationRecommendationPrompt =
           promptRepository.findFirstByNameOrderByIdDesc(PromptName.SIMULATION_SUMMARY)
             .orElseThrow();
+
+        var params = userHyperParameterService.findAllByChatId(chat.getId())
+          .stream()
+          .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
+          .toList();
+        log.info("The params we got from user hyper parameters are {} and it size it {}", params, params.size());
+
 
         if (simulationRecommendationPrompt.isOn()) {
           var aiRecommendation = generateAiSummary(updatedChat, params, simulationRecommendationPrompt);
@@ -720,12 +653,11 @@ public class InputMessageService {
   @Nullable
   private com.oruel.conditionscript.Message getMessage(final Long chatId, final Long orderNumber) {
     log.info("Trying to find message by order number: {}", orderNumber);
-    Optional<Message> messages = messageService.findQuestionUserMessageByOrderNumber(chatId, orderNumber);
-    if (messages.isPresent()) {
-      log.info("Message {} found by order number: {}", messages.get(), orderNumber);
-
-
-      return interpreterMessageMapper.map(messages.get());
+    List<Message> messages = messageService.findQuestionUserMessageByOrderNumber(chatId, orderNumber);
+    if (!messages.isEmpty()) {
+      log.info("Messages {} found by order number: {}", messages, orderNumber);
+      var message = messages.stream().max(Comparator.comparing(Message::getTimestamp));
+      return interpreterMessageMapper.map(message.get());
     } else {
       log.error("Message not found by order number: {}", orderNumber);
       //todo return null is not the best practice, using Optional is better
@@ -817,7 +749,7 @@ public class InputMessageService {
     } else if (flowNode instanceof HintMessageNode hintMessageNode) {
       var local = chat.getUser().getOrganization().getLocalization();
       var language = Objects.isNull(local) || local.isBlank() ? "UA" : local;
-      var title = language.equalsIgnoreCase("UA")? "Лови підказку!": "Tip";
+      var title = language.equalsIgnoreCase("UA") ? "Лови підказку!" : "Tip";
       return HintMessage.builder()
         .id(UUID.randomUUID().toString())
         .chat(chat)
@@ -927,7 +859,6 @@ public class InputMessageService {
         updatedChat.getUser().getOrganization().getLocalization()
       ).get();
       log.error("everything is fine {} ", summary.content());
-      //promptService.validateSimulationSummary(summary.content(), userName);
       return Optional.ofNullable(summary);
 
     } catch (Exception e) {
@@ -935,40 +866,5 @@ public class InputMessageService {
       return Optional.empty();
     }
   }
-
-//  private void verifyWhetherQuestionIsAlreadyAnswered(final List<Message> actionableMessages) throws
-//                                                                                              SendMessageConditionException {
-//    if (actionableMessages.isEmpty()) {
-//      throw new SendMessageConditionException("No messages should be answered");
-//    }
-//    if (actionableMessages.size() % 2 == 0) {
-//      throw new SendMessageConditionException("All questions have been already answered");
-//    }
-//  }
-
-//  private CompletableFuture<List<Message>> chatGptResponse(final Message messageEntity) {
-//
-//    var optionalChat = chatRepository.findByIdWithMessages(messageEntity.getChat().getId());
-//
-//    Chat chat = optionalChat.orElseThrow(() -> new NoSuchElementException(String.format(
-//      "No chat with id %s",
-//      messageEntity.getChat().getId()
-//    )));
-//
-//    //get response from chatgpt, store it and return to front
-//    return chatGptService.completeChat(Converter.convert(chat))
-//      .thenApply(messageDto -> {
-//                   var message =
-//                     EnterTextAnswerMessage.builder()
-//                       .chat(chat)
-//                       .content(messageDto.content())
-//                       .id(UUID.randomUUID().toString())
-//                       //.timestamp(LocalDateTime.now())
-//                       .build();
-//                   messageService.save(message);
-//                   return List.of(message);
-//                 }
-//      );
-//  }
 
 }

@@ -4,7 +4,9 @@ import com.backend.softtrainer.entities.enums.MessageType
 import com.backend.softtrainer.entities.flow.MultipleChoiceTask
 import com.backend.softtrainer.entities.flow.SingleChoiceQuestion
 import com.backend.softtrainer.entities.messages.MultiChoiceTaskAnswerMessage
+import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage
 import com.backend.softtrainer.entities.messages.SingleChoiceAnswerMessage
+import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage
 import com.oruel.conditionscript.Message
 import com.oruel.conditionscript.Option
 import com.backend.softtrainer.entities.messages.Message as DbMessage
@@ -23,8 +25,8 @@ class InterpreterMessageMapper {
 
     fun getStringAnswer(message: DbMessage): String? = message.run {
         when (this) {
-            is MultiChoiceTaskAnswerMessage -> answer
-            is SingleChoiceAnswerMessage -> answer
+            is MultiChoiceTaskQuestionMessage -> answer
+            is SingleChoiceQuestionMessage -> answer
             else -> null
         }
     }
