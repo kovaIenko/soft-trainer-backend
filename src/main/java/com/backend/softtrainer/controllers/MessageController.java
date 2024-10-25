@@ -104,7 +104,7 @@ public class MessageController {
 
           var prevHearts = chatData.params().getHearts();
 
-          var combinedMessage = userMessageService.combineMessages(chatData.messages(), chatData.params());
+          var combinedMessage = userMessageService.combineMessage(chatData.messages(), chatData.params());
 
           if (!Objects.equals(prevHearts, chatData.params().getHearts())) {
             chatRepository.updateHearts(messageRequestDto.getChatId(), chatData.params().getHearts());

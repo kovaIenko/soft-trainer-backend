@@ -206,7 +206,7 @@ public class InputMessageService {
 
       resultMessage.setHyperParams(params);
 
-      if (resultMessage.getContent().isBlank()) {
+      if (Objects.nonNull(resultMessage.getContent()) && resultMessage.getContent().isBlank()) {
         waitForAiMsg(resultMessage);
       }
 

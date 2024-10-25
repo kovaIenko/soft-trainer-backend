@@ -160,6 +160,19 @@ public class UserMessageService {
       .collect(Collectors.toList());
   }
 
+  public List<UserMessageDto> combineMessage(final List<Message> messages, final ChatParams chatParams) {
+    return messages.stream()
+      .flatMap(msg -> convert(msg, chatParams))
+      .filter(Objects::nonNull)
+      .peek(msg -> {
+        if (Objects.nonNull(msg.getCharacter()) && msg.getCharacter().getFlowCharacterId() == -1) {
+          msg.setCharacter(null);
+        }
+      })
+      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
+      .collect(Collectors.toList());
+  }
+
   public Stream<UserMessageDto> convert(final Message message, final ChatParams chatParams) {
 
     if (Objects.isNull(message)) {
