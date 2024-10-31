@@ -2,6 +2,7 @@ package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.ChatParams;
 import com.backend.softtrainer.dtos.MessageAnswerOptionDto;
+import com.backend.softtrainer.dtos.UserHyperParamResponseDto;
 import com.backend.softtrainer.dtos.client.CorrectnessState;
 import com.backend.softtrainer.dtos.client.UserContentMessageDto;
 import com.backend.softtrainer.dtos.client.UserEnterTextMessageDto;
@@ -173,6 +174,10 @@ public class UserMessageService {
       .collect(Collectors.toList());
   }
 
+  private Double normalizeHyperParams(final Double value, final Double maxValue) {
+    return 0.15 + 0.85 * (value / maxValue);
+  }
+
   public Stream<UserMessageDto> convert(final Message message, final ChatParams chatParams) {
 
     if (Objects.isNull(message)) {
@@ -193,9 +198,19 @@ public class UserMessageService {
 
       if (Objects.nonNull(lastSimulationMessage.getHyperParams()) && !lastSimulationMessage.getHyperParams().isEmpty()) {
 
+        var params = lastSimulationMessage.getHyperParams();
+        var maxValue = Math.max(1.0, params.stream()
+          .map(UserHyperParamResponseDto::value)
+          .max(Double::compareTo)
+          .orElse(1.0));;
+
+        var normalizedParams = params.stream()
+          .map(param -> new UserHyperParamResponseDto(param.key(), normalizeHyperParams(param.value(), maxValue)))
+          .toList();
+
         var chartContent = ChartInnerContent.builder()
           .type(InnerContentMessageType.CHART)
-          .values(lastSimulationMessage.getHyperParams())
+          .values(normalizedParams)
           .build();
         contents.add(chartContent);
       }
@@ -206,6 +221,7 @@ public class UserMessageService {
           .description(lastSimulationMessage.getContent())
           .title(lastSimulationMessage.getTitle())
           .build();
+
         contents.add(textContent);
       }
 

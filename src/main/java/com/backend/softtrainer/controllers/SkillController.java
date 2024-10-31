@@ -73,7 +73,7 @@ public class SkillController {
     var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
 
     var simulations = skillService.findSimulationsBySkill(userDetails.user(), skillId);
-    return ResponseEntity.ok(new AllSimulationsResponseDto(skillId, simulations, simulations, true, "success"));
+    return ResponseEntity.ok(new AllSimulationsResponseDto(skillId, simulations, true, "success"));
   }
 
 }

@@ -3,6 +3,7 @@ package com.backend.softtrainer.services.auth;
 import com.backend.softtrainer.dtos.StaticRole;
 import com.backend.softtrainer.entities.Auth;
 import com.backend.softtrainer.entities.Role;
+import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.enums.AuthType;
 import com.backend.softtrainer.entities.enums.AuthWay;
@@ -109,55 +110,64 @@ public class CustomUsrDetailsService implements UserDetailsService {
     }
   }
 
-  public boolean areSkillAndSimulationAvailable(Authentication authentication, Long skillId, Long simulationId) {
-    Optional<User> optUser = userRepository.findByEmail(authentication.getName());
-
-    //todo 1 org to 1 user when onboarding is a org
-    if(isSkillOnboarding(skillId)){
-      return true;
-    }
-
-    return optUser.map(user -> {
-        var skillOpt = user.getOrganization()
-          .getAvailableSkills()
-          .stream()
-          .filter(skillFilter -> skillFilter.getId().equals(skillId))
-          .findAny();
-        if (skillOpt.isPresent()) {
-          return skillOpt.get().getSimulations().keySet().stream().anyMatch(simulation -> simulation.getId().equals(simulationId));
-        } else {
-          log.error(String.format(
-            "The user %s does not have access to these resources skill_id %s and simulation_id %s",
-            authentication.getName(),
-            skillId,
-            simulationId
-          ));
-          return false;
-        }
-      })
-      .orElseGet(() -> {
-        log.error(String.format("The user %s doesn't exit", authentication.getName()));
-        return false;
-      });
-  }
+//  public boolean areSkillAndSimulationAvailable(Authentication authentication, Long skillId, Long simulationId) {
+//    Optional<User> optUser = userRepository.findByEmail(authentication.getName());
+//
+//    //todo 1 org to 1 user when onboarding is a org
+//    if(isSkillOnboarding(skillId)){
+//      return true;
+//    }
+//
+//    return optUser.map(user -> {
+//        var skillOpt = user.getOrganization()
+//          .getAvailableSkills()
+//          .stream()
+//          .filter(skillFilter -> skillFilter.getId().equals(skillId))
+//          .findAny();
+//        if (skillOpt.isPresent()) {
+//          return skillOpt.get().getSimulations().keySet().stream().anyMatch(simulation -> simulation.getId().equals
+//          (simulationId));
+//        } else {
+//          log.error(String.format(
+//            "The user %s does not have access to these resources skill_id %s and simulation_id %s",
+//            authentication.getName(),
+//            skillId,
+//            simulationId
+//          ));
+//          return false;
+//        }
+//      })
+//      .orElseGet(() -> {
+//        log.error(String.format("The user %s doesn't exit", authentication.getName()));
+//        return false;
+//      });
+//  }
 
   private boolean isSkillOnboarding(final Long skillId) {
     //todo 1 org to 1 user when onboarding is a org
     var isOnboarding = skillRepository.findById(skillId);
-    return isOnboarding.map(skill -> skill.getName().equals("Onboarding")).orElse(false);
+    return isOnboarding
+      .filter(skill -> Objects.nonNull(skill.getName()))
+      .map(skill -> skill.getName().startsWith("<Onboarding>")).orElse(false);
   }
 
   private boolean isSimulationOnboarding(final Long simulationId) {
     //todo 1 org to 1 user when onboarding is a org
     var isOnboarding = simulationRepository.findById(simulationId);
-    return isOnboarding.map(simulation -> simulation.getSkill().getName().equals("Onboarding")).orElse(false);
+    log.info("Found simulation {} for id {}", isOnboarding.isPresent(), simulationId);
+    return isOnboarding
+      .filter(simulation -> Objects.nonNull(simulation.getSkill()))
+      .map(Simulation::getSkill)
+      .filter(skill -> Objects.nonNull(skill.getName()))
+      .map(skill -> skill.getName().startsWith("Onboarding"))
+      .orElse(false);
   }
 
   public boolean isSkillAvailable(Authentication authentication, Long skillId) {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
 
     //todo 1 org to 1 user when onboarding is a org
-    if(isSkillOnboarding(skillId)){
+    if (isSkillOnboarding(skillId)) {
       return true;
     }
 
@@ -186,7 +196,7 @@ public class CustomUsrDetailsService implements UserDetailsService {
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
 
     //todo 1 org to 1 user when onboarding is a org
-    if(isSimulationOnboarding(simulationId)){
+    if (isSimulationOnboarding(simulationId)) {
       return true;
     }
 

@@ -50,11 +50,11 @@ public class SkillService {
 
   private @NotNull Set<Skill> getAvailableSkillsByOrgName(final Optional<Organization> optOrg) {
     //todo for now like that due to the restriction 1 user <-> 1 org
-    var optOnboardingOrg = organizationRepository.getFirstByName("Onboarding");
+//    var optOnboardingOrg = organizationRepository.getFirstByName("Onboarding");
 
     return optOrg.map(Organization::getAvailableSkills)
       .map(skills -> {
-        optOnboardingOrg.ifPresent(value -> skills.addAll(value.getAvailableSkills()));
+//        optOnboardingOrg.ifPresent(value -> skills.addAll(value.getAvailableSkills()));
         return skills;
       })
       .orElse(Collections.emptySet());

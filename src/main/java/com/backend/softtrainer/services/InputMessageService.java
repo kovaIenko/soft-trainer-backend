@@ -109,6 +109,8 @@ public class InputMessageService {
     }
 
     var message = messageOpt.get();
+
+    log.info("There is input message {} with message_type {} in the chat {}", message.getId(), message.getMessageType(), chat.getId());
     verifyUserAnswer(message, messageRequestDto);
 
     return findOutTheListOfMessagesBasedOnUserActionableMessage(messageRequestDto, chat, allMessagesByChat, message);
@@ -206,16 +208,16 @@ public class InputMessageService {
 
       resultMessage.setHyperParams(params);
 
-      if (Objects.nonNull(resultMessage.getContent()) && resultMessage.getContent().isBlank()) {
+      if (Objects.isNull(resultMessage.getContent()) || resultMessage.getContent().isBlank()) {
         waitForAiMsg(resultMessage);
       }
 
-      log.info("The hint message looks like {}", resultMessage);
+      log.info("The result message looks like {}", resultMessage);
       return CompletableFuture.completedFuture(new ChatDataDto(List.of(resultMessage), new ChatParams(null)));
     } else if (messageRequestDto instanceof HintMessageDto hintMessageDto) {
 
       waitForAiMsg(currentMessage);
-      log.info("The result message looks like {}", currentMessage);
+      log.info("The hint message looks like {}", currentMessage);
       return CompletableFuture.completedFuture(new ChatDataDto(List.of(currentMessage), new ChatParams(null)));
     } else {
       throw new SendMessageConditionException(
