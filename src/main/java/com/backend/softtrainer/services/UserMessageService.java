@@ -199,20 +199,24 @@ public class UserMessageService {
       if (Objects.nonNull(lastSimulationMessage.getHyperParams()) && !lastSimulationMessage.getHyperParams().isEmpty()) {
 
         var params = lastSimulationMessage.getHyperParams();
-        var maxValue = Math.max(1.0, params.stream()
-          .map(UserHyperParamResponseDto::value)
-          .max(Double::compareTo)
-          .orElse(1.0));;
+         // not less than 3 params should have values
+        if (lastSimulationMessage.getHyperParams().size() > 2) {
 
-        var normalizedParams = params.stream()
-          .map(param -> new UserHyperParamResponseDto(param.key(), normalizeHyperParams(param.value(), maxValue)))
-          .toList();
+          var maxValue = Math.max(1.0, params.stream()
+            .map(UserHyperParamResponseDto::value)
+            .max(Double::compareTo)
+            .orElse(1.0));
 
-        var chartContent = ChartInnerContent.builder()
-          .type(InnerContentMessageType.CHART)
-          .values(normalizedParams)
-          .build();
-        contents.add(chartContent);
+          var normalizedParams = params.stream()
+            .map(param -> new UserHyperParamResponseDto(param.key(), normalizeHyperParams(param.value(), maxValue)))
+            .toList();
+
+          var chartContent = ChartInnerContent.builder()
+            .type(InnerContentMessageType.CHART)
+            .values(normalizedParams)
+            .build();
+          contents.add(chartContent);
+        }
       }
 
       if (Objects.nonNull(lastSimulationMessage.getContent()) && !lastSimulationMessage.getContent().isEmpty()) {

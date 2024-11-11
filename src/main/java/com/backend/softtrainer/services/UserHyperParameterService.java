@@ -20,6 +20,7 @@ public class UserHyperParameterService {
 
   @Transactional
   public boolean update(final Long chatId, final String key, final double newValue) {
+    log.info("Update the hyper parameter with key: {} for the chatId: {} to the value: {}", key, chatId, newValue);
     var userHyperParamOptional = userHyperParameterRepository.findUserHyperParameterByChatIdAndKey(chatId, key);
 
     if (userHyperParamOptional.isPresent()) {
@@ -36,9 +37,10 @@ public class UserHyperParameterService {
     var userHyperParamOptional = userHyperParameterRepository.findUserHyperParameterByChatIdAndKey(chatId, key);
 
     if (userHyperParamOptional.isPresent()) {
+      log.info("Hyper Parameter with key: {} was found for the chatId: {} and the value is {}", key, chatId, userHyperParamOptional.get().getValue());
       return userHyperParamOptional.get().getValue();
     } else {
-      log.warn("Hyper Parameter with key: {} wasn't found for the chatId: {}", key, chatId);
+      log.info("Hyper Parameter with key: {} wasn't found for the chatId: {}", key, chatId);
       var userHyperParam = new UserHyperParameter();
       userHyperParam.setChatId(chatId);
       userHyperParam.setKey(key);
