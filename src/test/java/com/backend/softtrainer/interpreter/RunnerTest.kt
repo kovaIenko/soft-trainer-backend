@@ -52,7 +52,7 @@ class RunnerTest {
 
         val result = runner.runPredicate(newPredicate)
 //        printTree(astTree)
-        println(result)
+//        println(result)
         assert(result)
     }
 }
