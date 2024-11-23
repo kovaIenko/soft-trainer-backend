@@ -115,6 +115,7 @@ public class FlowService {
         .map(param -> HyperParameter.builder()
           .description(param.description())
           .key(param.key())
+          .maxValue(param.maxValue())
           .simulationId(simulation.getId())
           .build())
         .toList();

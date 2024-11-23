@@ -1,6 +1,7 @@
 package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.dtos.SumHyperParamDto;
+import com.backend.softtrainer.dtos.UserHyperParamMaxValueDto;
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.UserHyperParameter;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
@@ -51,6 +52,10 @@ public class UserHyperParameterService {
 
   public List<UserHyperParameter> findAllByChatId(final Long chatId) {
     return userHyperParameterRepository.findAllByChatId(chatId);
+  }
+
+  public List<UserHyperParamMaxValueDto> findHyperParamsWithMaxValues(final Long chatId) {
+    return userHyperParameterRepository.findHyperParamsWithMaxValues(chatId);
   }
 
   public List<SumHyperParamDto> sumUpByUser(final User user) {

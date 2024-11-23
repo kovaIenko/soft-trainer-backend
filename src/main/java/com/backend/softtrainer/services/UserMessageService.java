@@ -175,7 +175,8 @@ public class UserMessageService {
   }
 
   private Double normalizeHyperParams(final Double value, final Double maxValue) {
-    return 0.15 + 0.85 * (value / maxValue);
+    var ratio = value / maxValue;
+    return 0.15 + 0.85 * (ratio < 0 ? 0 : ratio);
   }
 
   public Stream<UserMessageDto> convert(final Message message, final ChatParams chatParams) {
@@ -207,8 +208,13 @@ public class UserMessageService {
             .max(Double::compareTo)
             .orElse(1.0));
 
+
           var normalizedParams = params.stream()
-            .map(param -> new UserHyperParamResponseDto(param.key(), normalizeHyperParams(param.value(), maxValue)))
+            .map(param -> {
+              //todo temporary
+              Double maxValueFinal = Objects.isNull(param.maxValue()) || param.maxValue() == 0.0 ? maxValue : param.maxValue();
+              return new UserHyperParamResponseDto(param.key(), normalizeHyperParams(param.value(), maxValueFinal), maxValueFinal);
+            })
             .toList();
 
           var chartContent = ChartInnerContent.builder()

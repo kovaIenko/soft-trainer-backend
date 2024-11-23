@@ -28,4 +28,6 @@ public class HyperParameter {
   @Column(name = "simulation_id")
   private Long simulationId;
 
+  private Double maxValue;
+
 }

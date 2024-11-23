@@ -1,6 +1,7 @@
 package com.backend.softtrainer.repositories;
 
 import com.backend.softtrainer.dtos.SumHyperParamDto;
+import com.backend.softtrainer.dtos.UserHyperParamMaxValueDto;
 import com.backend.softtrainer.entities.UserHyperParameter;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -23,4 +24,11 @@ public interface UserHyperParameterRepository extends JpaRepository<UserHyperPar
           "WHERE u.ownerId = :ownerId " +
           "GROUP BY u.key")
   List<SumHyperParamDto> sumUpByUser(@Param("ownerId") final Long ownerId);
+
+
+  @Query("SELECT distinct new com.backend.softtrainer.dtos.UserHyperParamMaxValueDto(u.key, u.value, h.maxValue) " +
+          "FROM user_hyperparams u " +
+          "JOIN FETCH hyperparams h on h.simulationId = u.simulationId and u.key = h.key " +
+          "WHERE u.chatId = :chatId ")
+  List<UserHyperParamMaxValueDto> findHyperParamsWithMaxValues(@Param("chatId") final Long chatId);
 }

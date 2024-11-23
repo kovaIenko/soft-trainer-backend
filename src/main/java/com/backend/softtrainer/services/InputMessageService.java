@@ -200,10 +200,11 @@ public class InputMessageService {
 
       var resultMessage = (LastSimulationMessage) currentMessage;
 
-      var params = userHyperParameterService.findAllByChatId(chat.getId())
+      var params = userHyperParameterService.findHyperParamsWithMaxValues(chat.getId())
         .stream()
-        .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
+        .map(param -> new UserHyperParamResponseDto(param.key(), param.value(), param.maxValue()))
         .toList();
+
       log.info("The params we got from user hyper parameters are {} and it size it {}", params, params.size());
 
       resultMessage.setHyperParams(params);
@@ -541,10 +542,11 @@ public class InputMessageService {
           promptRepository.findFirstByNameOrderByIdDesc(PromptName.SIMULATION_SUMMARY)
             .orElseThrow();
 
-        var params = userHyperParameterService.findAllByChatId(chat.getId())
+        var params = userHyperParameterService.findHyperParamsWithMaxValues(chat.getId())
           .stream()
-          .map(param -> new UserHyperParamResponseDto(param.getKey(), param.getValue()))
+          .map(param -> new UserHyperParamResponseDto(param.key(), param.value(), param.maxValue()))
           .toList();
+
         log.info("The params we got from user hyper parameters are {} and it size it {}", params, params.size());
 
 
