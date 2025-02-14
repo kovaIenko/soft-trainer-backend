@@ -19,4 +19,12 @@ public class EnterTextQuestionMessage extends Message {
 
   private String answer;
 
+  private String openAnswer;
+
+  @Column(length = 700)
+  private String correct;
+
+  @Column(length = 700)
+  private String options;
+
 }

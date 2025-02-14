@@ -205,6 +205,8 @@ public class FlowService {
         .prompt(enterTextQuestionDto.getPrompt())
         .responseTimeLimit(enterTextQuestionDto.getResponseTimeLimit())
         .character(authorEntity)
+        .correct(enterTextQuestionDto.getCorrect())
+        .options(String.join(" || ", enterTextQuestionDto.getOptions()))
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .hasHint(enterTextQuestionDto.isHasHint())

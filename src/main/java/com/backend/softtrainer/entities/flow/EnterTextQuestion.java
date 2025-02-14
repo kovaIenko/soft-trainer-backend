@@ -18,4 +18,10 @@ public class EnterTextQuestion extends FlowNode {
   @Column(length = 1500)
   private String prompt;
 
+  @Column(length = 700)
+  private String correct;
+
+  @Column(length = 700)
+  private String options;
+
 }

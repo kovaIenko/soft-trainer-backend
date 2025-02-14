@@ -39,6 +39,7 @@ import com.backend.softtrainer.interpreter.InterpreterMessageMapper;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.repositories.PromptRepository;
+import com.backend.softtrainer.services.chatgpt.ChatGptService;
 import com.backend.softtrainer.utils.Converter;
 import com.oruel.conditionscript.libs.MessageManagerLib;
 import com.oruel.conditionscript.script.ConditionScriptRunnerKt;
@@ -48,6 +49,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -110,7 +112,12 @@ public class InputMessageService {
 
     var message = messageOpt.get();
 
-    log.info("There is input message {} with message_type {} in the chat {}", message.getId(), message.getMessageType(), chat.getId());
+    log.info(
+      "There is input message {} with message_type {} in the chat {}",
+      message.getId(),
+      message.getMessageType(),
+      chat.getId()
+    );
     verifyUserAnswer(message, messageRequestDto);
 
     return findOutTheListOfMessagesBasedOnUserActionableMessage(messageRequestDto, chat, allMessagesByChat, message);
@@ -181,17 +188,35 @@ public class InputMessageService {
       var currentMsg = (EnterTextQuestionMessage) currentMessage;
       currentMsg.setUserResponseTime(messageRequestDto.getUserResponseTime());
       currentMsg.setInteracted(true);
-      currentMsg.setAnswer(enterTextAnswerMessageDto.getAnswer());
+      currentMsg.setOpenAnswer(enterTextAnswerMessageDto.getAnswer());
       currentMsg.setContent(enterTextAnswerMessageDto.getAnswer());
       currentMsg.setRole(ChatRole.USER);
 
-      messageService.save(currentMsg);
 
+      if (Objects.nonNull(currentMsg.getOptions()) && !currentMsg.getOptions().isBlank()) {
+        var classifyUserOpenAnswerResponse = classifyUserOpenAnswer(currentMsg);
+
+        var optionAnswer = extractFromClassificationResponse(classifyUserOpenAnswerResponse);
+        log.info("The option answer we got from classification is {}", optionAnswer);
+        if (Objects.isNull(optionAnswer)) {
+          log.info("The option answer is null, so we will use the correct one {}", currentMsg.getCorrect());
+          var options = currentMsg.getOptions().split("\\|\\|");
+          currentMsg.setAnswer(options[Integer.parseInt(currentMsg.getCorrect()) - 1]);
+          currentMsg.setContent(options[Integer.parseInt(currentMsg.getCorrect()) - 1]);
+        } else {
+          currentMsg.setAnswer(optionAnswer);
+        }
+      } else {
+        currentMsg.setAnswer(enterTextAnswerMessageDto.getAnswer());
+      }
+
+      messageService.save(currentMsg);
       var nextMessages = figureOutNextMessagesWith(
         chat,
         currentMessage.getFlowNode(),
         alreadyStoredMessagesAfterCurrent
       );
+
 
       whetherItStartsGenerationHint(alreadyStoredMessagesAfterCurrent, currentMsg, chat);
 
@@ -455,7 +480,9 @@ public class InputMessageService {
     return CompletableFuture.completedFuture(new ChatDataDto(alreadyStoredMessages, new ChatParams(chat.getHearts())));
   }
 
-  public void generateHintMessage(final String hintMessageId, final List<Message> actionableMsgs, final FlowNode hintNode,
+  public void generateHintMessage(final String hintMessageId,
+                                  final List<Message> actionableMsgs,
+                                  final FlowNode hintNode,
                                   final Chat chat) {
     log.info("Try to got necessary info for generating hint");
     try {
@@ -714,6 +741,8 @@ public class InputMessageService {
         .id(UUID.randomUUID().toString())
         .chat(chat)
         .role(ChatRole.APP)
+        .options(enterTextQuestion.getOptions())
+        .correct(enterTextQuestion.getCorrect())
         .messageType(MessageType.ENTER_TEXT_QUESTION)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
@@ -868,6 +897,61 @@ public class InputMessageService {
     } catch (Exception e) {
       log.error("Error while generating AI summary", e);
       return Optional.empty();
+    }
+  }
+
+  /**
+   * @param message
+   * @return JSON
+   */
+  public String classifyUserOpenAnswer(final EnterTextQuestionMessage message) {
+    log.info("Try to got necessary info for classifying user answer");
+    String mockContent = "{\n"
+      + "  \"index\": -1,\n"
+      + "  \"option\": \"\",\n"
+      + "  \"reason\": \"The answer refers to cold beverages, which are unrelated to the given options.\"\n"
+      + "}";
+    try {
+      Prompt answerClassifyingPrompt =
+        promptRepository.findFirstByNameOrderByIdDesc(PromptName.OPEN_QUESTION_CLASSIFYING)
+          .orElseThrow();
+
+      log.info("The prompt for  message is working {}", answerClassifyingPrompt.isOn());
+
+      if (answerClassifyingPrompt.isOn()) {
+
+        log.info("Current thread name is {}", Thread.currentThread().getName());
+
+        String response = chatGptService.classifyUserAnswer(message, answerClassifyingPrompt)
+          .thenApply(Optional::ofNullable)
+          .thenApply(classificationResponse -> {
+            log.info("The classification response we got from ai is {}", classificationResponse.map(MessageDto::content));
+            return classificationResponse.map(MessageDto::content)
+              .orElse(mockContent);
+          }).get();
+        log.info("We are done with classification of the user answer at {}", LocalDateTime.now());
+        return response;
+      } else {
+        return mockContent;
+      }
+    } catch (Exception e) {
+      log.error("Error while classification of the user answer ", e);
+      return mockContent;
+    }
+  }
+
+  private String extractFromClassificationResponse(String response) {
+    try {
+      var json = new JSONObject(response);
+      var index = json.getInt("index");
+      if (index >= 0) {
+        return json.getString("option");
+      } else {
+        return null;
+      }
+    } catch (Exception e) {
+      log.error("Error while extracting from classification response", e);
+      return null;
     }
   }
 

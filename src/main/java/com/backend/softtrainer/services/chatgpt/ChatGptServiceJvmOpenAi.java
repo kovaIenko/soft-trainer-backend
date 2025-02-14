@@ -1,8 +1,9 @@
-package com.backend.softtrainer.services;
+package com.backend.softtrainer.services.chatgpt;
 
 import com.backend.softtrainer.dtos.ChatDto;
 import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.entities.Prompt;
+import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import io.github.stefanbratanov.jvm.openai.Assistant;
 import io.github.stefanbratanov.jvm.openai.AssistantsClient;
@@ -23,6 +24,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -142,41 +145,33 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
 
 
   @Override
-  public CompletableFuture<MessageDto> buildAfterwardSimulationRecommendation(final ChatDto chat,
-                                                                              final Prompt prompt,
-                                                                              final Map<String, Double> params,
-                                                                              final String skillName,
-                                                                              final String onboardingExtraction,
-                                                                              final String localization) throws
-                                                                                                                 InterruptedException {
-    String userParams = params.entrySet().stream()
-      .map(entry -> {
-        var key = entry.getKey();
-        var value = entry.getValue();
-        return key + " = " + value;
-      })
-      .collect(Collectors.joining(" \n "));
+  public CompletableFuture<MessageDto> classifyUserAnswer(
+    final EnterTextQuestionMessage message,
+    final Prompt prompt
+  ) throws InterruptedException {
 
-    log.info("user params: \n {}", userParams);
+    // 🟢 1. Collect and Format Options for Classification
+    String optionsFormatted = Arrays.stream(message.getOptions().split("\\|\\|"))
+      .map(String::trim)
+      .collect(Collectors.joining("\n"));
 
-    var chatHistory = new StringBuilder();
-    chat.messages().forEach(message -> ChatGptService.convert(chatHistory, message));
-    log.info("chat history  \n {}", chatHistory);
+    log.info("User Answer:\n{}", message.getOpenAnswer());
+    log.info("Options for Classification:\n{}", optionsFormatted);
 
-    var promptMessage = String.format(
+    // 🟢 2. Construct Structured Prompt
+    String promptMessage = String.format(
       prompt.getPrompt(),
-      onboardingExtraction,
-      chatHistory,
-      localization
+      message.getOpenAnswer(),
+      optionsFormatted
     );
 
-    log.info("The prompt with the populated values for summary of the simulation looks like: \n {}", promptMessage);
+    log.info("Generated Prompt for Answer Classification:\n{}", promptMessage);
 
-    log.info("Start of requesting LLM date {}", LocalDateTime.now());
+    // 🟢 3. Start OpenAI API Request
+    log.info("Starting OpenAI Request at {}", LocalDateTime.now());
     CreateThreadRequest createThreadRequest = CreateThreadRequest.newBuilder().build();
     var thread = threadsClient.createThread(createThreadRequest);
 
-    //"asst_vVoj4x1xjspaQlmxrw7IbLIE"
     Assistant assistant = assistantsClient.retrieveAssistant(prompt.getAssistantId());
 
     CreateRunRequest createRunRequest = CreateRunRequest.newBuilder()
@@ -185,12 +180,22 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
       .responseFormat(AssistantsResponseFormat.auto())
       .build();
 
-    ThreadRun run = runsClient.createRun(thread.id(), java.util.Optional.empty(), createRunRequest);
+    ThreadRun run = runsClient.createRun(thread.id(), Optional.empty(), createRunRequest);
+    log.info("Run started with status: {}", run.status());
 
-    ThreadRun retrievedRun = runsClient.retrieveRun(thread.id(), run.id());
-    String status = retrievedRun.status();
-    log.info("status: " + status);
-    Thread.sleep(3000);
+    // 🟢 4. Implement Proper Polling Instead of Thread.sleep()
+    ThreadRun retrievedRun;
+    do {
+      Thread.sleep(1000); // Poll every second
+      retrievedRun = runsClient.retrieveRun(thread.id(), run.id());
+      log.info("Polling OpenAI API, status: {}", retrievedRun.status());
+    } while (!retrievedRun.status().equals("completed") && !retrievedRun.status().equals("failed"));
+
+    // 🟢 5. Handle OpenAI API Response
+    if (!retrievedRun.status().equals("completed")) {
+      log.warn("OpenAI API request failed or did not return a valid response.");
+      return CompletableFuture.completedFuture(new MessageDto("AI classification failed."));
+    }
 
     MessagesClient.PaginatedThreadMessages paginatedMessages = messagesClient.listMessages(
       thread.id(),
@@ -200,21 +205,109 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
     List<ThreadMessage> messagesResponse = paginatedMessages.data();
 
     if (messagesResponse.isEmpty()) {
-      log.info("End of requesting LLM date {}", LocalDateTime.now());
-      log.info("we still waiting for the response");
+      log.warn("OpenAI returned an empty response.");
       return CompletableFuture.completedFuture(new MessageDto(""));
-    } else {
-
-      log.info("End of requesting LLM date {}", LocalDateTime.now());
-      var content = messagesResponse.get(0)
-        .content()
-        .stream()
-        .map(cnt -> ((ThreadMessage.Content.TextContent) cnt).text().value())
-        .collect(Collectors.joining(" "));
-
-      return CompletableFuture.completedFuture(new MessageDto(content));
     }
+
+    String content = messagesResponse.get(0)
+      .content()
+      .stream()
+      .map(cnt -> ((ThreadMessage.Content.TextContent) cnt).text().value())
+      .collect(Collectors.joining(" "));
+
+    log.info("AI Classification successfully completed.");
+    return CompletableFuture.completedFuture(new MessageDto(content));
   }
+
+
+  @Override
+  public CompletableFuture<MessageDto> buildAfterwardSimulationRecommendation(
+    final ChatDto chat,
+    final Prompt prompt,
+    final Map<String, Double> params,
+    final String skillName,
+    final String onboardingExtraction,
+    final String localization
+  ) throws InterruptedException {
+
+    // 🟢 1. Collect and Format User Parameters
+    String userParams = params.entrySet().stream()
+      .map(entry -> String.format("%s = %.2f", entry.getKey(), entry.getValue())) // Format values properly
+      .collect(Collectors.joining("\n"));
+
+    log.info("User Parameters:\n{}", userParams);
+
+    // 🟢 2. Collect and Format Chat History
+    var chatHistory = new StringBuilder();
+    chat.messages()
+      .stream()
+      .sorted(Comparator.comparing(Message::getTimestamp))
+      .forEach(message -> ChatGptService.convert(chatHistory, message));
+
+    log.info("Chat History:\n{}", chatHistory);
+
+    // 🟢 3. Construct Structured Prompt
+    String promptMessage = String.format(
+      prompt.getPrompt(),
+      onboardingExtraction,
+      chatHistory,
+      localization
+    );
+
+    log.info("Generated Prompt for Simulation Summary:\n{}", promptMessage);
+
+    // 🟢 4. Start OpenAI API Request
+    log.info("Starting OpenAI Request at {}", LocalDateTime.now());
+    CreateThreadRequest createThreadRequest = CreateThreadRequest.newBuilder().build();
+    var thread = threadsClient.createThread(createThreadRequest);
+
+    Assistant assistant = assistantsClient.retrieveAssistant(prompt.getAssistantId());
+
+    CreateRunRequest createRunRequest = CreateRunRequest.newBuilder()
+      .assistantId(assistant.id())
+      .instructions(promptMessage)
+      .responseFormat(AssistantsResponseFormat.auto())
+      .build();
+
+    ThreadRun run = runsClient.createRun(thread.id(), Optional.empty(), createRunRequest);
+    log.info("Run started with status: {}", run.status());
+
+    // 🟢 5. Implement Proper Polling Instead of Thread.sleep()
+    ThreadRun retrievedRun;
+    do {
+      Thread.sleep(1000); // Poll every second
+      retrievedRun = runsClient.retrieveRun(thread.id(), run.id());
+      log.info("Polling OpenAI API, status: {}", retrievedRun.status());
+    } while (!retrievedRun.status().equals("completed") && !retrievedRun.status().equals("failed"));
+
+    // 🟢 6. Handle OpenAI API Response
+    if (!retrievedRun.status().equals("completed")) {
+      log.warn("OpenAI API request failed or did not return a valid response.");
+      return CompletableFuture.completedFuture(new MessageDto("AI simulation summary generation failed."));
+    }
+
+    MessagesClient.PaginatedThreadMessages paginatedMessages = messagesClient.listMessages(
+      thread.id(),
+      PaginationQueryParameters.none(),
+      Optional.empty()
+    );
+    List<ThreadMessage> messagesResponse = paginatedMessages.data();
+
+    if (messagesResponse.isEmpty()) {
+      log.warn("OpenAI returned an empty response.");
+      return CompletableFuture.completedFuture(new MessageDto(""));
+    }
+
+    String content = messagesResponse.get(0)
+      .content()
+      .stream()
+      .map(cnt -> ((ThreadMessage.Content.TextContent) cnt).text().value())
+      .collect(Collectors.joining(" "));
+
+    log.info("AI Simulation Summary successfully generated.");
+    return CompletableFuture.completedFuture(new MessageDto(content));
+  }
+
 
   @Override
   public CompletableFuture<MessageDto> buildAfterwardActionableHintMessage(final ChatDto chat,
@@ -224,17 +317,22 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
                                                                            final String skillName,
                                                                            final String onboardingExtraction,
                                                                            final String localization) throws
-                                                                                                              InterruptedException {
+                                                                                                      InterruptedException {
 
 
     var lastActionableMessage = new StringBuilder();
-    if (actionableMessages.isEmpty()) {
-      log.info("No actionable messages found in the chat, since we convert chat history {}", chat.messages());
-      chat.messages().forEach(msg -> ChatGptService.convert(lastActionableMessage, msg));
-    } else {
-      log.info("Actionable messages found in the chat, since we convert actionable messages {}", actionableMessages);
-      actionableMessages.subList(0, 2).forEach(msg -> ChatGptService.convert(lastActionableMessage, msg));
-    }
+
+
+    log.info("actionableMessages {}", chat.messages());
+    log.info("chat {}", actionableMessages);
+
+    log.info("No actionable messages found, using last 3 chat messages.");
+    List<Message> lastThreeMessages = chat.messages().stream()
+      .sorted(Comparator.comparing(Message::getTimestamp))
+      .skip(Math.max(0, chat.messages().size() - 6))
+      .toList();
+    lastThreeMessages.forEach(msg -> ChatGptService.convert(lastActionableMessage, msg));
+
     log.info("chat {}", lastActionableMessage);
 
     var promptMessage = String.format(
@@ -246,7 +344,7 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
 
     log.info("The prompt with the populated values for hint message looks like {}", promptMessage);
 
-    log.info("Start of requesting LLM date {}", LocalDateTime.now());
+    log.info("Start OpenAI request at {}", LocalDateTime.now());
 
     CreateThreadRequest createThreadRequest = CreateThreadRequest.newBuilder().build();
     var thread = threadsClient.createThread(createThreadRequest);
@@ -260,11 +358,21 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
       .build();
 
     ThreadRun run = runsClient.createRun(thread.id(), Optional.empty(), createRunRequest);
+    log.info("Run started with status: {}", run.status());
 
-    ThreadRun retrievedRun = runsClient.retrieveRun(thread.id(), run.id());
-    String status = retrievedRun.status();
-    log.info("status: " + status);
-    Thread.sleep(3000);
+// Polling mechanism for waiting on OpenAI response
+    ThreadRun retrievedRun;
+    do {
+      Thread.sleep(1000);
+      retrievedRun = runsClient.retrieveRun(thread.id(), run.id());
+      log.info("Polling OpenAI API, status: {}", retrievedRun.status());
+    } while (!retrievedRun.status().equals("completed") && !retrievedRun.status().equals("failed"));
+
+    if (!retrievedRun.status().equals("completed")) {
+      log.warn("OpenAI API did not return a valid response.");
+      return CompletableFuture.completedFuture(new MessageDto("AI hint generation failed."));
+    }
+
     MessagesClient.PaginatedThreadMessages paginatedMessages = messagesClient.listMessages(
       thread.id(),
       PaginationQueryParameters.none(),
@@ -273,21 +381,18 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
     List<ThreadMessage> messagesResponse = paginatedMessages.data();
 
     if (messagesResponse.isEmpty()) {
-      log.info("End of requesting LLM date {}", LocalDateTime.now());
-      log.info("we still waiting for the response");
+      log.warn("OpenAI returned an empty response.");
       return CompletableFuture.completedFuture(new MessageDto(""));
-    } else {
-
-      log.info("End of requesting LLM date {}", LocalDateTime.now());
-      var content = messagesResponse.get(0)
-        .content()
-        .stream()
-        .map(cnt -> ((ThreadMessage.Content.TextContent) cnt).text().value())
-        .collect(Collectors.joining(" "));
-
-      return CompletableFuture.completedFuture(new MessageDto(content));
-
     }
+
+    String content = messagesResponse.get(0)
+      .content()
+      .stream()
+      .map(cnt -> ((ThreadMessage.Content.TextContent) cnt).text().value())
+      .collect(Collectors.joining(" "));
+
+    log.info("AI hint generated successfully.");
+    return CompletableFuture.completedFuture(new MessageDto(content));
   }
 
 }

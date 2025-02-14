@@ -9,4 +9,6 @@ public class EnterTextAnswerMessageDto extends MessageRequestDto {
 
   private String answer;
 
+
+
 }

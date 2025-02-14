@@ -225,14 +225,20 @@ public class UserMessageService {
         }
       }
 
-      if (Objects.nonNull(lastSimulationMessage.getContent()) && !lastSimulationMessage.getContent().isEmpty()) {
-        var textContent = TextInnerContent.builder()
-          .type(InnerContentMessageType.TEXT)
-          .description(lastSimulationMessage.getContent())
-          .title(lastSimulationMessage.getTitle())
-          .build();
 
-        contents.add(textContent);
+      if (Objects.nonNull(lastSimulationMessage.getContent()) && !lastSimulationMessage.getContent().isEmpty()) {
+        // 🟢 Split content by "==" separator
+        List<String> chunkedContent = List.of(lastSimulationMessage.getContent().split("=="));
+
+        // 🟢 Convert each chunk into a structured message
+        for (String chunk : chunkedContent) {
+          var textContent = TextInnerContent.builder()
+            .type(InnerContentMessageType.TEXT)
+            .title(lastSimulationMessage.getTitle())
+            .description(chunk.trim()) // Trim to remove extra spaces
+            .build();
+          contents.add(textContent);
+        }
       }
 
       log.info("Last simulation message content {}", contents);
@@ -246,16 +252,22 @@ public class UserMessageService {
                          .hasHint(false)
                          .build());
     } else if (message instanceof HintMessage hintMessage) {
-
       var contents = new ArrayList<InnerContentMessage>();
 
       if (Objects.nonNull(hintMessage.getContent()) && !hintMessage.getContent().isEmpty()) {
-        var textContent = TextInnerContent.builder()
-          .type(InnerContentMessageType.TEXT)
-          .title(hintMessage.getTitle())
-          .description(hintMessage.getContent())
-          .build();
-        contents.add(textContent);
+
+        // 🟢 Split content by "==" separator
+        List<String> chunkedContent = List.of(hintMessage.getContent().split("=="));
+
+        // 🟢 Convert each chunk into a structured message
+        for (String chunk : chunkedContent) {
+          var textContent = TextInnerContent.builder()
+            .type(InnerContentMessageType.TEXT)
+            .title(hintMessage.getTitle())
+            .description(chunk.trim()) // Trim to remove extra spaces
+            .build();
+          contents.add(textContent);
+        }
       }
 
       log.info("Hint message content {}", contents);
@@ -265,7 +277,7 @@ public class UserMessageService {
                          .messageType(MessageType.HINT_MESSAGE)
                          .id(message.getId())
                          .character(hintMessage.getCharacter())
-                         .contents(contents)
+                         .contents(contents) // Store split content properly
                          .hasHint(false)
                          .build());
     } else if (message instanceof ContentMessage contentMessage) {

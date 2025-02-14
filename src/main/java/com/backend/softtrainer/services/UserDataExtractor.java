@@ -6,6 +6,7 @@ import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.messages.EnterTextAnswerMessage;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.repositories.ChatRepository;
+import com.backend.softtrainer.services.chatgpt.ChatGptService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,13 +32,14 @@ public class UserDataExtractor {
       }
 
       var onboardingChat = onboardingChatOpt.get();
-      log.info("Onboarding chat with messages: {}", onboardingChat.getMessages());
+      log.info("Onboarding chat id {} with messages: {}", onboardingChat.getId(), onboardingChat.getMessages());
 
       var stringBuilder = new StringBuilder();
 
       onboardingChat.getMessages()
         .stream()
         .filter(msg -> !msg.getMessageType().equals(MessageType.RESULT_SIMULATION))
+        .sorted(Comparator.comparing(Message::getTimestamp))
         .forEach(msg -> {
           ChatGptService.convert(stringBuilder, msg);
           stringBuilder.append("\n");
