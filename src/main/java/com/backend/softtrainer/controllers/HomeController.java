@@ -14,6 +14,7 @@ import com.backend.softtrainer.services.UserDataExtractor;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import com.backend.softtrainer.services.auth.TokenService;
+import com.backend.softtrainer.services.notifications.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ public class HomeController {
   private final CustomUsrDetailsService usrDetailsService;
   private final ContactInfoRepository contactInfoRepository;
   private final UserDataExtractor userDataExtractor;
+  private final EmailService emailService;
 
   @GetMapping("/health")
   //@PreAuthorize("hasAnyRole('ROLE_OWNER')")
@@ -106,6 +108,13 @@ public class HomeController {
     }
   }
 
+  private  static String EMAIL_SUBJECT = "Contact information from thesofttrainer.com";
+  private static String EMAIL_BODY = """
+    + 1 one contact information was left on thesofttrainer.com:
+    Name: %s
+    Contact: %s
+    Request: %s
+    """;
 
   @PostMapping("/contact/info")
   public ResponseEntity<ContactInfoResponse> addContactInfo(@RequestBody final ContactInfoRequestDto request) {
@@ -115,6 +124,7 @@ public class HomeController {
         .name(request.name())
         .request(request.request())
         .build();
+      emailService.sendEmail(String.format(EMAIL_SUBJECT), String.format(EMAIL_BODY, request.name(), request.contact(), request.request()));
       contactInfoRepository.save(entity);
       return ResponseEntity.ok(new ContactInfoResponse(true, "success"));
     } catch (Exception e) {

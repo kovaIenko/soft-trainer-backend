@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'com.backend'
-version = '0.0.428'
+version = '0.0.438'
 
 java {
   sourceCompatibility = '17'
@@ -102,6 +102,9 @@ dependencies {
   implementation fileTree(dir: 'libs', include: '*.jar')
   implementation 'co.touchlab:kermit:2.0.0-RC4'
   implementation group: 'org.json', name: 'json', version: '20090211'
+
+  // https://mvnrepository.com/artifact/com.sun.mail/jakarta.mail
+  implementation("com.sun.mail:jakarta.mail:2.0.1")
 
 
   implementation group: 'org.springframework.security', name: 'spring-security-oauth2-resource-server', version: '6.2.4'

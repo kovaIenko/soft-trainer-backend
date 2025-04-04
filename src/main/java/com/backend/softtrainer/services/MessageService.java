@@ -93,6 +93,7 @@ public class MessageService {
     }
   }
 
+  @Transactional(isolation = Isolation.READ_UNCOMMITTED)
   public Message save(final Message message) {
     return messageRepository.saveAndFlush(message);
   }

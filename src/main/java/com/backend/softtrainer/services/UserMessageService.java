@@ -200,7 +200,7 @@ public class UserMessageService {
       if (Objects.nonNull(lastSimulationMessage.getHyperParams()) && !lastSimulationMessage.getHyperParams().isEmpty()) {
 
         var params = lastSimulationMessage.getHyperParams();
-         // not less than 3 params should have values
+        // not less than 3 params should have values
         if (lastSimulationMessage.getHyperParams().size() > 2) {
 
           var maxValue = Math.max(1.0, params.stream()
@@ -213,7 +213,11 @@ public class UserMessageService {
             .map(param -> {
               //todo temporary
               Double maxValueFinal = Objects.isNull(param.maxValue()) || param.maxValue() == 0.0 ? maxValue : param.maxValue();
-              return new UserHyperParamResponseDto(param.key(), normalizeHyperParams(param.value(), maxValueFinal), maxValueFinal);
+              return new UserHyperParamResponseDto(
+                param.key(),
+                normalizeHyperParams(param.value(), maxValueFinal),
+                maxValueFinal
+              );
             })
             .toList();
 
@@ -311,13 +315,27 @@ public class UserMessageService {
                          .build());
     } else if (message instanceof EnterTextQuestionMessage enterTextQuestionMessage) {
       if (Objects.nonNull(enterTextQuestionMessage.getAnswer()) && !enterTextQuestionMessage.getAnswer().isBlank()) {
+        var correctnessState = CorrectnessState.UNDEFINED;
+        if (Objects.nonNull(enterTextQuestionMessage.getOptions()) && !enterTextQuestionMessage.getOptions().isBlank()) {
+          var options = split(enterTextQuestionMessage.getOptions());
+          var userAnswer = splitToSet(enterTextQuestionMessage.getAnswer());
+          var correctAnswer = splitCorrectAnswer(enterTextQuestionMessage.getCorrect());
+          var answerOptions = getCorrectAnswerStr(options, correctAnswer);
+          correctnessState = resolveCorrectnessState(answerOptions, userAnswer);
+
+          if (enterTextQuestionMessage.isHasHint()) {
+            adjustHeartsToCorrectnessOfAnswer(correctnessState, chatParams);
+          }
+        }
         return Stream.of(UserEnterTextMessageDto.builder()
                            .content(enterTextQuestionMessage.getContent())
                            .id(enterTextQuestionMessage.getId())
                            .idTemp(enterTextQuestionMessage.getId())
                            .timestamp(enterTextQuestionMessage.getTimestamp())
-                           .correctness(CorrectnessState.UNDEFINED)
+                           .hasHint(enterTextQuestionMessage.isHasHint())
+                           .hintMessage(getHintMessage(enterTextQuestionMessage))
                            .messageType(MessageType.TEXT)
+                           .correctness(correctnessState)
                            .isVoted(true)
                            .build());
       } else {
@@ -355,7 +373,7 @@ public class UserMessageService {
                            .idTemp(singleChoiceQuestionMessage.getId())
                            .content(singleChoiceQuestionMessage.getAnswer())
                            .hasHint(singleChoiceQuestionMessage.isHasHint())
-                           .hintMessage(getHitMessage(singleChoiceQuestionMessage))
+                           .hintMessage(getHintMessage(singleChoiceQuestionMessage))
                            .correctness(correctnessState)
                            .messageType(MessageType.TEXT)
                            .isVoted(true)
@@ -368,7 +386,7 @@ public class UserMessageService {
                            .id(message.getId())
                            .hasHint(singleChoiceQuestionMessage.isHasHint())
                            .correctness(CorrectnessState.UNDEFINED)
-                           .hintMessage(getHitMessage(singleChoiceQuestionMessage))
+                           .hintMessage(getHintMessage(singleChoiceQuestionMessage))
                            .responseTimeLimit(singleChoiceQuestionMessage.getResponseTimeLimit())
                            .isVoted(false)
                            .build());
@@ -398,7 +416,7 @@ public class UserMessageService {
                            .messageType(MessageType.SINGLE_CHOICE_TASK)
                            .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
                            .correctness(correctnessState)
-                           .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
+                           .hintMessage(getHintMessage(singleChoiceTaskQuestionMessage))
                            .responseTimeLimit(singleChoiceTaskQuestionMessage.getResponseTimeLimit())
                            .isVoted(true)
                            .build());
@@ -410,7 +428,7 @@ public class UserMessageService {
                            .messageType(MessageType.SINGLE_CHOICE_TASK)
                            .hasHint(singleChoiceTaskQuestionMessage.isHasHint())
                            .correctness(CorrectnessState.UNDEFINED)
-                           .hintMessage(getHitMessage(singleChoiceTaskQuestionMessage))
+                           .hintMessage(getHintMessage(singleChoiceTaskQuestionMessage))
                            .responseTimeLimit(singleChoiceTaskQuestionMessage.getResponseTimeLimit())
                            .isVoted(false)
                            .build());
@@ -447,7 +465,7 @@ public class UserMessageService {
           var lastMsg = msgs.get(msgs.size() - 1);
 
           if (multiChoiceTaskQuestionMessage.isHasHint()) {
-            lastMsg.setHintMessage(getHitMessage(multiChoiceTaskQuestionMessage));
+            lastMsg.setHintMessage(getHintMessage(multiChoiceTaskQuestionMessage));
             lastMsg.setHasHint(multiChoiceTaskQuestionMessage.isHasHint());
           }
         }
@@ -461,7 +479,7 @@ public class UserMessageService {
                            .correctness(CorrectnessState.UNDEFINED)
                            .hasHint(multiChoiceTaskQuestionMessage.isHasHint())
                            .responseTimeLimit(multiChoiceTaskQuestionMessage.getResponseTimeLimit())
-                           .hintMessage(getHitMessage(multiChoiceTaskQuestionMessage))
+                           .hintMessage(getHintMessage(multiChoiceTaskQuestionMessage))
                            .isVoted(false)
                            .build());
       }
@@ -469,7 +487,7 @@ public class UserMessageService {
     throw new NoSuchElementException("The incorrect question type " + message.getClass().getName());
   }
 
-  private UserHintMessageDto getHitMessage(final Message message) {
+  private UserHintMessageDto getHintMessage(final Message message) {
     if (message.isHasHint()) {
       var converted = convert(message.getHintMessage(), null).toList();
       log.info("The hint message for the message {} is {}", message.getId(), converted);

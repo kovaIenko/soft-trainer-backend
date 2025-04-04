@@ -14,6 +14,7 @@ import lombok.experimental.SuperBuilder;
 @Entity
 public class HintMessage extends Message {
 
+  @Column(length = 2000)
   private String content;
 
   @Column(name = "based_message_id")

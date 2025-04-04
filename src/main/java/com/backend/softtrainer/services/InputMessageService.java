@@ -192,17 +192,14 @@ public class InputMessageService {
       currentMsg.setContent(enterTextAnswerMessageDto.getAnswer());
       currentMsg.setRole(ChatRole.USER);
 
-
       if (Objects.nonNull(currentMsg.getOptions()) && !currentMsg.getOptions().isBlank()) {
         var classifyUserOpenAnswerResponse = classifyUserOpenAnswer(currentMsg);
-
-        var optionAnswer = extractFromClassificationResponse(classifyUserOpenAnswerResponse);
+        var options = currentMsg.getOptions().split("\\|\\|");
+        var optionAnswer = extractFromClassificationResponse(classifyUserOpenAnswerResponse, options);
         log.info("The option answer we got from classification is {}", optionAnswer);
         if (Objects.isNull(optionAnswer)) {
           log.info("The option answer is null, so we will use the correct one {}", currentMsg.getCorrect());
-          var options = currentMsg.getOptions().split("\\|\\|");
           currentMsg.setAnswer(options[Integer.parseInt(currentMsg.getCorrect()) - 1]);
-          currentMsg.setContent(options[Integer.parseInt(currentMsg.getCorrect()) - 1]);
         } else {
           currentMsg.setAnswer(optionAnswer);
         }
@@ -940,11 +937,11 @@ public class InputMessageService {
     }
   }
 
-  private String extractFromClassificationResponse(String response) {
+  private String extractFromClassificationResponse(String response, final String[] options) {
     try {
       var json = new JSONObject(response);
       var index = json.getInt("index");
-      if (index >= 0) {
+      if (index >= 0 && index < options.length) {
         return json.getString("option");
       } else {
         return null;

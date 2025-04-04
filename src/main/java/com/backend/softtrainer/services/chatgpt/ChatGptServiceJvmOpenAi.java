@@ -153,10 +153,8 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
     // 🟢 1. Collect and Format Options for Classification
     String optionsFormatted = Arrays.stream(message.getOptions().split("\\|\\|"))
       .map(String::trim)
+      .map(option -> String.format("- %s", "\"" + option + "\""))
       .collect(Collectors.joining("\n"));
-
-    log.info("User Answer:\n{}", message.getOpenAnswer());
-    log.info("Options for Classification:\n{}", optionsFormatted);
 
     // 🟢 2. Construct Structured Prompt
     String promptMessage = String.format(
@@ -326,10 +324,10 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
     log.info("actionableMessages {}", chat.messages());
     log.info("chat {}", actionableMessages);
 
-    log.info("No actionable messages found, using last 3 chat messages.");
+    log.info("No actionable messages found, using last 6 chat messages.");
     List<Message> lastThreeMessages = chat.messages().stream()
       .sorted(Comparator.comparing(Message::getTimestamp))
-      .skip(Math.max(0, chat.messages().size() - 6))
+//      .skip(Math.max(0, chat.messages().size() - 6))
       .toList();
     lastThreeMessages.forEach(msg -> ChatGptService.convert(lastActionableMessage, msg));
 
