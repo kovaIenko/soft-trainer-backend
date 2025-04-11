@@ -77,7 +77,7 @@ public interface ChatGptService {
 
   // 🟢 Helper function for structured message formatting
   private static String formatMessage(Message msg, String sender, String content) {
-    return String.format("- %s: %s", sender, content);
+,     return String.format("- %s: %s", sender, content);
   }
 
   // 🟢 Updated formatOptions method to support Java 17
