@@ -98,11 +98,17 @@ public class DashboardController {
                     .average()
                     .orElse(0.0);
 
-                var hyperParams = userHyperParameterService.sumUpByUser(user).stream()
-                    .map(param -> new UserHyperParamDto(param.key(), param.value(), null))
+                // Get raw hyperparameters and merge them by case-insensitive keys
+                var mergedHyperParams = userHyperParameterService.sumUpByUser(user).stream()
+                    .collect(Collectors.groupingBy(
+                        param -> param.key().toLowerCase().trim(),
+                        Collectors.summingDouble(param -> param.value())
+                    ))
+                    .entrySet().stream()
+                    .map(entry -> new UserHyperParamDto(entry.getKey(), entry.getValue(), null))
                     .collect(Collectors.toList());
 
-                var totalScore = hyperParams.stream()
+                var totalScore = mergedHyperParams.stream()
                     .mapToDouble(UserHyperParamDto::getValue)
                     .sum();
 
@@ -111,7 +117,7 @@ public class DashboardController {
                     user.getDepartment(),
                     user.getName(),
                     user.getAvatar(),
-                    hyperParams,
+                    mergedHyperParams,
                     totalScore,
                     (int) completedSimulations,
                     totalAttempts,
