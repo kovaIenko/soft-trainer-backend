@@ -2,23 +2,24 @@ package com.backend.softtrainer.services;
 
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.repositories.UserRepository;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
-  private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-  public List<User> findAllCollegues(final User user){
-    return userRepository.findAllByOrganizations(user.getOrganization());
-  }
+    public List<User> findAllCollegues(User user) {
+        return userRepository.findAllByOrganization(user.getOrganization());
+    }
 
-  public void updateName(final User user, final String name){
-    userRepository.updateName(user, name);
-  }
-
+    public void updateName(User user, String name) {
+        userRepository.updateName(user, name);
+    }
 }
