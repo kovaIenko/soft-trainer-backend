@@ -7,10 +7,12 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
   Optional<User> findByEmail(final String email);
@@ -18,8 +20,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
   @Query("SELECT u from users u join fetch u.organization where u.email = :email")
   Optional<User> findByEmailWithOrg(@Param("email") final String email);
 
-  @Query("SELECT u from users u join fetch u.organization where u.organization = :organization")
-  List<User> findAllByOrganizations(final Organization organization);
+  @Query("SELECT u FROM users u WHERE u.organization = :organization")
+  List<User> findAllByOrganization(@Param("organization") Organization organization);
 
   @Modifying
   @Transactional
