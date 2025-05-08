@@ -2,14 +2,18 @@ package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.ContactInfoRequestDto;
 import com.backend.softtrainer.dtos.ContactInfoResponse;
+import com.backend.softtrainer.dtos.OrganizationDetailsDto;
 import com.backend.softtrainer.dtos.SignUpUserResponseDto;
 import com.backend.softtrainer.dtos.auth.LoginRequest;
 import com.backend.softtrainer.dtos.auth.LoginResponse;
 import com.backend.softtrainer.dtos.auth.RefreshTokenResponse;
 import com.backend.softtrainer.dtos.auth.SignupRequestDto;
 import com.backend.softtrainer.entities.ContactInfo;
+import com.backend.softtrainer.entities.Skill;
+import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.exceptions.UserAlreadyExitsException;
 import com.backend.softtrainer.repositories.ContactInfoRepository;
+import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.services.UserDataExtractor;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
@@ -19,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -27,6 +32,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping
@@ -40,6 +48,7 @@ public class HomeController {
   private final ContactInfoRepository contactInfoRepository;
   private final UserDataExtractor userDataExtractor;
   private final EmailService emailService;
+  private final OrganizationRepository organizationRepository;
 
   @GetMapping("/health")
   //@PreAuthorize("hasAnyRole('ROLE_OWNER')")
@@ -66,16 +75,30 @@ public class HomeController {
     var isOnboarded = userDataExtractor.getFirstChatOfOnboarding(user.user()).isPresent();
 
     var org = user.user().getOrganization();
+    var highestRole = getHighestRole(user.user());
+
     return ResponseEntity.ok(new LoginResponse(
-      "User with email = " + request.email() + " successfully logined!",
+      "User with email = " + request.email() + " successfully login!",
       access_token,
       refresh_token,
       true,
       "success",
       user.user().getId(),
       isOnboarded,
-      org.getLocalization()
+      org.getLocalization(),
+      highestRole,
+      org.getName()
     ));
+  }
+
+  private String getHighestRole(User user) {
+    if (user.getRoles().stream().anyMatch(r -> "ROLE_OWNER".equals(r.getName().toString()))) {
+      return "OWNER";
+    }
+    if (user.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName().toString()))) {
+      return "ADMIN";
+    }
+    return "USER";
   }
 
   @GetMapping("/token/refresh")
@@ -130,6 +153,22 @@ public class HomeController {
     } catch (Exception e) {
       return ResponseEntity.ok(new ContactInfoResponse(false, "unknown"));
     }
+  }
+
+  @GetMapping("/organizations/all")
+  @PreAuthorize("hasRole('ROLE_OWNER')")
+  public ResponseEntity<List<OrganizationDetailsDto>> getAllOrganizations() {
+    var orgs = organizationRepository.findAll().stream().map(org ->
+      new OrganizationDetailsDto(
+        org.getId(),
+        org.getAvatar(),
+        org.getName(),
+        org.getLocalization(),
+        org.getAvailableSkills() != null ? org.getAvailableSkills().stream().map(Skill::getName).collect(Collectors.toSet()) : null,
+        org.getEmployees() != null ? org.getEmployees().stream().map(User::getEmail).collect(Collectors.toList()) : null
+      )
+    ).collect(Collectors.toList());
+    return ResponseEntity.ok(orgs);
   }
 
 }
