@@ -1,4 +1,4 @@
-package com.backend.softtrainer.services;
+package com.backend.softtrainer.services.analytics;
 
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.repositories.UserRepository;

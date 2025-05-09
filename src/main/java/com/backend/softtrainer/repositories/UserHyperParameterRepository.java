@@ -31,4 +31,10 @@ public interface UserHyperParameterRepository extends JpaRepository<UserHyperPar
           "JOIN FETCH hyperparams h on h.simulationId = u.simulationId and u.key = h.key " +
           "WHERE u.chatId = :chatId ")
   List<UserHyperParamMaxValueDto> findHyperParamsWithMaxValues(@Param("chatId") final Long chatId);
+
+  @Query("SELECT u FROM user_hyperparams u WHERE u.ownerId = :ownerId AND u.simulationId = :simulationId")
+  List<UserHyperParameter> findAllByOwnerIdAndSimulationId(@Param("ownerId") Long ownerId, @Param("simulationId") Long simulationId);
+
+  @Query("SELECT u FROM user_hyperparams u WHERE u.ownerId = :ownerId")
+  List<UserHyperParameter> findAllByOwnerId(@Param("ownerId") Long ownerId);
 }

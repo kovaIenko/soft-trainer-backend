@@ -1,4 +1,4 @@
-package com.backend.softtrainer.services;
+package com.backend.softtrainer.services.analytics;
 
 import com.backend.softtrainer.dtos.analytics.HyperParamRatioDto;
 import com.backend.softtrainer.dtos.analytics.ProfileRadarDto;
@@ -7,7 +7,6 @@ import com.backend.softtrainer.entities.UserHyperParameter;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,9 +19,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ProfileAnalyticsService {
     private final UserRepository userRepository;
-    private final UserHyperParameterService userHyperParameterService;
-    @Autowired
-    private final UserHyperParameterRepository userHyperParameterRepository;
+  private final UserHyperParameterRepository userHyperParameterRepository;
 
     public ProfileRadarDto getProfileRadar(String userEmail) {
         User user = userRepository.findByEmail(userEmail).orElse(null);
@@ -32,10 +29,10 @@ public class ProfileAnalyticsService {
         // 1. Fetch all user hyperparams to get simulation IDs
         List<UserHyperParameter> allUserParams = userHyperParameterRepository.findAll();
         List<Long> simulationIds = allUserParams.stream()
-            .filter(param -> userId.equals(param.getOwnerId()))
-            .map(UserHyperParameter::getSimulationId)
-            .distinct()
-            .toList();
+          .filter(param -> userId.equals(param.getOwnerId()))
+          .map(UserHyperParameter::getSimulationId)
+          .distinct()
+          .toList();
 
         // 2. For each simulation, fetch all user hyperparams
         Map<String, List<Double>> paramValues = new HashMap<>();
@@ -59,25 +56,25 @@ public class ProfileAnalyticsService {
         Map<String, Double> maxValues = new HashMap<>();
         for (String key : avgValues.keySet()) {
             double max = allUserParams.stream()
-                .filter(param -> param.getKey().equalsIgnoreCase(key))
-                .mapToDouble(UserHyperParameter::getValue)
-                .max()
-                .orElse(1.0);
+              .filter(param -> param.getKey().equalsIgnoreCase(key))
+              .mapToDouble(UserHyperParameter::getValue)
+              .max()
+              .orElse(1.0);
             maxValues.put(key, max > 0 ? max : 1.0);
         }
 
         // 5. Normalize the user's average values using these max values
         List<HyperParamRatioDto> paramDtos = avgValues.entrySet().stream()
-            .filter(entry -> entry.getValue() > 0)
-            .map(entry -> {
-                String key = entry.getKey();
-                double avg = entry.getValue();
-                double max = maxValues.getOrDefault(key, 1.0);
-                double normalizedValue = (avg / max) * 100;
-                double ratio = normalizedValue / 100.0;
-                return new HyperParamRatioDto(key, normalizedValue, 100.0, ratio);
-            })
-            .collect(Collectors.toList());
+          .filter(entry -> entry.getValue() > 0)
+          .map(entry -> {
+              String key = entry.getKey();
+              double avg = entry.getValue();
+              double max = maxValues.getOrDefault(key, 1.0);
+              double normalizedValue = (avg / max) * 100;
+              double ratio = normalizedValue / 100.0;
+              return new HyperParamRatioDto(key, normalizedValue, 100.0, ratio);
+          })
+          .collect(Collectors.toList());
 
         return new ProfileRadarDto(user.getEmail(), user.getName(), paramDtos);
     }

@@ -1,7 +1,7 @@
 package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.analytics.AnalyticsResponseDto;
-import com.backend.softtrainer.services.DashboardAnalyticsService;
+import com.backend.softtrainer.services.analytics.DashboardAnalyticsService;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import lombok.AllArgsConstructor;

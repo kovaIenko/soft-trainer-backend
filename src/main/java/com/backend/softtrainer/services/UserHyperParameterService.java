@@ -62,4 +62,11 @@ public class UserHyperParameterService {
     return userHyperParameterRepository.sumUpByUser(user.getId());
   }
 
+  public List<UserHyperParameter> findAllByUser(final User user) {
+    if (user == null || user.getId() == null) {
+      return List.of();
+    }
+    return userHyperParameterRepository.findAllByOwnerId(user.getId());
+  }
+
 }
