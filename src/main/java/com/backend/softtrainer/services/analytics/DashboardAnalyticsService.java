@@ -52,6 +52,17 @@ public class DashboardAnalyticsService {
                     throw new AccessDeniedException("You do not have permission to access this user's data.");
                 }
                 return profileAnalyticsService.getProfileRadar(userEmail);
+            case "profile_progression":
+                if (userEmail == null) {
+                    throw new AccessDeniedException("User email must be provided.");
+                }
+                User progressionUser = userRepository.findByEmail(userEmail).orElseThrow(() -> new AccessDeniedException("User not found"));
+                if (!isOwner(currentUser) &&
+                    !(isAdmin(currentUser) && isSameOrg(currentUser, progressionUser.getOrganization().getName())) &&
+                    !isSameUser(currentUser, userEmail)) {
+                    throw new AccessDeniedException("You do not have permission to access this user's data.");
+                }
+                return profileAnalyticsService.getProfileProgression(userEmail);
             case "hyperparam_max_values":
                 // Disabled: return empty map
                 return Collections.emptyMap();
