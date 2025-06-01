@@ -393,4 +393,12 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
     return CompletableFuture.completedFuture(new MessageDto(content));
   }
 
+  @Override
+  public String generateOverview(String prompt, String model) {
+    // TODO: Replace with real OpenAI call
+    log.info("[MOCK] Sending prompt to LLM ({}): {}", model, prompt);
+    // For now, return a mock response
+    return "[AI Overview] This is a mock summary based on the provided analytics.";
+  }
+
 }

@@ -37,4 +37,7 @@ public interface UserHyperParameterRepository extends JpaRepository<UserHyperPar
 
   @Query("SELECT u FROM user_hyperparams u WHERE u.ownerId = :ownerId")
   List<UserHyperParameter> findAllByOwnerId(@Param("ownerId") Long ownerId);
+
+  @Query("SELECT u.email FROM users u WHERE u.id = :userId")
+  String findUserEmailById(@Param("userId") Long userId);
 }

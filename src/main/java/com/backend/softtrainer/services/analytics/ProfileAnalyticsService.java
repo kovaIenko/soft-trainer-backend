@@ -8,12 +8,15 @@ import com.backend.softtrainer.dtos.analytics.SkillProgressionDto;
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.UserHyperParameter;
 import com.backend.softtrainer.entities.Chat;
+import com.backend.softtrainer.events.HyperParameterUpdatedEvent;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import com.backend.softtrainer.repositories.ChatRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ProfileAnalyticsService {
     private final UserRepository userRepository;
     private final UserHyperParameterRepository userHyperParameterRepository;
@@ -203,5 +207,11 @@ public class ProfileAnalyticsService {
     @CacheEvict(value = "profileProgression", key = "#userEmail")
     public void evictProfileProgressionCache(String userEmail) {
         // Method to evict cache
+    }
+
+    @EventListener
+    public void handleHyperParameterUpdated(HyperParameterUpdatedEvent event) {
+        log.info("Received hyperparameter update event for user: {}", event.getUserEmail());
+        evictProfileProgressionCache(event.getUserEmail());
     }
 }

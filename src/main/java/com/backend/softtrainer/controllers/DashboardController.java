@@ -1,7 +1,10 @@
 package com.backend.softtrainer.controllers;
 
 import com.backend.softtrainer.dtos.analytics.AnalyticsResponseDto;
+import com.backend.softtrainer.entities.User;
+import com.backend.softtrainer.repositories.UserRepository;
 import com.backend.softtrainer.services.analytics.DashboardAnalyticsService;
+import com.backend.softtrainer.services.analytics.ProfileAiOverviewService;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import lombok.AllArgsConstructor;
@@ -15,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/dashboard")
 @AllArgsConstructor
@@ -23,10 +29,12 @@ public class DashboardController {
 
   private final CustomUsrDetailsService usrDetailsService;
   private final DashboardAnalyticsService dashboardAnalyticsService;
+  private final ProfileAiOverviewService profileAiOverviewService;
+  private final UserRepository userRepository;
 
   @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_OWNER')")
   @GetMapping("/analytics")
-  public ResponseEntity<AnalyticsResponseDto> getAnalytics(
+  public ResponseEntity<Map<String, Object>> getAnalytics(
     @RequestParam String type,
     @RequestParam(required = false) String orgName,
     @RequestParam(required = false) String userEmail,
@@ -36,10 +44,61 @@ public class DashboardController {
     var userDetails = (CustomUsrDetails) usrDetailsService.loadUserByUsername(authentication.getName());
 
     try {
+      if ("profile_ai_overview".equals(type)) {
+        log.info("[AI Overview] Requested for userEmail: {}", userEmail);
+        Map<String, Object> response = new HashMap<>();
+        response.put("type", type);
+        if (userEmail == null) {
+          response.put("success", false);
+          response.put("data", null);
+          response.put("error_message", "userEmail is required");
+          return ResponseEntity.badRequest().body(response);
+        }
+        User user = userRepository.findByEmail(userEmail).orElse(null);
+        if (user == null) {
+          response.put("success", false);
+          response.put("data", null);
+          response.put("error_message", "User not found");
+          return ResponseEntity.badRequest().body(response);
+        }
+        var overview = profileAiOverviewService.getLatestProfileOverview(user.getId())
+          .orElse(null);
+        if (overview == null) {
+          log.info("[AI Overview] No overview found for user: {}", userEmail);
+          response.put("success", false);
+          response.put("data", null);
+          response.put("error_message", "No AI overview found for this user");
+        } else {
+          log.info("[AI Overview] Overview found for user: {}", userEmail);
+          response.put("success", true);
+          response.put("data", overview.getOverviewText());
+          response.put("error_message", null);
+        }
+        return ResponseEntity.ok(response);
+      }
       Object data = dashboardAnalyticsService.getAnalytics(type, orgName, userEmail, simulationId, userDetails.user());
-      return ResponseEntity.ok(new AnalyticsResponseDto(type, data));
+      Map<String, Object> response = new HashMap<>();
+      response.put("type", type);
+      response.put("success", true);
+      response.put("data", data);
+      response.put("error_message", null);
+      return ResponseEntity.ok(response);
     } catch (AccessDeniedException e) {
-      return ResponseEntity.status(403).build();
+      log.error("[AI Overview] Access denied for analytics request", e);
+      Map<String, Object> response = new HashMap<>();
+      response.put("type", type);
+      response.put("success", false);
+      response.put("data", null);
+      response.put("error_message", "Access denied");
+      return ResponseEntity.status(403).body(response);
+    } catch (Exception e) {
+      log.error("[AI Overview] Unexpected error for analytics request", e);
+      Map<String, Object> response = new HashMap<>();
+      response.put("type", type);
+      response.put("success", false);
+      response.put("data", null);
+      response.put("error_message", e.getMessage());
+      return ResponseEntity.internalServerError().body(response);
     }
   }
 

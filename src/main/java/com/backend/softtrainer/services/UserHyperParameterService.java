@@ -4,9 +4,11 @@ import com.backend.softtrainer.dtos.SumHyperParamDto;
 import com.backend.softtrainer.dtos.UserHyperParamMaxValueDto;
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.UserHyperParameter;
+import com.backend.softtrainer.events.HyperParameterUpdatedEvent;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,7 @@ import java.util.List;
 public class UserHyperParameterService {
 
   private final UserHyperParameterRepository userHyperParameterRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   public boolean update(final Long chatId, final String key, final double newValue) {
@@ -28,6 +31,15 @@ public class UserHyperParameterService {
       var userHyperParam = userHyperParamOptional.get();
       userHyperParam.setValue(newValue);
       userHyperParameterRepository.save(userHyperParam);
+
+      // Publish event for hyperparameter update
+      if (userHyperParam.getOwnerId() != null) {
+        String userEmail = userHyperParameterRepository.findUserEmailById(userHyperParam.getOwnerId());
+        if (userEmail != null) {
+          eventPublisher.publishEvent(new HyperParameterUpdatedEvent(userEmail));
+          log.info("Published hyperparameter update event for user: {}", userEmail);
+        }
+      }
       return true;
     }
     log.warn(String.format("Hyper Parameter with key: %s wasn't found for the chatId: %s", key, chatId));
@@ -46,7 +58,17 @@ public class UserHyperParameterService {
       userHyperParam.setChatId(chatId);
       userHyperParam.setKey(key);
       userHyperParam.setValue((double) 0);
-      return userHyperParameterRepository.save(userHyperParam).getValue();
+      var savedParam = userHyperParameterRepository.save(userHyperParam);
+
+      // Publish event for new hyperparameter
+      if (savedParam.getOwnerId() != null) {
+        String userEmail = userHyperParameterRepository.findUserEmailById(savedParam.getOwnerId());
+        if (userEmail != null) {
+          eventPublisher.publishEvent(new HyperParameterUpdatedEvent(userEmail));
+          log.info("Published hyperparameter update event for user: {}", userEmail);
+        }
+      }
+      return savedParam.getValue();
     }
   }
 
