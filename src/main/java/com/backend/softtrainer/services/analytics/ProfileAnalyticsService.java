@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ProfileAnalyticsService {
     private final UserRepository userRepository;
-    private final UserHyperParameterRepository userHyperParameterRepository;
+  private final UserHyperParameterRepository userHyperParameterRepository;
     private final ChatRepository chatRepository;
 
     public ProfileRadarDto getProfileRadar(String userEmail) {
@@ -123,8 +123,8 @@ public class ProfileAnalyticsService {
     }
 
     // Cache profile progression for 5 minutes
-    @Cacheable(value = "profileProgression", key = "#userEmail")
-    public ProfileProgressionDto getProfileProgression(String userEmail) {
+    @Cacheable(value = "profileProgression", key = "#userEmail + '-' + #maxSimulations")
+    public ProfileProgressionDto getProfileProgression(String userEmail, Integer maxSimulations) {
         User user = userRepository.findByEmail(userEmail).orElse(null);
         if (user == null) return null;
 
@@ -137,7 +137,7 @@ public class ProfileAnalyticsService {
             .map(UserHyperParameter::getChatId)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
-        
+
         Map<Long, LocalDateTime> chatTimestamps = chatRepository.findAllById(chatIds).stream()
             .collect(Collectors.toMap(
                 Chat::getId,
@@ -169,9 +169,37 @@ public class ProfileAnalyticsService {
             List<UserHyperParameter> paramValues = entry.getValue();
 
             // Sort by chat timestamp
-            paramValues.sort(Comparator.comparing(param -> 
+            paramValues.sort(Comparator.comparing(param ->
                 chatTimestamps.getOrDefault(param.getChatId(), LocalDateTime.MIN)
             ));
+
+            // If maxSimulations is provided, limit the number of simulations
+            if (maxSimulations != null && maxSimulations > 0) {
+                // Get unique simulation IDs
+                Set<Long> uniqueSimIds = paramValues.stream()
+                    .map(UserHyperParameter::getSimulationId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+                // If we have more simulations than the limit, keep only the most recent ones
+                if (uniqueSimIds.size() > maxSimulations) {
+                    // Get the most recent simulation IDs
+                    Set<Long> recentSimIds = paramValues.stream()
+                        .sorted(Comparator.comparing((UserHyperParameter param) ->
+                            chatTimestamps.getOrDefault(param.getChatId(), LocalDateTime.MIN)
+                        ).reversed())
+                        .map(UserHyperParameter::getSimulationId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .limit(maxSimulations)
+                        .collect(Collectors.toSet());
+
+                    // Filter paramValues to only include the most recent simulations
+                    paramValues = paramValues.stream()
+                        .filter(param -> recentSimIds.contains(param.getSimulationId()))
+                        .collect(Collectors.toList());
+                }
+            }
 
             // Calculate normalized scores per simulation
             List<SkillProgressionDto> scores = paramValues.stream()
@@ -201,6 +229,12 @@ public class ProfileAnalyticsService {
             user.getName(),
             progressionData
         );
+    }
+
+    // Add overloaded method for backward compatibility
+    @Cacheable(value = "profileProgression", key = "#userEmail")
+    public ProfileProgressionDto getProfileProgression(String userEmail) {
+        return getProfileProgression(userEmail, null);
     }
 
     // Evict profile progression cache when new data is added

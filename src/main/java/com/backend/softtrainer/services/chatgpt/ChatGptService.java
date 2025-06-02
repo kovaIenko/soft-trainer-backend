@@ -39,7 +39,7 @@ public interface ChatGptService {
   ) throws InterruptedException;
 
   // New method for AI overview
-  String generateOverview(String prompt, String model);
+  String generateOverview(String prompt, String assistantId, String model);
 
   // 🟢 Refactored method to maintain compatibility with Java 17
   static void convert(StringBuilder chatHistory, Message message) {

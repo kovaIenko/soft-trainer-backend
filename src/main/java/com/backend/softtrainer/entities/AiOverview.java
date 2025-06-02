@@ -1,7 +1,12 @@
 package com.backend.softtrainer.entities;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -23,9 +28,16 @@ public class AiOverview {
     @Column(columnDefinition = "TEXT")
     private String promptUsed;
     private String llmModel;
+    
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String paramsJson;
+    private JsonNode paramsJson;
+    
     private String source;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private JsonNode overviewJson;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

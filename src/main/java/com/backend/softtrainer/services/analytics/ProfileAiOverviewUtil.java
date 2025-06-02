@@ -1,7 +1,7 @@
 package com.backend.softtrainer.services.analytics;
 
 import com.backend.softtrainer.entities.User;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Method;
@@ -9,10 +9,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ProfileAiOverviewUtil {
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     public static Map<String, Object> collectUserAnalytics(User user, ProfileAnalyticsService analyticsService) {
+        return collectUserAnalytics(user, analyticsService, null);
+    }
+
+    public static Map<String, Object> collectUserAnalytics(User user, ProfileAnalyticsService analyticsService, Integer maxSimulations) {
         Map<String, Object> map = new HashMap<>();
         map.put("name", user.getName());
         map.put("department", user.getDepartment());
+        map.put("localization", user.getOrganization().getLocalization());
+
         // Use reflection for optional fields
         addIfPresent(map, user, "getPosition", "position");
         addIfPresent(map, user, "getSkills", "skills");
@@ -21,7 +29,7 @@ public class ProfileAiOverviewUtil {
         addIfPresent(map, user, "getOtherContext", "other_context");
         // Add analytics (e.g., radar, progression)
         map.put("hyperparams", analyticsService.getProfileRadar(user.getEmail()));
-        map.put("simulation_results", analyticsService.getProfileProgression(user.getEmail()));
+        map.put("simulation_results", analyticsService.getProfileProgression(user.getEmail(), maxSimulations));
         return map;
     }
 
@@ -42,11 +50,11 @@ public class ProfileAiOverviewUtil {
         return prompt;
     }
 
-    public static String analyticsToJson(Map<String, Object> analytics) {
+    public static JsonNode analyticsToJson(Map<String, Object> analytics) {
         try {
-            return new ObjectMapper().writeValueAsString(analytics);
-        } catch (JsonProcessingException e) {
-            return "{}";
+            return objectMapper.valueToTree(analytics);
+        } catch (Exception e) {
+            return objectMapper.createObjectNode();
         }
     }
-} 
+}
