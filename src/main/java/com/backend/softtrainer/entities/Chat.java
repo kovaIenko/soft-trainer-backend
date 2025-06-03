@@ -50,6 +50,7 @@ public class Chat {
   @ManyToOne(fetch = FetchType.EAGER)
   private Skill skill;
 
+  @Builder.Default
   private boolean isFinished = false;
 
   private Double hearts;

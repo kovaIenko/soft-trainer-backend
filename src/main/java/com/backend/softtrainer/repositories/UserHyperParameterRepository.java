@@ -52,4 +52,11 @@ public interface UserHyperParameterRepository extends JpaRepository<UserHyperPar
   """)
   List<User> findUsersWithRecentHyperparamUpdates(@Param("since") LocalDateTime since);
 
+  @Query("""
+    SELECT COUNT(DISTINCT uhp.ownerId) > 0
+    FROM user_hyperparams uhp
+    WHERE uhp.ownerId = :ownerId
+    AND uhp.updatedAt >= :since
+  """)
+  boolean hasRecentUpdates(@Param("ownerId") Long ownerId, @Param("since") LocalDateTime since);
 }
