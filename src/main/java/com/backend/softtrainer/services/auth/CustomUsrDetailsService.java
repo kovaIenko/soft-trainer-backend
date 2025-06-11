@@ -16,6 +16,7 @@ import com.backend.softtrainer.repositories.RoleRepository;
 import com.backend.softtrainer.repositories.SimulationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
+import com.backend.softtrainer.services.notifications.TelegramService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,25 +43,42 @@ public class CustomUsrDetailsService implements UserDetailsService {
   private PasswordEncoder passwordEncoder;
   private final RoleRepository roleRepository;
   private final AuthRepository authRepository;
+  private final TelegramService telegramService;
 
   private final ChatRepository chatRepository;
   private final OrganizationRepository organizationRepository;
 
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-    User user = userRepository.findByEmail(username)
+    User user = userRepository.findByEmailWithRoles(username)
       .orElseThrow(() -> new UsernameNotFoundException("User with username = " + username + " not exist!"));
     return new CustomUsrDetails(user);
   }
 
-  public void createAuthRecord(final User user) {
+  public void createAuthRecord(final User user, String ipAddress) {
+    // Convert IPv6 localhost to IPv4 localhost for better readability
+    String displayIp = ipAddress.equals("0:0:0:0:0:0:0:1") ? "127.0.0.1" : ipAddress;
+    
     var login = Auth.builder()
       .platform(PlatformType.WEB)
       .user(user)
       .authType(AuthType.LOGIN)
       .authWay(AuthWay.BASIC)
+      .ipAddress(displayIp)
       .build();
     authRepository.save(login);
+    
+    String notificationMessage = String.format(
+      "🔐 Login Alert\n" +
+      "👤 User: %s\n" +
+      "🌐 IP Address: %s\n" +
+      "⏰ Time: %s",
+      user.getEmail(),
+      displayIp,
+      java.time.LocalDateTime.now()
+    );
+    
+    telegramService.sendMessage(notificationMessage);
   }
 
   public void createUser(String email, String password) throws UserAlreadyExitsException {

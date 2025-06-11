@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -34,6 +35,7 @@ public class FlowNode {
   @Column(name = "order_number", nullable = false)
   private Long orderNumber;
 
+  @Builder.Default
   @Column(name = "previous_order_number", nullable = false)
   private Long previousOrderNumber = 0L;
 

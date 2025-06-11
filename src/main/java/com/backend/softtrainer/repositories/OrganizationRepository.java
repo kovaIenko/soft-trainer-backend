@@ -14,4 +14,6 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
   @Query("SELECT o FROM organizations o JOIN FETCH o.availableSkills WHERE o.name = :name")
   Optional<Organization> getFirstByName(@Param("name") final String name);
 
+  Optional<Organization> findByName(String name);
+
 }

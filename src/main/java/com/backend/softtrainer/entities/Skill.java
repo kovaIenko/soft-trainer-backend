@@ -32,6 +32,7 @@ public class Skill {
   //integer is an order of the simulation in that skill
   @ElementCollection(fetch = FetchType.EAGER)
   //reference to the first node of simulations
+  @Builder.Default
   private Map<Simulation, Long> simulations = new HashMap<>();
 
   @Column(length = 1000)
