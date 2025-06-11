@@ -1,4 +1,4 @@
-package com.backend.softtrainer.config;
+package com.backend.softtrainer.configs;
 
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -19,4 +19,4 @@ public class CacheConfig {
         ));
         return cacheManager;
     }
-} 
+}
