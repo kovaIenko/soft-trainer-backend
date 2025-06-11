@@ -256,7 +256,7 @@ public class TeamAiOverviewService {
                     Optional<AiOverview> latestOverviewOpt = getLatestTeamOverview(org.getId());
                     boolean hasRecentOverview = latestOverviewOpt.isPresent() &&
                         latestOverviewOpt.get().getCreatedAt() != null &&
-                        latestOverviewOpt.get().getCreatedAt().isAfter(LocalDateTime.now().minusDays(15));
+                        latestOverviewOpt.get().getCreatedAt().isAfter(LocalDateTime.now().minusDays(1));
 
                     if (activeUsers >= MIN_ACTIVE_USERS && !hasRecentOverview) {
                         log.info("Processing team overview for organization: {} ({} active users)", org.getName(), activeUsers);
