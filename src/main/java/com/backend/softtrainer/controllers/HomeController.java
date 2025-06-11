@@ -61,14 +61,16 @@ public class HomeController {
   }
 
   @PostMapping("/login")
-  public ResponseEntity<LoginResponse> login(@RequestBody final LoginRequest request) {
-    log.info(String.format("The user %s is trying to login by pass %s", request.email(), request.password()));
+  public ResponseEntity<LoginResponse> login(@RequestBody final LoginRequest request, HttpServletRequest httpRequest) {
+    String clientIp = getClientIp(httpRequest);
+    log.info("Login attempt from IP: {} for user: {}", clientIp, request.email());
+    
     UsernamePasswordAuthenticationToken authenticationToken =
       new UsernamePasswordAuthenticationToken(request.email(), request.password());
     Authentication auth = authManager.authenticate(authenticationToken);
 
     CustomUsrDetails user = (CustomUsrDetails) usrDetailsService.loadUserByUsername(request.email());
-    usrDetailsService.createAuthRecord(user.user());
+    usrDetailsService.createAuthRecord(user.user(), clientIp);
     String access_token = tokenService.generateAccessToken(user);
     String refresh_token = tokenService.generateRefreshToken(user);
 
@@ -169,6 +171,28 @@ public class HomeController {
       )
     ).collect(Collectors.toList());
     return ResponseEntity.ok(orgs);
+  }
+
+  private String getClientIp(HttpServletRequest request) {
+    // Try X-Forwarded-For first
+    String xForwardedFor = request.getHeader("X-Forwarded-For");
+    if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+      return xForwardedFor.split(",")[0].trim();
+    }
+    
+    // Try X-Real-IP next
+    String xRealIp = request.getHeader("X-Real-IP");
+    if (xRealIp != null && !xRealIp.isEmpty()) {
+      return xRealIp;
+    }
+    
+    // Get remote address and convert IPv6 localhost to IPv4
+    String remoteAddr = request.getRemoteAddr();
+    if (remoteAddr.equals("0:0:0:0:0:0:0:1")) {
+      return "127.0.0.1";
+    }
+    
+    return remoteAddr;
   }
 
 }
