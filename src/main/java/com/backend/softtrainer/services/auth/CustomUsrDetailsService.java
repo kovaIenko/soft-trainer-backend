@@ -271,4 +271,30 @@ public class CustomUsrDetailsService implements UserDetailsService {
 
     return false;
   }
+
+  public boolean canAccessSkill(Authentication authentication, Long skillId) {
+    Optional<User> optUser = userRepository.findByEmailWithOrg(authentication.getName());
+    
+    if (optUser.isEmpty()) {
+      log.error("User {} not found", authentication.getName());
+      return false;
+    }
+    
+    User user = optUser.get();
+    
+    // Owners can access all skills
+    if (user.getRoles().stream().anyMatch(role -> role.getName().toString().equals("ROLE_OWNER"))) {
+      return true;
+    }
+    
+    // Admins can only access skills from their organization (NO onboarding bypass for admin operations)
+    if (user.getRoles().stream().anyMatch(role -> role.getName().toString().equals("ROLE_ADMIN"))) {
+      return user.getOrganization()
+          .getAvailableSkills()
+          .stream()
+          .anyMatch(skillFilter -> skillFilter.getId().equals(skillId));
+    }
+    
+    return false;
+  }
 }

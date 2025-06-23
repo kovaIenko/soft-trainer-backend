@@ -1,5 +1,6 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.NewSkillPayload;
 import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Organization;
@@ -10,6 +11,11 @@ import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
+import com.backend.softtrainer.repositories.MaterialRepository;
+import com.backend.softtrainer.dtos.MaterialMetadataDto;
+import com.backend.softtrainer.dtos.SimulationNodesDto;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -42,6 +48,137 @@ public class SkillService {
 
   private final ChatRepository chatRepository;
 
+  private final MaterialStorageService materialStorageService;
+
+  private final MaterialRepository materialRepository;
+
+  public Skill createSkill(NewSkillPayload payload) {
+    Skill newSkill = Skill.builder()
+            .name(payload.getName())
+            .description(payload.getDescription())
+            .type(payload.getType())
+            .behavior(payload.getBehavior())
+            .simulationCount(payload.getSimulationCount())
+            .build();
+
+    newSkill.setMaterials(materialStorageService.storeMaterials(payload, newSkill));
+
+    return skillRepository.save(newSkill);
+  }
+
+  @Transactional
+  public Skill createSkillForOrganization(NewSkillPayload payload, Organization organization) {
+
+    log.info("Organization {} is creating a new skill with name: {}", organization.getName(), payload.getName());
+    // Create the skill first
+    Skill newSkill = Skill.builder()
+            .name(payload.getName())
+            .description(payload.getDescription())
+            .type(payload.getType())
+            .behavior(payload.getBehavior())
+            .simulationCount(payload.getSimulationCount())
+            .build();
+
+    newSkill.setMaterials(materialStorageService.storeMaterials(payload, newSkill));
+
+    // Save the skill first to get the ID
+    Skill savedSkill = skillRepository.save(newSkill);
+
+    log.info("Skill created with ID: {}", savedSkill.getId());
+    
+    // Directly insert the association without loading all skills
+    organizationRepository.addSkillToOrganization(organization.getId(), savedSkill.getId());
+    
+    log.info("Created skill with ID {} and associated it with organization {}", savedSkill.getId(), organization.getName());
+
+    return savedSkill;
+  }
+
+  public Skill getSkillById(Long id) {
+    return skillRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Skill not found with id: " + id));
+  }
+
+  @Transactional(readOnly = true)
+  public Skill getSkillByIdWithMaterials(Long id) {
+    return skillRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Skill not found with id: " + id));
+  }
+
+  public List<MaterialMetadataDto> getMaterialMetadataBySkillId(Long skillId) {
+    List<Object[]> results = materialRepository.findMaterialMetadataBySkillId(skillId);
+    return results.stream()
+            .map(row -> MaterialMetadataDto.builder()
+                    .id((Long) row[0])
+                    .fileName((String) row[1])
+                    .tag((String) row[2])
+                    .build())
+            .collect(Collectors.toList());
+  }
+
+  public List<SimulationNodesDto> getSimulationsBySkillId(Long skillId) {
+    Skill skill = getSkillById(skillId);
+    return skill.getSimulations().entrySet().stream()
+            .sorted(Map.Entry.comparingByValue()) // Sort by order value
+            .map(entry -> {
+              var simulation = entry.getKey();
+              // Don't include nodes to avoid LOB issues - following same pattern as flow/get endpoint
+              return new SimulationNodesDto(
+                      simulation.getId(),
+                      simulation.getName(),
+                      Collections.emptyList(), // nodes - empty to avoid LOB loading
+                      simulation.getAvatar(),
+                      simulation.getComplexity(),
+                      simulation.getCreatedAt() != null ? simulation.getCreatedAt().toString() : null,
+                      skill.getId(), // skill_id
+                      simulation.isOpen()
+              );
+            })
+            .collect(Collectors.toList());
+  }
+
+  public void updateSkillVisibility(Long id, boolean isHidden) {
+    Skill skill = getSkillById(id);
+    skill.setHidden(isHidden);
+    skillRepository.save(skill);
+    log.info("Updated skill visibility for skill id: {} to isHidden: {}", id, isHidden);
+  }
+
+  @Transactional
+  public void deleteSkill(Long id) {
+    Skill skill = getSkillById(id);
+    if (skill.isProtected()) {
+      throw new UnsupportedOperationException("Cannot delete a protected skill.");
+    }
+
+    // Soft delete: hide the skill from admin instead of actually deleting it
+    skill.setAdminHidden(true);
+    skillRepository.save(skill);
+
+    log.info("Successfully soft deleted (admin hidden) skill with id: {}", id);
+  }
+
+  @Transactional
+  public void restoreSkill(Long id) {
+    Skill skill = getSkillById(id);
+    skill.setAdminHidden(false);
+    skillRepository.save(skill);
+
+    log.info("Successfully restored skill with id: {}", id);
+  }
+
+  public Set<Skill> getArchivedSkills() {
+    return skillRepository.findAll().stream()
+        .filter(Skill::isAdminHidden)
+        .collect(Collectors.toSet());
+  }
+
+  public Set<Skill> getArchivedSkillsByOrganization(String organizationName) {
+    return getAvailableSkillByOrg(organizationName).stream()
+        .filter(Skill::isAdminHidden)
+        .collect(Collectors.toSet());
+  }
+
   public Set<Skill> getAvailableSkillByOrg(final String organization) {
 
     var optOrg = organizationRepository.getFirstByName(organization);
@@ -73,7 +210,15 @@ public class SkillService {
   }
 
   public Set<Skill> getAllSkill() {
-    return new HashSet<>(skillRepository.findAll());
+    return skillRepository.findAll().stream()
+        .filter(skill -> !skill.isAdminHidden())
+        .collect(Collectors.toSet());
+  }
+
+  public Set<Skill> getSkillsByOrganization(String organizationName) {
+    return getAvailableSkillByOrg(organizationName).stream()
+        .filter(skill -> !skill.isAdminHidden())
+        .collect(Collectors.toSet());
   }
 
   public Set<SimulationAvailabilityStatusDto> findSimulationsBySkill(final User user, final Long skillId) {

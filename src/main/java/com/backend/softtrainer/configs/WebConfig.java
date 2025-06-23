@@ -20,7 +20,7 @@ public class WebConfig implements WebMvcConfigurer {
         "https://*.thesofttrainer.com",
         "https://admin.thesofttrainer.com"
       )
-      .allowedMethods("GET", "POST", "PUT", "DELETE")
+      .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
       .allowedHeaders("*")
       .allowCredentials(true);
   }
