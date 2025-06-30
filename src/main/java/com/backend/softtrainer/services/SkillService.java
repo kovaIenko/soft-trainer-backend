@@ -85,10 +85,10 @@ public class SkillService {
     Skill savedSkill = skillRepository.save(newSkill);
 
     log.info("Skill created with ID: {}", savedSkill.getId());
-    
+
     // Directly insert the association without loading all skills
     organizationRepository.addSkillToOrganization(organization.getId(), savedSkill.getId());
-    
+
     log.info("Created skill with ID {} and associated it with organization {}", savedSkill.getId(), organization.getName());
 
     return savedSkill;
@@ -119,18 +119,21 @@ public class SkillService {
   public List<SimulationNodesDto> getSimulationsBySkillId(Long skillId) {
     Skill skill = getSkillById(skillId);
     return skill.getSimulations().entrySet().stream()
-            .sorted(Map.Entry.comparingByValue()) // Sort by order value
+            .sorted(Map.Entry.comparingByValue())
             .map(entry -> {
               var simulation = entry.getKey();
-              // Don't include nodes to avoid LOB issues - following same pattern as flow/get endpoint
+              // Break the recursion for DTO serialization only
+              if (simulation.getNodes() != null) {
+                simulation.getNodes().forEach(node -> node.setSimulation(null));
+              }
               return new SimulationNodesDto(
                       simulation.getId(),
                       simulation.getName(),
-                      Collections.emptyList(), // nodes - empty to avoid LOB loading
+                      simulation.getNodes(),
                       simulation.getAvatar(),
                       simulation.getComplexity(),
                       simulation.getCreatedAt() != null ? simulation.getCreatedAt().toString() : null,
-                      skill.getId(), // skill_id
+                      skill.getId(),
                       simulation.isOpen()
               );
             })

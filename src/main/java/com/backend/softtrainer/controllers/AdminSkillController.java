@@ -3,6 +3,7 @@ package com.backend.softtrainer.controllers;
 import com.backend.softtrainer.dtos.ApiResponseDto;
 import com.backend.softtrainer.dtos.NewSkillPayload;
 import com.backend.softtrainer.dtos.SkillDetailDto;
+import com.backend.softtrainer.dtos.SkillListDto;
 import com.backend.softtrainer.dtos.SkillSummaryDto;
 import com.backend.softtrainer.dtos.UpdateSkillVisibilityDto;
 import com.backend.softtrainer.entities.Skill;
@@ -59,17 +60,23 @@ public class AdminSkillController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_OWNER')")
-    public ResponseEntity<ApiResponseDto<List<SkillSummaryDto>>> getSkills(Authentication authentication) {
+    public ResponseEntity<ApiResponseDto<List<SkillListDto>>> getSkills(Authentication authentication) {
         var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
         boolean isOwner = userIsOwnerApp(authentication);
 
         var skills = isOwner ?
             skillService.getAllSkill() :
             skillService.getSkillsByOrganization(userDetails.user().getOrganization().getName());
-        var converted = skills.stream()
-                .map(skill -> new SkillSummaryDto(skill.getId(), skill.getName(), skill.getDescription()))
+        
+        // Filter out admin hidden skills
+        var filteredSkills = skills.stream()
+                .filter(skill -> !skill.isAdminHidden())
                 .collect(Collectors.toList());
-        ApiResponseDto<List<SkillSummaryDto>> response = ApiResponseDto.<List<SkillSummaryDto>>builder()
+        
+        var converted = filteredSkills.stream()
+                .map(this::toSkillListDto)
+                .collect(Collectors.toList());
+        ApiResponseDto<List<SkillListDto>> response = ApiResponseDto.<List<SkillListDto>>builder()
                 .success(true)
                 .data(converted)
                 .build();
@@ -91,6 +98,17 @@ public class AdminSkillController {
 
         try {
             Skill skill = skillService.getSkillById(id);
+            
+            // Check if skill is admin hidden
+            if (skill.isAdminHidden()) {
+                ApiResponseDto<SkillDetailDto> response = ApiResponseDto.<SkillDetailDto>builder()
+                        .success(false)
+                        .message("Skill not found")
+                        .data(null)
+                        .build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
             ApiResponseDto<SkillDetailDto> response = ApiResponseDto.<SkillDetailDto>builder()
                     .success(true)
                     .data(toSkillDetailDto(skill))
@@ -118,12 +136,31 @@ public class AdminSkillController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         }
 
-        skillService.updateSkillVisibility(id, payload.isHidden());
-        ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
-                .success(true)
-                .message("Skill visibility updated successfully")
-                .build();
-        return ResponseEntity.ok(response);
+        try {
+            Skill skill = skillService.getSkillById(id);
+            
+            // Check if skill is admin hidden
+            if (skill.isAdminHidden()) {
+                ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
+                        .success(false)
+                        .message("Skill not found")
+                        .build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
+            skillService.updateSkillVisibility(id, payload.isHidden());
+            ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
+                    .success(true)
+                    .message("Skill visibility updated successfully")
+                    .build();
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
+                    .success(false)
+                    .message("Skill not found")
+                    .build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -139,6 +176,17 @@ public class AdminSkillController {
         }
 
         try {
+            Skill skill = skillService.getSkillById(id);
+            
+            // Check if skill is admin hidden
+            if (skill.isAdminHidden()) {
+                ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
+                        .success(false)
+                        .message("Skill not found")
+                        .build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
             skillService.deleteSkill(id);
             ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
                 .success(true)
@@ -173,6 +221,17 @@ public class AdminSkillController {
         }
 
         try {
+            Skill skill = skillService.getSkillById(id);
+            
+            // Check if skill is admin hidden
+            if (skill.isAdminHidden()) {
+                ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
+                        .success(false)
+                        .message("Skill not found")
+                        .build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
             skillService.restoreSkill(id);
             ApiResponseDto<Void> response = ApiResponseDto.<Void>builder()
                     .success(true)
@@ -197,7 +256,13 @@ public class AdminSkillController {
         var archivedSkills = isOwner ?
             skillService.getArchivedSkills() :
             skillService.getArchivedSkillsByOrganization(userDetails.user().getOrganization().getName());
-        var converted = archivedSkills.stream()
+        
+        // Filter out admin hidden skills
+        var filteredArchivedSkills = archivedSkills.stream()
+                .filter(skill -> !skill.isAdminHidden())
+                .collect(Collectors.toList());
+        
+        var converted = filteredArchivedSkills.stream()
                 .map(skill -> new SkillSummaryDto(skill.getId(), skill.getName(), skill.getDescription()))
                 .collect(Collectors.toList());
         ApiResponseDto<List<SkillSummaryDto>> response = ApiResponseDto.<List<SkillSummaryDto>>builder()
@@ -206,6 +271,20 @@ public class AdminSkillController {
                 .data(converted)
                 .build();
         return ResponseEntity.ok(response);
+    }
+
+    private SkillListDto toSkillListDto(Skill skill) {
+        return SkillListDto.builder()
+                .id(skill.getId())
+                .name(skill.getName())
+                .description(skill.getDescription())
+                .avatar(skill.getAvatar())
+                .type(skill.getType())
+                .behavior(skill.getBehavior())
+                .simulationCount(skill.getSimulationCount())
+                .isHidden(skill.isHidden())
+                .isProtected(skill.isProtected())
+                .build();
     }
 
     private SkillDetailDto toSkillDetailDto(Skill skill) {
