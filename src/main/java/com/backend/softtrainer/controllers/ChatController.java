@@ -17,6 +17,7 @@ import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -50,6 +51,8 @@ public class ChatController {
   private final SimulationRepository simulationRepository;
 
   private final SkillService skillService;
+
+  private final ApplicationEventPublisher eventPublisher;
 
   @PutMapping("/create")
   @PreAuthorize("@customUsrDetailsService.isSimulationAvailable(authentication, #chatRequestDto.simulationId)")
@@ -234,6 +237,14 @@ public class ChatController {
 
     userHyperParameterRepository.saveAll(userHyperParams);
     log.info("User hyper params {} initialized for user {} and simulation {}", hyperparams, userId, simulationId);
+    // Publish event for cache eviction
+    if (userId != null) {
+        String userEmail = userHyperParameterRepository.findUserEmailById(userId);
+        if (userEmail != null) {
+            eventPublisher.publishEvent(new com.backend.softtrainer.events.HyperParameterUpdatedEvent(userEmail));
+            log.info("Published hyperparameter update event for user: {} (bulk insert)", userEmail);
+        }
+    }
   }
 
 }

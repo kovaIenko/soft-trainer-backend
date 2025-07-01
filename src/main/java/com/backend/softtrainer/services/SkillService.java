@@ -7,6 +7,7 @@ import com.backend.softtrainer.entities.Organization;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
+import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
@@ -14,6 +15,7 @@ import com.backend.softtrainer.repositories.UserRepository;
 import com.backend.softtrainer.repositories.MaterialRepository;
 import com.backend.softtrainer.dtos.MaterialMetadataDto;
 import com.backend.softtrainer.dtos.SimulationNodesDto;
+import com.backend.softtrainer.dtos.aiagent.AiGeneratePlanResponseDto;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +53,10 @@ public class SkillService {
   private final MaterialStorageService materialStorageService;
 
   private final MaterialRepository materialRepository;
+
+  private final AiAgentService aiAgentService;
+
+  private final AiPlanProcessingService aiPlanProcessingService;
 
   public Skill createSkill(NewSkillPayload payload) {
     Skill newSkill = Skill.builder()
@@ -91,7 +97,55 @@ public class SkillService {
 
     log.info("Created skill with ID {} and associated it with organization {}", savedSkill.getId(), organization.getName());
 
+    // Trigger async AI plan generation
+    triggerAiPlanGeneration(savedSkill, organization);
+
     return savedSkill;
+  }
+
+  private void triggerAiPlanGeneration(Skill skill, Organization organization) {
+    log.info("Triggering AI plan generation for skill: {} in organization: {}", 
+             skill.getName(), organization.getName());
+    
+    try {
+      // Call AI agent asynchronously
+      aiAgentService.generatePlanAsync(skill, organization)
+          .thenCompose(aiResponse -> {
+            log.info("AI plan generation completed for skill: {}, success: {}", 
+                     skill.getName(), aiResponse.getSuccess());
+            
+            // Process the AI response and create simulations
+            return aiPlanProcessingService.processAiPlanAndCreateSimulations(skill.getId(), aiResponse);
+          })
+          .exceptionally(throwable -> {
+            log.error("AI plan generation failed for skill: {}", skill.getName(), throwable);
+            
+            // Update skill status to FAILED and ensure it stays hidden from users
+            try {
+              skill.setGenerationStatus(SkillGenerationStatus.FAILED);
+              skill.setHidden(true);  // Ensure failed skills remain hidden from users
+              skillRepository.save(skill);
+              log.info("Set generation status to FAILED and kept skill hidden for skill: {}", skill.getName());
+            } catch (Exception statusUpdateException) {
+              log.error("Failed to update skill status to FAILED for skill: {}", skill.getName(), statusUpdateException);
+            }
+            
+            return null;
+          });
+          
+    } catch (Exception e) {
+      log.error("Failed to trigger AI plan generation for skill: {}", skill.getName(), e);
+      
+      // Update skill status to FAILED and ensure it stays hidden from users
+      try {
+        skill.setGenerationStatus(SkillGenerationStatus.FAILED);
+        skill.setHidden(true);  // Ensure failed skills remain hidden from users
+        skillRepository.save(skill);
+        log.info("Set generation status to FAILED and kept skill hidden for skill: {} due to trigger exception", skill.getName());
+      } catch (Exception statusUpdateException) {
+        log.error("Failed to update skill status to FAILED for skill: {}", skill.getName(), statusUpdateException);
+      }
+    }
   }
 
   public Skill getSkillById(Long id) {

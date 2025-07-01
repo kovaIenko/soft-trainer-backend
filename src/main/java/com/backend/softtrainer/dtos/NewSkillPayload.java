@@ -6,6 +6,8 @@ import lombok.Data;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import com.backend.softtrainer.utils.WordCount;
 import java.util.List;
 
 @Data
@@ -15,6 +17,8 @@ public class NewSkillPayload {
     private String name;
 
     @NotEmpty
+    @WordCount(max = 3000, message = "Description cannot exceed 3000 words")
+    @Size(max = 20000, message = "Description text is too long")
     private String description;
 
     @NotNull

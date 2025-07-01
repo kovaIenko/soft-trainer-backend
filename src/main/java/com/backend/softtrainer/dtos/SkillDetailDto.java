@@ -2,6 +2,7 @@ package com.backend.softtrainer.dtos;
 
 import com.backend.softtrainer.entities.enums.BehaviorType;
 import com.backend.softtrainer.entities.enums.SkillType;
+import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,8 @@ public class SkillDetailDto {
     private Long id;
     @JsonProperty("name")
     private String name;
+    @JsonProperty("avatar")
+    private String avatar;
     @JsonProperty("description")
     private String description;
     @JsonProperty("type")
@@ -23,6 +26,8 @@ public class SkillDetailDto {
     private BehaviorType behavior;
     @JsonProperty("simulation_count")
     private Integer simulationCount;
+    @JsonProperty("generation_status")
+    private SkillGenerationStatus generationStatus;
     @JsonProperty("simulations")
     private List<SimulationNodesDto> simulations;
     @JsonProperty("materials")

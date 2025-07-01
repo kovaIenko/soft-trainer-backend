@@ -2,6 +2,7 @@ package com.backend.softtrainer.dtos;
 
 import com.backend.softtrainer.entities.enums.BehaviorType;
 import com.backend.softtrainer.entities.enums.SkillType;
+import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,8 @@ public class SkillListDto {
     private BehaviorType behavior;
     @JsonProperty("simulation_count")
     private Integer simulationCount;
+    @JsonProperty("generation_status")
+    private SkillGenerationStatus generationStatus;
     @JsonProperty("is_hidden")
     private boolean isHidden;
     @JsonProperty("is_protected")

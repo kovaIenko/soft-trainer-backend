@@ -6,6 +6,7 @@ build/
 !**/src/test/**/build/
 
 softtrainer-dependency-tree/
+softtrainer-ai-agent/
 
 ### STS ###
 .apt_generated

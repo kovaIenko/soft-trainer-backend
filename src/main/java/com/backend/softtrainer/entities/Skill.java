@@ -2,6 +2,7 @@ package com.backend.softtrainer.entities;
 
 import com.backend.softtrainer.entities.enums.BehaviorType;
 import com.backend.softtrainer.entities.enums.SkillType;
+import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -59,10 +60,19 @@ public class Skill {
   @Enumerated(EnumType.STRING)
   private BehaviorType behavior;
 
+  @Enumerated(EnumType.STRING)
+  @Builder.Default
+  private SkillGenerationStatus generationStatus = SkillGenerationStatus.GENERATING;
+
   private Integer simulationCount;
 
+  /**
+   * Controls user visibility of the skill.
+   * Skills are hidden by default until AI generation completes successfully.
+   * Only skills with COMPLETED generation status should be visible to users.
+   */
   @Builder.Default
-  private boolean isHidden = false;
+  private boolean isHidden = true;
 
   @Builder.Default
   private boolean isProtected = false;
@@ -74,7 +84,7 @@ public class Skill {
   @CreationTimestamp(source = SourceType.DB)
   private LocalDateTime timestamp;
 
-  @Column(length = 1000)
+  @Column(length = 20000)
   private String description;
 
 }

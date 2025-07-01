@@ -46,7 +46,7 @@ public class UserHyperParameterService {
     return false;
   }
 
-  public Double getOrCreateUserHyperParameter(final Long chatId, final String key) {
+  public Double getOrCreateUserHyperParameter(final Long chatId, final String key, final Long ownerId) {
     var userHyperParamOptional = userHyperParameterRepository.findUserHyperParameterByChatIdAndKey(chatId, key);
 
     if (userHyperParamOptional.isPresent()) {
@@ -58,6 +58,7 @@ public class UserHyperParameterService {
       userHyperParam.setChatId(chatId);
       userHyperParam.setKey(key);
       userHyperParam.setValue((double) 0);
+      userHyperParam.setOwnerId(ownerId);
       var savedParam = userHyperParameterRepository.save(userHyperParam);
 
       // Publish event for new hyperparameter
@@ -70,6 +71,11 @@ public class UserHyperParameterService {
       }
       return savedParam.getValue();
     }
+  }
+
+  // Backward compatibility
+  public Double getOrCreateUserHyperParameter(final Long chatId, final String key) {
+    return getOrCreateUserHyperParameter(chatId, key, null);
   }
 
   public List<UserHyperParameter> findAllByChatId(final Long chatId) {
