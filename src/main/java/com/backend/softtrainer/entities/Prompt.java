@@ -24,7 +24,7 @@ public class Prompt {
   @Enumerated(EnumType.STRING)
   private PromptName name;
 
-  @Column(length = 5000)
+  @Column(columnDefinition = "TEXT")
   private String prompt;
 
   @Column(name = "is_on")

@@ -51,4 +51,7 @@ public class Auth {
   @Column(name = "auth_way")
   private AuthWay authWay;
 
+  @Column(name = "ip_address")
+  private String ipAddress;
+
 }

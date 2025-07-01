@@ -16,9 +16,11 @@ public class WebConfig implements WebMvcConfigurer {
         "http://localhost:*",
         "https://app.thesofttrainer.com",
         "https://thesofttrainer.com",
-        "https://app1.thesofttrainer.com"
+        "https://app1.thesofttrainer.com",
+        "https://*.thesofttrainer.com",
+        "https://admin.thesofttrainer.com"
       )
-      .allowedMethods("GET", "POST", "PUT", "DELETE")
+      .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
       .allowedHeaders("*")
       .allowCredentials(true);
   }

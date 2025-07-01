@@ -29,51 +29,51 @@ import static com.backend.softtrainer.utils.Converter.convertSkills;
 @Slf4j
 public class SkillController {
 
-  private final SkillService skillService;
+    private final SkillService skillService;
 
-  private final CustomUsrDetailsService customUsrDetailsService;
+    private final CustomUsrDetailsService customUsrDetailsService;
 
-  @Deprecated
-  @GetMapping
-  @PreAuthorize("@customUsrDetailsService.orgHasEmployee(authentication, #organization)")
-  public ResponseEntity<AllSkillsResponseDto> getSkills(@RequestParam(name = "org") String organization,
-                                                        final Authentication authentication) {
-    Set<Skill> skills = new HashSet<>();
-    if ((Objects.isNull(organization) || organization.isEmpty())) {
-      if (userIsOwnerApp(authentication)) {
-        skills = skillService.getAllSkill();
-      } else {
-        ResponseEntity.ok(new AllSkillsResponseDto(
-          new HashSet<>(),
-          new HashSet<>(),
-          false,
-          "The organization should be specified for that user"
-        ));
-      }
-    } else {
-      skills = skillService.getAvailableSkillByOrg(organization);
+    @Deprecated
+    @GetMapping
+    @PreAuthorize("@customUsrDetailsService.orgHasEmployee(authentication, #organization)")
+    public ResponseEntity<AllSkillsResponseDto> getSkills(@RequestParam(name = "org") String organization,
+                                                          final Authentication authentication) {
+        Set<Skill> skills = new HashSet<>();
+        if ((Objects.isNull(organization) || organization.isEmpty())) {
+            if (userIsOwnerApp(authentication)) {
+                skills = skillService.getAllSkill();
+            } else {
+                return ResponseEntity.ok(new AllSkillsResponseDto(
+                        new HashSet<>(),
+                        new HashSet<>(),
+                        false,
+                        "The organization should be specified for that user"
+                ));
+            }
+        } else {
+            skills = skillService.getAvailableSkillByOrg(organization);
+        }
+
+        var converted = convertSkills(skills);
+        return ResponseEntity.ok(new AllSkillsResponseDto(converted, converted, true, "success"));
     }
 
-    var converted = convertSkills(skills);
-    return ResponseEntity.ok(new AllSkillsResponseDto(converted, converted, true, "success"));
-  }
+    @GetMapping("/available")
+    public ResponseEntity<AllSkillsResponseDto> getSkills(final Authentication authentication) {
+        var username = authentication.getName();
+        var skills = skillService.getAvailableSkill(username);
+        var converted = convertSkills(skills);
+        return ResponseEntity.ok(new AllSkillsResponseDto(converted, converted, true, "success"));
+    }
 
-  @GetMapping("/available")
-  public ResponseEntity<AllSkillsResponseDto> getSkills(final Authentication authentication) {
-    var username = authentication.getName();
-    var skills = skillService.getAvailableSkill(username);
-    var converted = convertSkills(skills);
-    return ResponseEntity.ok(new AllSkillsResponseDto(converted, converted, true, "success"));
-  }
+    @GetMapping("/simulations")
+    @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #skillId)")
+    public ResponseEntity<AllSimulationsResponseDto> getAllSimulations(@RequestParam(name = "skillId") Long skillId,
+                                                                       final Authentication authentication) {
+        var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
 
-  @GetMapping("/simulations")
-  @PreAuthorize("@customUsrDetailsService.isSkillAvailable(authentication, #skillId)")
-  public ResponseEntity<AllSimulationsResponseDto> getAllSimulations(@RequestParam(name = "skillId") Long skillId,
-                                                                     final Authentication authentication) {
-    var userDetails = (CustomUsrDetails) customUsrDetailsService.loadUserByUsername(authentication.getName());
-
-    var simulations = skillService.findSimulationsBySkill(userDetails.user(), skillId);
-    return ResponseEntity.ok(new AllSimulationsResponseDto(skillId, simulations, true, "success"));
-  }
+        var simulations = skillService.findSimulationsBySkill(userDetails.user(), skillId);
+        return ResponseEntity.ok(new AllSimulationsResponseDto(skillId, simulations, true, "success"));
+    }
 
 }

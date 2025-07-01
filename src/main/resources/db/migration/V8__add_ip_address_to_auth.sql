@@ -1,0 +1,1 @@
+ALTER TABLE logins ADD COLUMN ip_address VARCHAR(45); 

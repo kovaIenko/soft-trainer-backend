@@ -13,13 +13,13 @@ import java.util.List;
 @Slf4j
 public class UserService {
 
-    private final UserRepository userRepository;
+  private final UserRepository userRepository;
 
     public List<User> findAllCollegues(User user) {
         return userRepository.findAllByOrganization(user.getOrganization());
-    }
+  }
 
     public void updateName(User user, String name) {
-        userRepository.updateName(user, name);
-    }
+    userRepository.updateName(user, name);
+  }
 }

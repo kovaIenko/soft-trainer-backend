@@ -9,5 +9,6 @@ public record LoginResponse(String message,
                             @JsonProperty("error_message") String errorMessage,
                             @JsonProperty("user_id") Long userId,
                             @JsonProperty("is_onboarded") boolean isOnboarded,
-                            String localization){
-};
+                            String localization,
+                            @JsonProperty("highest_role") String highestRole,
+                            @JsonProperty("org_name") String orgName) {}
