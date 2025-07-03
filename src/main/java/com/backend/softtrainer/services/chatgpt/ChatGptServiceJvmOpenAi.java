@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 public class ChatGptServiceJvmOpenAi implements ChatGptService {
 
   private final OpenAI openAI = OpenAI.newBuilder(System.getenv("OPEN_AI_SECRET_KEY"))
-    .requestTimeout(Duration.ofSeconds(10))
+    .requestTimeout(Duration.ofSeconds(60))
     .build();
 
   private final ChatClient chatClient = openAI.chatClient();
@@ -55,7 +55,7 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
 
   // Add logging for OpenAI client initialization
   {
-    log.info("[OpenAI] Initializing OpenAI client with timeout: {} seconds", 10);
+    log.info("[OpenAI] Initializing OpenAI client with timeout: {} seconds", 60);
     log.info("[OpenAI] Using model: {}", gptModel);
   }
 

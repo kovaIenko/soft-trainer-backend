@@ -170,6 +170,11 @@ public class CustomUsrDetailsService implements UserDetailsService {
   }
 
   private boolean isSimulationOnboarding(final Long simulationId) {
+    // Handle null simulationId gracefully
+    if (simulationId == null) {
+      return false;
+    }
+    
     //todo 1 org to 1 user when onboarding is a org
     var isOnboarding = simulationRepository.findById(simulationId);
     log.info("Found simulation {} for id {}", isOnboarding.isPresent(), simulationId);
@@ -211,6 +216,12 @@ public class CustomUsrDetailsService implements UserDetailsService {
   }
 
   public boolean isSimulationAvailable(Authentication authentication, Long simulationId) {
+    // Handle null simulationId gracefully
+    if (simulationId == null) {
+      log.warn("simulationId is null for user {}", authentication.getName());
+      return false;
+    }
+    
     Optional<User> optUser = userRepository.findByEmail(authentication.getName());
 
     //todo 1 org to 1 user when onboarding is a org

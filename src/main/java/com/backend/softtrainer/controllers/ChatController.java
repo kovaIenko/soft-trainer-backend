@@ -9,12 +9,15 @@ import com.backend.softtrainer.repositories.HyperParameterRepository;
 import com.backend.softtrainer.repositories.SimulationRepository;
 import com.backend.softtrainer.repositories.UserHyperParameterRepository;
 import com.backend.softtrainer.services.ChatService;
+import com.backend.softtrainer.services.EnhancedMessageProcessor;
 import com.backend.softtrainer.services.FlowService;
+import com.backend.softtrainer.services.HybridAiProcessingService;
 import com.backend.softtrainer.services.InputMessageService;
 import com.backend.softtrainer.services.SkillService;
 import com.backend.softtrainer.services.UserMessageService;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
 import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
+import com.backend.softtrainer.simulation.DualModeSimulationRuntime;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -54,6 +57,12 @@ public class ChatController {
 
   private final ApplicationEventPublisher eventPublisher;
 
+  private final EnhancedMessageProcessor enhancedMessageProcessor;
+
+  private final HybridAiProcessingService hybridAiProcessingService;
+
+  private final DualModeSimulationRuntime dualModeSimulationRuntime;
+
   @PutMapping("/create")
   @PreAuthorize("@customUsrDetailsService.isSimulationAvailable(authentication, #chatRequestDto.simulationId)")
   public ResponseEntity<ChatResponseDto> create(@RequestBody ChatRequestDto chatRequestDto, Authentication authentication) {
@@ -82,20 +91,20 @@ public class ChatController {
         }
       }
 
-      var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationId());
-      if (!flowTillActions.isEmpty()) {
+      try {
         var createdChat = chatService.store(simulation, userDetails.user());
 
-        var messages = inputMessageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
+        // 🚀 Use new dual-mode runtime for initialization
+        var initialMessages = dualModeSimulationRuntime.initializeChat(createdChat).get();
 
         var chatParams = new ChatParams(createdChat.getHearts());
-        var combinedMessages = userMessageService.combineMessages(messages, chatParams);
+        var combinedMessages = userMessageService.combineMessages(initialMessages, chatParams);
 
         //init default values to the hyper params for the user
         initUserDefaultHyperParams(simulation.getId(), createdChat.getId(), userDetails.user().getId());
 
         log.info(
-          "Chat {} created for user {} and simulation {}",
+          "Chat {} created for user {} and simulation {} using dual-mode runtime",
           createdChat.getId(),
           userDetails.user().getId(),
           simulation.getId()
@@ -110,15 +119,36 @@ public class ChatController {
           chatParams
         ));
 
-      } else {
-        return ResponseEntity.ok(new ChatResponseDto(
-          null,
-          chatRequestDto.getSkillId(),
-          false,
-          String.format("The is no flow nodes to display for simulation %s", chatRequestDto.getSimulationId()),
-          null,
-          new ChatParams(null)
-        ));
+      } catch (Exception e) {
+        log.error("❌ Error creating chat with dual-mode runtime, falling back to legacy", e);
+
+        // Fallback to legacy approach
+        var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationId());
+        if (!flowTillActions.isEmpty()) {
+          var createdChat = chatService.store(simulation, userDetails.user());
+          var messages = inputMessageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
+          var chatParams = new ChatParams(createdChat.getHearts());
+          var combinedMessages = userMessageService.combineMessages(messages, chatParams);
+          initUserDefaultHyperParams(simulation.getId(), createdChat.getId(), userDetails.user().getId());
+
+          return ResponseEntity.ok(new ChatResponseDto(
+            createdChat.getId(),
+            chatRequestDto.getSkillId(),
+            true,
+            "success (legacy fallback)",
+            combinedMessages,
+            chatParams
+          ));
+        } else {
+          return ResponseEntity.ok(new ChatResponseDto(
+            null,
+            chatRequestDto.getSkillId(),
+            false,
+            String.format("No flow nodes to display for simulation %s", chatRequestDto.getSimulationId()),
+            null,
+            new ChatParams(null)
+          ));
+        }
       }
     } else {
       return ResponseEntity.ok(new ChatResponseDto(
@@ -246,5 +276,4 @@ public class ChatController {
         }
     }
   }
-
 }

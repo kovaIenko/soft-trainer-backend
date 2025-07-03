@@ -6,11 +6,14 @@ import com.backend.softtrainer.dtos.client.UserMessageDto;
 import com.backend.softtrainer.dtos.client.UserMultiChoiceTaskMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
 import com.backend.softtrainer.dtos.client.UserSingleChoiceTaskMessageDto;
+import com.backend.softtrainer.dtos.client.UserTextMessageDto;
 import com.backend.softtrainer.dtos.messages.MessageRequestDto;
+import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.services.InputMessageService;
 import com.backend.softtrainer.services.UserMessageService;
+import com.backend.softtrainer.simulation.DualModeSimulationRuntime;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +28,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.UUID;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/message")
@@ -38,62 +43,79 @@ public class MessageController {
 
   private final ChatRepository chatRepository;
 
+  private final DualModeSimulationRuntime dualModeSimulationRuntime;
+
   @PutMapping("/send")
   @PreAuthorize("@customUsrDetailsService.isChatOfUser(authentication, #messageRequestDto?.chatId)")
   public CompletableFuture<ResponseEntity<ChatResponseDto>> create(@RequestBody MessageRequestDto messageRequestDto) {
-    try {
-      return inputMessageService.buildResponse(messageRequestDto)
+    return dualModeSimulationRuntime.processUserMessage(messageRequestDto)
         .thenApply(chatData -> {
-
           var prevHearts = chatData.params().getHearts();
           var combinedMessage = userMessageService.combineMessages(chatData.messages(), chatData.params());
 
+          // Update hearts in a new transaction if needed
           if (Objects.nonNull(prevHearts) && !Objects.equals(prevHearts, chatData.params().getHearts())) {
             chatRepository.updateHearts(messageRequestDto.getChatId(), chatData.params().getHearts());
           }
 
+          // Handle zero hearts case in a new transaction
           var chatOptional = chatRepository.findById(messageRequestDto.getChatId());
-
-          chatOptional.ifPresent(chat -> {
-            if (Objects.nonNull(chatData.params().getHearts()) && chatData.params().getHearts() <= 0.0) {
-              log.info("Remove all non-interacted messages for the chat {}", chat.getId());
-              removeNonInteractedMessages(combinedMessage);
-              log.info("User {} has used already all the hearts for chat {}", chat.getUser().getId(), chat.getId());
-              var resultMsg = inputMessageService.generateLastSimulationMessage(chat);
-              var userResultMsg = userMessageService.convert(resultMsg, null);
-              log.info("The last message for the chat with the specific message looks like : {}", userResultMsg);
-              combinedMessage.addAll(userResultMsg.toList());
+          if (chatOptional.isPresent() && Objects.nonNull(chatData.params().getHearts()) 
+              && chatData.params().getHearts() <= 0.0) {
+            
+            var chat = chatOptional.get();
+            log.info("Remove all non-interacted messages for the chat {}", chat.getId());
+            removeNonInteractedMessages(combinedMessage);
+            log.info("User {} has used already all the hearts for chat {}", 
+                    chat.getUser().getId(), chat.getId());
+            
+            // Generate last message in a separate transaction
+            try {
+                var resultMsg = inputMessageService.generateLastSimulationMessage(chat);
+                if (resultMsg != null) {
+                    var userResultMsg = userMessageService.convert(resultMsg, null);
+                    log.info("Successfully generated last simulation message: {}", userResultMsg);
+                    combinedMessage.addAll(userResultMsg.toList());
+                }
+            } catch (Exception e) {
+                log.error("Failed to generate last simulation message", e);
+                // Add a generic message instead of failing
+                var fallbackMsg = UserTextMessageDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .messageType(MessageType.TEXT)
+                    .content("No more attempts remaining. Please try again.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+                combinedMessage.add(fallbackMsg);
             }
-          });
+          }
 
           return ResponseEntity.ok(new ChatResponseDto(
             messageRequestDto.getChatId(),
             null,
             true,
-            "success",
+            "success (dual-mode runtime)",
             combinedMessage,
             chatData.params()
           ));
+        })
+        .exceptionally(throwable -> {
+          log.error("❌ Dual-mode runtime failed completely", throwable);
+          return ResponseEntity.ok(new ChatResponseDto(
+            messageRequestDto.getChatId(),
+            null,
+            false,
+            "Processing failed: " + throwable.getMessage(),
+            Collections.emptyList(),
+            null
+          ));
         });
-    } catch (SendMessageConditionException e) {
-      log.error(e.getMessage());
-      return CompletableFuture.completedFuture(
-        ResponseEntity.ok(new ChatResponseDto(
-          messageRequestDto.getChatId(),
-          null,
-          false,
-          e.getMessage(),
-          Collections.emptyList(),
-          null
-        )));
-    }
   }
 
   @PostMapping("/get")
   @PreAuthorize("@customUsrDetailsService.isChatOfUser(authentication, #messageRequestDto?.chatId)")
   public CompletableFuture<ResponseEntity<ChatResponseDto>> getHintMessage(@RequestBody MessageRequestDto messageRequestDto) {
-    try {
-      return inputMessageService.buildResponse(messageRequestDto)
+    return dualModeSimulationRuntime.processUserMessage(messageRequestDto)
         .thenApply(chatData -> {
 
           log.info(
@@ -113,7 +135,7 @@ public class MessageController {
             messageRequestDto.getChatId(),
             null,
             true,
-            "success",
+            "success (dual-mode runtime)",
             combinedMessage,
             chatData.params()
           );
@@ -124,19 +146,35 @@ public class MessageController {
             combinedMessage
           );
           return ResponseEntity.ok(chatResponse);
+        })
+        .exceptionally(throwable -> {
+          log.error("❌ Dual-mode runtime failed for hint, falling back to legacy", throwable);
+          
+          try {
+            return inputMessageService.buildResponse(messageRequestDto)
+              .thenApply(chatData -> {
+                var combinedMessage = userMessageService.combineMessage(chatData.messages(), chatData.params());
+                return ResponseEntity.ok(new ChatResponseDto(
+                  messageRequestDto.getChatId(),
+                  null,
+                  true,
+                  "success (legacy fallback)",
+                  combinedMessage,
+                  chatData.params()
+                ));
+              }).get();
+          } catch (Exception fallbackError) {
+            log.error("❌ Legacy fallback failed for hint", fallbackError);
+            return ResponseEntity.ok(new ChatResponseDto(
+              messageRequestDto.getChatId(),
+              null,
+              false,
+              "Hint processing failed: " + fallbackError.getMessage(),
+              Collections.emptyList(),
+              null
+            ));
+          }
         });
-    } catch (SendMessageConditionException e) {
-      log.error(e.getMessage());
-      return CompletableFuture.completedFuture(
-        ResponseEntity.ok(new ChatResponseDto(
-          messageRequestDto.getChatId(),
-          null,
-          false,
-          e.getMessage(),
-          Collections.emptyList(),
-          null
-        )));
-    }
   }
 
   private void removeNonInteractedMessages(List<UserMessageDto> messages) {

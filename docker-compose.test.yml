@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Test PostgreSQL Database
+  postgres-test:
+    image: postgres:14-alpine
+    container_name: softtrainer-test-db
+    environment:
+      POSTGRES_DB: softtrainer_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./src/main/resources/db/migration:/docker-entrypoint-initdb.d/
+    networks:
+      - softtrainer-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d softtrainer_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Test Application
+  softtrainer-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: softtrainer-test-app
+    environment:
+      SPRING_PROFILES_ACTIVE: test
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-test:5432/softtrainer_test
+      SPRING_DATASOURCE_USERNAME: test_user
+      SPRING_DATASOURCE_PASSWORD: test_password
+      
+      # Dual-mode runtime configuration
+      APP_DUAL_MODE_ENABLED: "true"
+      APP_LEGACY_ENGINE_ENABLED: "true"
+      APP_MODERN_ENGINE_ENABLED: "false"
+      APP_AUTO_DETECTION_ENABLED: "true"
+      APP_FALLBACK_TO_LEGACY: "true"
+      
+      # Test-specific settings
+      LOGGING_LEVEL_COM_BACKEND_SOFTTRAINER: DEBUG
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - softtrainer-test-network
+    volumes:
+      - ./logs:/app/logs
+    command: >
+      sh -c "
+        echo '🧪 Starting SoftTrainer Test Environment...'
+        echo '🔄 Dual-Mode Runtime: Enabled'
+        echo '🏛️ Legacy Engine: Enabled'
+        echo '🚀 Modern Engine: Disabled (testing legacy compatibility)'
+        echo '🔍 Auto-Detection: Enabled'
+        java -jar /app/softtrainer-backend.jar
+      "
+
+volumes:
+  test_postgres_data:
+    driver: local
+
+networks:
+  softtrainer-test-network:
+    driver: bridge 

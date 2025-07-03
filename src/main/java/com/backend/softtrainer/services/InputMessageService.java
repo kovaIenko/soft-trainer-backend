@@ -35,7 +35,6 @@ import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
 import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
 import com.backend.softtrainer.entities.messages.TextMessage;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
-import com.backend.softtrainer.interpreter.InterpreterMessageMapper;
 import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.repositories.PromptRepository;
@@ -45,12 +44,15 @@ import com.oruel.conditionscript.libs.MessageManagerLib;
 import com.oruel.conditionscript.script.ConditionScriptRunnerKt;
 import com.oruel.scriptforge.Runner;
 import jakarta.persistence.OptimisticLockException;
+import kotlin.jvm.functions.Function1;
+import kotlin.jvm.functions.Function2;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -81,8 +83,6 @@ public class InputMessageService {
   private final UserDataExtractor userDataExtractor;
 
   private final MessageService messageService;
-
-  private final InterpreterMessageMapper interpreterMessageMapper = new InterpreterMessageMapper();
 
   private final Map<String, String> HINT_CACHE = new ConcurrentHashMap<>();
 
@@ -636,11 +636,11 @@ public class InputMessageService {
 
     log.info("Trying to find first by predicate in flowNodes {}", flowNodes);
 
-    var messageManagerLib = new MessageManagerLib(
-      (Long orderNumber) -> getMessage(chatId, orderNumber),
-      (String key) -> userHyperParameterService.getOrCreateUserHyperParameter(chatId, key),
-      (String key, Double value) -> userHyperParameterService.update(chatId, key, value)
-    );
+    Function1<Long, com.oruel.conditionscript.Message> getMessageFn = orderNumber -> getMessage(chatId, orderNumber);
+    Function1<String, Double> getHyperParamFn = key -> userHyperParameterService.getOrCreateUserHyperParameter(chatId, key);
+    Function2<String, Double, Boolean> updateHyperParamFn = (key, value) -> userHyperParameterService.update(chatId, key, value);
+
+    var messageManagerLib = new MessageManagerLib(getMessageFn, getHyperParamFn, updateHyperParamFn);
     log.info("Found nodes by order number: {}", flowNodes.stream().map(FlowNode::getOrderNumber).toList());
 
     var nextFlowNodes = flowNodes
@@ -685,10 +685,55 @@ public class InputMessageService {
     if (!messages.isEmpty()) {
       log.info("Messages {} found by order number: {}", messages, orderNumber);
       var message = messages.stream().max(Comparator.comparing(Message::getTimestamp));
-      return interpreterMessageMapper.map(message.get());
+      var msg = message.orElseThrow(() -> new NoSuchElementException("No message found"));
+      
+      // Create options list based on message type and answer
+      List<com.oruel.conditionscript.Option> options = new ArrayList<>();
+      if (msg instanceof SingleChoiceQuestionMessage singleChoice && 
+          Objects.nonNull(singleChoice.getAnswer()) && 
+          !singleChoice.getAnswer().isBlank()) {
+        // Split options and find index of selected answer
+        String[] optionTexts = singleChoice.getOptions().split("\\|\\|");
+        String selectedAnswer = singleChoice.getAnswer().trim();
+        
+        // Get selected index (1-based)
+        int selectedIndex = -1;
+        for (int i = 0; i < optionTexts.length; i++) {
+          if (optionTexts[i].trim().equals(selectedAnswer)) {
+            selectedIndex = i + 1;
+            break;
+          }
+        }
+        
+        // Create a single option with the selected index
+        if (selectedIndex > 0) {
+          options.add(new com.oruel.conditionscript.Option(String.valueOf(selectedIndex), false, true));
+        }
+      }
+      
+      // Map our MessageType to ConditionScript MessageType
+      com.oruel.conditionscript.MessageType conditionScriptType;
+      switch (msg.getMessageType()) {
+        case TEXT:
+          conditionScriptType = com.oruel.conditionscript.MessageType.Text;
+          break;
+        case SINGLE_CHOICE_QUESTION:
+          conditionScriptType = com.oruel.conditionscript.MessageType.SingleChoiceTask;
+          break;
+        case MULTI_CHOICE_TASK:
+          conditionScriptType = com.oruel.conditionscript.MessageType.MultiChoiceTask;
+          break;
+        case ENTER_TEXT_QUESTION:
+          conditionScriptType = com.oruel.conditionscript.MessageType.EnterText;
+          break;
+        default:
+          // For unsupported types, default to Text
+          conditionScriptType = com.oruel.conditionscript.MessageType.Text;
+      }
+      
+      return new com.oruel.conditionscript.Message(msg.getId(), conditionScriptType, options);
     } else {
       log.error("Message not found by order number: {}", orderNumber);
-      //todo return null is not the best practice, using Optional is better
       return null;
     }
   }
@@ -806,7 +851,11 @@ public class InputMessageService {
     throw new RuntimeException("Please add converting type of messages from the flow");
   }
 
-  public LastSimulationMessage generateLastSimulationMessage(Chat chat) {
+  @Transactional
+  public LastSimulationMessage generateLastSimulationMessage(Chat inputChat) {
+    // Get a fresh Chat entity to avoid detached entity issues
+    final Chat chat = chatRepository.findById(inputChat.getId()).orElseThrow(() ->
+      new RuntimeException("Chat not found: " + inputChat.getId()));
 
     var local = chat.getUser().getOrganization().getLocalization();
     var language = Objects.isNull(local) || local.isBlank() ? "UA" : local;
@@ -814,7 +863,6 @@ public class InputMessageService {
       .id(UUID.randomUUID().toString())
       .chat(chat)
       .messageType(MessageType.RESULT_SIMULATION)
-//      .character(flowNode.getCharacter())
       .content(language.equalsIgnoreCase("UA") ?
                  "На жаль, ви вичерпали всі можливі спроби. Спробуйте знову." :
                  "Unfortunately, you have exhausted all possible attempts. Try again.")
@@ -823,8 +871,7 @@ public class InputMessageService {
       .timestamp(LocalDateTime.now())
       .build();
 
-    messageRepository.save(lastMessage);
-    return lastMessage;
+    return messageRepository.save(lastMessage);
   }
 
   public List<Message> getAndStoreMessageByFlow(final List<FlowNode> flowNodes, final Chat chat) {

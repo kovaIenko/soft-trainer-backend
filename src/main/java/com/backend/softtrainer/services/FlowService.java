@@ -14,10 +14,13 @@ import com.backend.softtrainer.dtos.flow.TextDto;
 import com.backend.softtrainer.dtos.flow.VideosDto;
 import com.backend.softtrainer.entities.Character;
 import com.backend.softtrainer.entities.HyperParameter;
+import com.backend.softtrainer.entities.Organization;
 import com.backend.softtrainer.entities.Simulation;
 import com.backend.softtrainer.entities.Skill;
+import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.entities.enums.SimulationComplexity;
+import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
 import com.backend.softtrainer.entities.flow.ContentQuestion;
 import com.backend.softtrainer.entities.flow.EnterTextQuestion;
 import com.backend.softtrainer.entities.flow.FlowNode;
@@ -33,8 +36,14 @@ import com.backend.softtrainer.repositories.HyperParameterRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.SimulationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
+import com.backend.softtrainer.repositories.UserRepository;
+import com.backend.softtrainer.services.auth.CustomUsrDetailsService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -49,6 +58,7 @@ import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FlowService {
 
   private final FlowRepository flowRepository;
@@ -62,7 +72,10 @@ public class FlowService {
   private final SkillRepository skillRepository;
 
   private final SimulationRepository simulationRepository;
+  
+  private final UserRepository userRepository;
 
+  @Transactional
   public void uploadFlow(final SimulationRequestDto flowRequestDto) {
     var skillReq = flowRequestDto.getSkill();
     Skill temp = null;
@@ -80,10 +93,43 @@ public class FlowService {
       if (Objects.isNull(skillReq.name()) || skillReq.name().isEmpty()) {
         throw new NoSuchElementException("New skill should contains of name");
       }
+      
+      // Create new skill and associate it with user's organization
       temp = Skill.builder()
         .avatar(skillReq.avatar())
         .name(skillReq.name())
+        .generationStatus(SkillGenerationStatus.COMPLETED)
+        .isHidden(false) // Make skill visible since it's being manually imported
+        .isProtected(false)
+        .isAdminHidden(false)
         .build();
+      
+      // Save the skill first to get an ID
+      temp = skillRepository.save(temp);
+      
+      // Associate the skill with the current user's organization
+      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      if (authentication != null && authentication.getName() != null) {
+        Optional<User> userOpt = userRepository.findByEmail(authentication.getName());
+        if (userOpt.isPresent()) {
+          User user = userOpt.get();
+          if (user.getOrganization() != null) {
+            Organization organization = user.getOrganization();
+            // Add skill to organization's available skills
+            organizationRepository.addSkillToOrganization(organization.getId(), temp.getId());
+            log.info("Associated skill '{}' (ID: {}) with organization '{}' (ID: {}) for user '{}'", 
+                    temp.getName(), temp.getId(), organization.getName(), organization.getId(), user.getEmail());
+          } else {
+            log.warn("User '{}' has no organization associated, skill '{}' not linked to any organization", 
+                    user.getEmail(), temp.getName());
+          }
+        } else {
+          log.warn("Could not find user '{}' to associate skill '{}' with organization", 
+                  authentication.getName(), temp.getName());
+        }
+      } else {
+        log.warn("No authentication context available, skill '{}' not associated with any organization", temp.getName());
+      }
     }
 
     var simulation = Simulation.builder()
@@ -98,16 +144,34 @@ public class FlowService {
     Map<Long, Character> characterMap = flowRequestDto.getCharacters().stream()
       .collect(Collectors.toMap(
         CharacterDto::id, // Key extractor
-        characterDto -> Character.builder()
-          .name(characterDto.name())
-          .avatar(characterDto.avatar())
-          .flowCharacterId(characterDto.id())
-          .build(), // Value function
+        characterDto -> {
+          // Check if character already exists with this flow_character_id
+          Optional<Character> existingCharacter = characterRepository.findByFlowCharacterId(characterDto.id());
+          if (existingCharacter.isPresent()) {
+            log.info("Using existing character '{}' with flow_character_id {}", 
+                    existingCharacter.get().getName(), characterDto.id());
+            return existingCharacter.get();
+          } else {
+            return Character.builder()
+              .name(characterDto.name())
+              .avatar(characterDto.avatar())
+              .flowCharacterId(characterDto.id())
+              .build();
+          }
+        }, // Value function
         (existing, replacement) -> existing, // Merge function, in case of duplicate keys
         HashMap::new // Map supplier
       ));
 
-    characterRepository.saveAll(characterMap.values());
+    // Only save characters that are new (don't have an ID yet)
+    List<Character> newCharacters = characterMap.values().stream()
+        .filter(character -> character.getId() == 0) // primitive long defaults to 0, not null
+        .collect(Collectors.toList());
+    
+    if (!newCharacters.isEmpty()) {
+      characterRepository.saveAll(newCharacters);
+      log.info("Saved {} new characters", newCharacters.size());
+    }
 
     if (Objects.nonNull(flowRequestDto.getHyperparameters())) {
       List<HyperParameter> hyperParameters = flowRequestDto.getHyperparameters()
@@ -143,6 +207,9 @@ public class FlowService {
 
     simulation.setSkill(temp);
     simulationRepository.save(simulation);
+    
+    log.info("Successfully uploaded simulation '{}' for skill '{}' with {} flow nodes", 
+            simulation.getName(), temp.getName(), nodes.size());
   }
 
   public Optional<FlowNode> findById(final Long simulationId) {

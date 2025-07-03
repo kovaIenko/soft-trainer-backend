@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 public class AiAgentService {
 
     private final RestTemplate restTemplate;
+    // private final HybridAiProcessingService hybridProcessingService;  // Will inject when ready
     
     @Value("${app.ai-agent.base-url:http://16.171.20.54:8000}")
     private String aiAgentBaseUrl;
@@ -57,6 +58,39 @@ public class AiAgentService {
             return CompletableFuture.completedFuture(createFallbackResponse());
         }
     }
+
+    /**
+     * 🚀 Enhanced AI Plan Generation with Smart Processing
+     * Uses hybrid processing to choose between legacy and enhanced systems
+     * TODO: Re-enable when HybridAiProcessingService is ready
+     */
+    /*
+    @Async("aiAgentTaskExecutor")
+    public CompletableFuture<Void> generateAndProcessPlanAsync(Skill skill, Organization organization) {
+        log.info("🚀 Starting enhanced AI plan generation and processing for skill: {}", skill.getName());
+        
+        if (!aiAgentEnabled) {
+            log.warn("AI Agent is disabled, skipping plan generation");
+            return CompletableFuture.completedFuture(null);
+        }
+        
+        try {
+            // Generate plan using AI agent
+            AiGeneratePlanRequestDto request = buildRequest(skill, organization);
+            AiGeneratePlanResponseDto response = callAiAgent(request);
+            
+            log.info("✅ Generated AI plan for skill: {} with {} simulations", 
+                    skill.getName(), response.getSimulations().size());
+            
+            // Process plan using hybrid system (enhanced or legacy)
+            return hybridProcessingService.processAiPlanWithSmartRouting(skill.getId(), response);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to generate and process AI plan for skill: {}", skill.getName(), e);
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+    */
 
     private AiGeneratePlanRequestDto buildRequest(Skill skill, Organization organization) {
         AiAgentOrganizationDto orgDto = AiAgentOrganizationDto.builder()

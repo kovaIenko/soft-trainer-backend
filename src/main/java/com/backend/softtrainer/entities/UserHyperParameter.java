@@ -30,8 +30,10 @@ public class UserHyperParameter {
   private Long simulationId;
 
   //id from the table hyperparams
+  @Column(name = "\"key\"") // Escape reserved keyword for H2 compatibility
   private String key;
 
+  @Column(name = "\"value\"") // Escape reserved keyword for H2 compatibility
   private Double value;
 
   @Column(name = "updated_at")

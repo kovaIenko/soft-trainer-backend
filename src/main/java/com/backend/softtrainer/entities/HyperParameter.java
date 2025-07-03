@@ -21,6 +21,7 @@ public class HyperParameter {
   @GeneratedValue(strategy = GenerationType.AUTO)
   private Long id;
 
+  @Column(name = "\"key\"") // Escape reserved keyword for H2 compatibility
   private String key;
 
   private String description;

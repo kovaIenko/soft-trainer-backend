@@ -95,7 +95,9 @@ public class MessageService {
 
   @Transactional(isolation = Isolation.READ_UNCOMMITTED)
   public Message save(final Message message) {
-    return messageRepository.saveAndFlush(message);
+    // Use EntityManager.merge() to handle detached entities properly
+    // This will merge the entire object graph into the current session
+    return entityManager.merge(message);
   }
 
   @Transactional(isolation = Isolation.READ_UNCOMMITTED)

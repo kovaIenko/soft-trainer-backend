@@ -6,6 +6,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
@@ -26,5 +30,9 @@ public class EnterTextQuestionMessage extends Message {
 
   @Column(length = 700)
   private String options;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @JsonProperty("selected")
+  private Integer selected;
 
 }

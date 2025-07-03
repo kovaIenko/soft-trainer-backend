@@ -30,13 +30,13 @@ public class AiOverview {
     private String llmModel;
     
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(name = "params_json", columnDefinition = "TEXT")
     private JsonNode paramsJson;
     
     private String source;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(name = "overview_json", columnDefinition = "TEXT")
     private JsonNode overviewJson;
 
     private LocalDateTime createdAt;

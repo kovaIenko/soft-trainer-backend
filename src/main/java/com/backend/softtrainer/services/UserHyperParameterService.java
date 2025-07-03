@@ -50,10 +50,10 @@ public class UserHyperParameterService {
     var userHyperParamOptional = userHyperParameterRepository.findUserHyperParameterByChatIdAndKey(chatId, key);
 
     if (userHyperParamOptional.isPresent()) {
-      log.info("Hyper Parameter with key: {} was found for the chatId: {} and the value is {}", key, chatId, userHyperParamOptional.get().getValue());
+      log.debug("Hyper Parameter with key: {} was found for the chatId: {} and the value is {}", key, chatId, userHyperParamOptional.get().getValue());
       return userHyperParamOptional.get().getValue();
     } else {
-      log.info("Hyper Parameter with key: {} wasn't found for the chatId: {}", key, chatId);
+      log.debug("Hyper Parameter with key: {} wasn't found for the chatId: {}", key, chatId);
       var userHyperParam = new UserHyperParameter();
       userHyperParam.setChatId(chatId);
       userHyperParam.setKey(key);
@@ -66,7 +66,7 @@ public class UserHyperParameterService {
         String userEmail = userHyperParameterRepository.findUserEmailById(savedParam.getOwnerId());
         if (userEmail != null) {
           eventPublisher.publishEvent(new HyperParameterUpdatedEvent(userEmail));
-          log.info("Published hyperparameter update event for user: {}", userEmail);
+          log.debug("Published hyperparameter update event for user: {}", userEmail);
         }
       }
       return savedParam.getValue();
