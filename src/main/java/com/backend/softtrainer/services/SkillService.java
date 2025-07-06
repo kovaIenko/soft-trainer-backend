@@ -1,7 +1,9 @@
 package com.backend.softtrainer.services;
 
+import com.backend.softtrainer.dtos.MaterialMetadataDto;
 import com.backend.softtrainer.dtos.NewSkillPayload;
 import com.backend.softtrainer.dtos.SimulationAvailabilityStatusDto;
+import com.backend.softtrainer.dtos.SimulationNodesDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Organization;
 import com.backend.softtrainer.entities.Simulation;
@@ -9,19 +11,16 @@ import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
 import com.backend.softtrainer.repositories.ChatRepository;
+import com.backend.softtrainer.repositories.MaterialRepository;
 import com.backend.softtrainer.repositories.OrganizationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
-import com.backend.softtrainer.repositories.MaterialRepository;
-import com.backend.softtrainer.dtos.MaterialMetadataDto;
-import com.backend.softtrainer.dtos.SimulationNodesDto;
-import com.backend.softtrainer.dtos.aiagent.AiGeneratePlanResponseDto;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -104,22 +103,22 @@ public class SkillService {
   }
 
   private void triggerAiPlanGeneration(Skill skill, Organization organization) {
-    log.info("Triggering AI plan generation for skill: {} in organization: {}", 
+    log.info("Triggering AI plan generation for skill: {} in organization: {}",
              skill.getName(), organization.getName());
-    
+
     try {
       // Call AI agent asynchronously
       aiAgentService.generatePlanAsync(skill, organization)
           .thenCompose(aiResponse -> {
-            log.info("AI plan generation completed for skill: {}, success: {}", 
+            log.info("AI plan generation completed for skill: {}, success: {}",
                      skill.getName(), aiResponse.getSuccess());
-            
+
             // Process the AI response and create simulations
             return aiPlanProcessingService.processAiPlanAndCreateSimulations(skill.getId(), aiResponse);
           })
           .exceptionally(throwable -> {
             log.error("AI plan generation failed for skill: {}", skill.getName(), throwable);
-            
+
             // Update skill status to FAILED and ensure it stays hidden from users
             try {
               skill.setGenerationStatus(SkillGenerationStatus.FAILED);
@@ -129,13 +128,13 @@ public class SkillService {
             } catch (Exception statusUpdateException) {
               log.error("Failed to update skill status to FAILED for skill: {}", skill.getName(), statusUpdateException);
             }
-            
+
             return null;
           });
-          
+
     } catch (Exception e) {
       log.error("Failed to trigger AI plan generation for skill: {}", skill.getName(), e);
-      
+
       // Update skill status to FAILED and ensure it stays hidden from users
       try {
         skill.setGenerationStatus(SkillGenerationStatus.FAILED);
@@ -281,6 +280,9 @@ public class SkillService {
   public Set<SimulationAvailabilityStatusDto> findSimulationsBySkill(final User user, final Long skillId) {
     var optSkill = skillRepository.findById(skillId);
     if (optSkill.isPresent()) {
+      if(optSkill.get().isAdminHidden() || optSkill.get().isHidden()) {
+        throw new NoSuchElementException(String.format("You have no permission to get the skill with id %s", skillId));
+      }
       log.info("Skill {} is present ", skillId);
       var simulations = optSkill.get().getSimulations();
       var chats = chatRepository.findAllBySkillId(user, skillId);
