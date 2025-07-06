@@ -17,6 +17,10 @@ INSERT INTO user_roles (user_id, role_id) VALUES (1, 1); -- ROLE_USER
 INSERT INTO user_roles (user_id, role_id) VALUES (1, 2); -- ROLE_OWNER  
 INSERT INTO user_roles (user_id, role_id) VALUES (1, 3); -- ROLE_ADMIN 
 
+-- Add required prompts for simulation completion
+INSERT INTO prompts (id, name, prompt, is_on, assistant_id) VALUES 
+(1, 'SIMULATION_SUMMARY', 'Analyze the user''s performance in this simulation and provide a brief summary of their strengths and areas for improvement.', true, 1);
+
 -- NOTE: Skills and characters will be created through the import logic during tests
 -- This ensures we test the actual skill creation and organization association functionality
 
