@@ -143,7 +143,7 @@ public class DualModeRuntimeIntegrationTest {
                     {
                         "message_id": 3,
                         "previous_message_id": [2],
-                        "message_type": "SingleChoiceQuestion",
+                        "message_type": "SingleChoiceTask",
                         "character_id": -1,
                         "text": "What is your immediate response to this upset customer?",
                         "options": [
@@ -350,7 +350,7 @@ public class DualModeRuntimeIntegrationTest {
         if (chatId == null) {
             testCreateChatWithDualModeRuntime();
         }
-        // Step 1: Get current chat state and find the SingleChoiceQuestion
+        // Step 1: Get current chat state and find the SingleChoiceTask
         MvcResult chatResult = mockMvc.perform(get("/chats/get")
                 .param("simulationId", simulationId.toString())
                 .header("Authorization", "Bearer " + jwtToken))
@@ -364,13 +364,13 @@ public class DualModeRuntimeIntegrationTest {
         // Extract the actual chat ID from the response
         Long actualChatId = chatResponse.get("chat_id").asLong();
 
-        // Find the SingleChoiceQuestion message
+        // Find the SingleChoiceTask message (legacy simulations use SingleChoiceTask, not SingleChoiceQuestion)
         JsonNode choiceQuestion = null;
         String questionId = null;
         JsonNode options = null;
 
         for (JsonNode message : messages) {
-            if ("SingleChoiceQuestion".equals(message.get("message_type").asText())) {
+            if ("SingleChoiceTask".equals(message.get("message_type").asText())) {
                 choiceQuestion = message;
                 questionId = message.get("id").asText();
                 options = message.get("options");
@@ -378,12 +378,12 @@ public class DualModeRuntimeIntegrationTest {
             }
         }
 
-        assertNotNull(choiceQuestion, "Should find SingleChoiceQuestion message");
+        assertNotNull(choiceQuestion, "Should find SingleChoiceTask message");
         assertNotNull(questionId, "Question should have an ID");
         assertNotNull(options, "Question should have options");
         assertTrue(options.size() >= 4, "Should have 4 options");
 
-        System.out.println("✅ Found SingleChoiceQuestion with ID: " + questionId);
+        System.out.println("✅ Found SingleChoiceTask with ID: " + questionId);
 
         // Step 2: Answer the first question (choose the correct answer based on simulation data)
         // The simulation has "correct_answer_position": 1, which means the first option (0-based index 0)
@@ -410,7 +410,7 @@ public class DualModeRuntimeIntegrationTest {
             {
                 "chat_id": %d,
                 "id": "%s",
-                "message_type": "SingleChoiceQuestion",
+                "message_type": "SingleChoiceTask",
                 "answer": "%s",
                 "user_response_time": 5000
             }
@@ -433,7 +433,7 @@ public class DualModeRuntimeIntegrationTest {
         JsonNode answerResponse = objectMapper.readTree(asyncAnswerResult.getResponse().getContentAsString());
         JsonNode newMessages = answerResponse.get("messages");
 
-        System.out.println("✅ Answered single choice question with best option");
+        System.out.println("✅ Answered single choice task with best option");
         System.out.println("✅ Received " + newMessages.size() + " new messages");
 
         // Verify we got positive feedback (this tests show_predicate logic)

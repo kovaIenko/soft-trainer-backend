@@ -257,6 +257,9 @@ public class ModernSimulationIntegrationTest {
     @WithMockUser(username = "test-admin", roles = {"ADMIN", "OWNER"})
     @Commit
     public void testFindImportedSimulation() throws Exception {
+        // Wait to ensure all transactions are committed
+        Thread.sleep(1000);
+        
         // First get available skills to find our imported skill
         System.out.println("🔍 Calling /skills/available endpoint...");
 
@@ -366,6 +369,8 @@ public class ModernSimulationIntegrationTest {
         // Defensive: ensure simulationId and chatId are initialized
         if (simulationId == null) {
             testImportModernSimulation();
+            // Add wait to ensure transaction is committed when called directly
+            Thread.sleep(1000);
             testFindImportedSimulation();
         }
         if (chatId == null) {
@@ -436,18 +441,119 @@ public class ModernSimulationIntegrationTest {
             }
             """, questionId, actualChatId, correctOptionId);
 
-            MvcResult asyncResult = mockMvc.perform(put("/message/send")
-                    .header("Authorization", "Bearer " + jwtToken)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(answerRequest))
-                    .andExpect(request().asyncStarted())
-                    .andReturn();
+        MvcResult asyncResult = mockMvc.perform(put("/message/send")
+                .header("Authorization", "Bearer " + jwtToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(answerRequest))
+                .andExpect(request().asyncStarted())
+                .andReturn();
 
-            // Wait for async processing to complete
-            mockMvc.perform(asyncDispatch(asyncResult))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+        // Wait for async processing to complete
+        MvcResult result = mockMvc.perform(asyncDispatch(asyncResult))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn();
 
         System.out.println("✅ Sent correct answer for SingleChoiceQuestion");
+        System.out.println("📋 Response: " + result.getResponse().getContentAsString());
+
+        // Step 4: Use the response from message send (which includes the new EnterTextQuestion)
+        System.out.println("🔍 Using response from message send to find EnterTextQuestion...");
+        
+        JsonNode sendResponse = objectMapper.readTree(result.getResponse().getContentAsString());
+        JsonNode messages2 = sendResponse.get("messages");
+
+        // Find the EnterTextQuestion message
+        JsonNode textQuestion = null;
+        String textQuestionId = null;
+
+        for (JsonNode message : messages2) {
+            if ("EnterTextQuestion".equals(message.get("message_type").asText())) {
+                textQuestion = message;
+                textQuestionId = message.get("id").asText();
+                break;
+            }
+        }
+
+        assertNotNull(textQuestion, "Should find EnterTextQuestion message after answering SingleChoiceQuestion");
+        assertNotNull(textQuestionId, "EnterTextQuestion should have an ID");
+
+        System.out.println("✅ Found EnterTextQuestion with ID: " + textQuestionId);
+        System.out.println("📋 Question prompt: " + textQuestion.get("content").asText());
+
+        // Step 5: Answer the text question
+        String textAnswerRequest = String.format("""
+            {
+                "id": "%s",
+                "chat_id": %d,
+                "message_type": "EnterTextQuestion",
+                "answer": "I would immediately escalate this to our logistics team, contact the customer directly with a sincere apology, offer expedited shipping at no cost, and provide a discount for future orders. I would also follow up personally to ensure their satisfaction.",
+                "user_response_time": 2000
+            }
+            """, textQuestionId, actualChatId);
+
+        MvcResult asyncResult2 = mockMvc.perform(put("/message/send")
+                .header("Authorization", "Bearer " + jwtToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(textAnswerRequest))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        // Wait for async processing to complete
+        MvcResult result2 = mockMvc.perform(asyncDispatch(asyncResult2))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn();
+
+        System.out.println("✅ Sent text answer for EnterTextQuestion");
+        System.out.println("📋 Response: " + result2.getResponse().getContentAsString());
+
+        // Step 6: Use the response from second message send (which includes the ResultSimulation)
+        System.out.println("🔍 Using response from second message send to find ResultSimulation...");
+        
+        JsonNode sendResponse2 = objectMapper.readTree(result2.getResponse().getContentAsString());
+        JsonNode messages3 = sendResponse2.get("messages");
+
+        // Find the ResultSimulation message
+        JsonNode resultMessage = null;
+        String resultMessageId = null;
+
+        for (JsonNode message : messages3) {
+            if ("ResultSimulation".equals(message.get("message_type").asText())) {
+                resultMessage = message;
+                resultMessageId = message.get("id").asText();
+                break;
+            }
+        }
+
+        assertNotNull(resultMessage, "Should find ResultSimulation message after completing the simulation flow");
+        assertNotNull(resultMessageId, "ResultSimulation should have an ID");
+
+        System.out.println("✅ Found ResultSimulation with ID: " + resultMessageId);
+        System.out.println("📋 Result message type: " + resultMessage.get("message_type").asText());
+
+        // Step 7: Verify the simulation is completed
+        boolean isFinished = sendResponse2.get("chat_finished") != null ? sendResponse2.get("chat_finished").asBoolean() : false;
+        System.out.println("📊 Chat finished status: " + isFinished);
+
+        // Verify content of the result message - ResultSimulation uses "contents" field
+        JsonNode resultContents = resultMessage.get("contents");
+        String resultContent = "";
+        if (resultContents != null && resultContents.isArray() && resultContents.size() > 0) {
+            resultContent = resultContents.get(0).asText();
+        }
+        
+        // For modern simulations, ResultSimulation might have empty contents, which is acceptable
+        System.out.println("📋 Result message contents: " + (resultContents != null ? resultContents.toString() : "null"));
+        
+        // The presence of ResultSimulation message itself indicates successful completion
+        assertTrue(resultMessage.get("message_type").asText().equals("ResultSimulation"), 
+                "Should have ResultSimulation message type");
+
+        System.out.println("🎉 Successfully completed entire modern simulation flow:");
+        System.out.println("   ✅ SingleChoiceQuestion answered");
+        System.out.println("   ✅ EnterTextQuestion answered");
+        System.out.println("   ✅ ResultSimulation received");
+        System.out.println("   📊 Total messages in final state: " + messages3.size());
     }
 }

@@ -3,7 +3,8 @@ package com.backend.softtrainer.simulation.engine;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.dtos.ChatDataDto;
 import com.backend.softtrainer.dtos.messages.MessageRequestDto;
-import com.backend.softtrainer.services.InputMessageService;
+import com.backend.softtrainer.services.InputMessageServiceFactory;
+import com.backend.softtrainer.services.InputMessageServiceInterface;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.simulation.context.SimulationContext;
 import com.backend.softtrainer.simulation.DualModeSimulationRuntime.SimulationType;
@@ -32,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class LegacySimulationEngine implements BaseSimulationEngine {
     
-    private final InputMessageService inputMessageService;
+    private final InputMessageServiceFactory inputMessageServiceFactory;
     private final FlowService flowService;
     
     // Performance metrics
@@ -53,8 +54,9 @@ public class LegacySimulationEngine implements BaseSimulationEngine {
         long startTime = System.currentTimeMillis();
         
         try {
-            // Use existing InputMessageService - no changes needed!
-            ChatDataDto result = inputMessageService.buildResponse(messageRequest).get();
+            // Get appropriate service from factory
+            InputMessageServiceInterface service = inputMessageServiceFactory.getServiceForChat(messageRequest.getChatId());
+            ChatDataDto result = service.buildResponse(messageRequest).get();
             
             // Update metrics
             processedMessages.incrementAndGet();
@@ -84,7 +86,9 @@ public class LegacySimulationEngine implements BaseSimulationEngine {
             // Use existing FlowService logic - no changes needed!
             var flowTillActions = flowService.getFirstFlowNodesUntilActionable(context.getSimulationId());
             
-            List<Message> initialMessages = inputMessageService.getAndStoreMessageByFlow(
+            // Get appropriate service from factory
+            InputMessageServiceInterface service = inputMessageServiceFactory.getServiceForSimulation(context.getSimulation());
+            List<Message> initialMessages = service.getAndStoreMessageByFlow(
                     flowTillActions, context.getChat());
             
             // Update metrics

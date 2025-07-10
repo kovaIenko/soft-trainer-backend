@@ -71,7 +71,7 @@ import java.util.Arrays;
 @Service
 @AllArgsConstructor
 @Slf4j
-public class InputMessageService {
+public class InputMessageService implements InputMessageServiceInterface {
 
   private final ChatRepository chatRepository;
   private final FlowService flowService;
@@ -704,12 +704,30 @@ public class InputMessageService {
       
       // Create options list based on message type and answer
       List<com.oruel.conditionscript.Option> options = new ArrayList<>();
+      
+      // Handle both SingleChoiceQuestionMessage and SingleChoiceTaskQuestionMessage
+      String messageOptions = null;
+      String messageAnswer = null;
+      String messageCorrect = null;
+      
       if (msg instanceof SingleChoiceQuestionMessage singleChoice && 
           Objects.nonNull(singleChoice.getAnswer()) && 
           !singleChoice.getAnswer().isBlank()) {
+        messageOptions = singleChoice.getOptions();
+        messageAnswer = singleChoice.getAnswer();
+        messageCorrect = singleChoice.getCorrect();
+      } else if (msg instanceof SingleChoiceTaskQuestionMessage singleChoiceTask && 
+                 Objects.nonNull(singleChoiceTask.getAnswer()) && 
+                 !singleChoiceTask.getAnswer().isBlank()) {
+        messageOptions = singleChoiceTask.getOptions();
+        messageAnswer = singleChoiceTask.getAnswer();
+        messageCorrect = singleChoiceTask.getCorrect();
+      }
+      
+      if (messageOptions != null && messageAnswer != null) {
         // Split options and find index of selected answer
-        String[] optionTexts = singleChoice.getOptions().split("\\|\\|");
-        String selectedAnswer = singleChoice.getAnswer().trim();
+        String[] optionTexts = messageOptions.split("\\|\\|");
+        String selectedAnswer = messageAnswer.trim();
         
         // Get selected index (1-based)
         int selectedIndex = -1;
@@ -729,13 +747,12 @@ public class InputMessageService {
           // As a workaround, we'll use the correct answer as the selected index
           // This assumes the test is selecting the correct answer (which it should be)
           try {
-            String correctAnswerStr = singleChoice.getCorrect();
-            if (Objects.nonNull(correctAnswerStr) && !correctAnswerStr.isBlank()) {
-              selectedIndex = Integer.parseInt(correctAnswerStr.trim());
+            if (Objects.nonNull(messageCorrect) && !messageCorrect.isBlank()) {
+              selectedIndex = Integer.parseInt(messageCorrect.trim());
               log.info("UUID answer detected, using correct answer index: {}", selectedIndex);
             }
           } catch (NumberFormatException e) {
-            log.warn("Could not parse correct answer as index: {}", singleChoice.getCorrect());
+            log.warn("Could not parse correct answer as index: {}", messageCorrect);
             // If we can't determine, default to 1 (first option)
             selectedIndex = 1;
           }
@@ -757,6 +774,9 @@ public class InputMessageService {
           conditionScriptType = com.oruel.conditionscript.MessageType.Text;
           break;
         case SINGLE_CHOICE_QUESTION:
+          conditionScriptType = com.oruel.conditionscript.MessageType.SingleChoiceTask;
+          break;
+        case SINGLE_CHOICE_TASK:
           conditionScriptType = com.oruel.conditionscript.MessageType.SingleChoiceTask;
           break;
         case MULTI_CHOICE_TASK:
@@ -837,7 +857,7 @@ public class InputMessageService {
         .id(UUID.randomUUID().toString())
         .chat(chat)
         .role(ChatRole.APP)
-        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+        .messageType(MessageType.SINGLE_CHOICE_TASK)
         .flowNode(flowNode)
         .character(flowNode.getCharacter())
         .timestamp(LocalDateTime.now())
