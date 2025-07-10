@@ -114,6 +114,9 @@ public class UserMessageService {
   }
 
   private List<Integer> splitCorrectAnswer(final String text) {
+    if (text == null || text.trim().isEmpty()) {
+      return Collections.emptyList();
+    }
     return Stream.of(text.split("\\|\\|"))
       .map(String::trim)
       .map(Integer::parseInt)

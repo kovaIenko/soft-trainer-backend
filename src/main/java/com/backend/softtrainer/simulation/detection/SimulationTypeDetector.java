@@ -115,10 +115,10 @@ public class SimulationTypeDetector {
             }
         }
         
-        // Check for modern rule structures (when EnhancedFlowNode is available)
-        // For now, these would be additional fields or patterns we'd define
+        // Check for modern rule structures
         if (hasModernRuleStructure(node)) {
-            metrics.modernIndicatorCount += 2;
+            metrics.modernIndicatorCount += 3; // Strong modern indicator
+            log.debug("🚀 Found modern rule structure in node: {}", node.getId());
         }
         
         // Check message type patterns
@@ -132,12 +132,8 @@ public class SimulationTypeDetector {
      * 🔮 Check for Modern Rule Structure
      */
     private boolean hasModernRuleStructure(FlowNode node) {
-        // This would check for:
-        // - JSON rule definitions
-        // - Structured transition logic
-        // - Modern message type patterns
-        // For now, return false since we're focusing on legacy compatibility
-        return false;
+        // Check if node has flow_rules defined (modern format)
+        return node.getFlowRules() != null && !node.getFlowRules().isEmpty();
     }
     
     /**

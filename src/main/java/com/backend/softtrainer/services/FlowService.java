@@ -234,13 +234,40 @@ public class FlowService {
       .map(prevOrderNumber -> convertFlow(flowRecordDto, prevOrderNumber, authorEntity, simulation));
   }
 
+  /**
+   * 🔧 Set common FlowNode properties including modern flow_rules
+   */
+  private void setCommonFlowNodeProperties(FlowNode.FlowNodeBuilder<?, ?> builder, 
+                                          FlowNodeDto dto, 
+                                          long previousMessageId,
+                                          Character authorEntity,
+                                          Simulation simulation) {
+    builder
+        .orderNumber(dto.getMessageId())
+        .showPredicate(dto.getShowPredicate())
+        .responseTimeLimit(dto.getResponseTimeLimit())
+        .character(authorEntity)
+        .previousOrderNumber(previousMessageId)
+        .hasHint(dto.isHasHint())
+        .simulation(simulation);
+  }
+
+  /**
+   * 🔧 Set flow rules on the built FlowNode entity
+   */
+  private void setFlowRulesOnNode(FlowNode node, FlowNodeDto dto) {
+    if (dto.getFlowRules() != null && !dto.getFlowRules().isEmpty()) {
+      node.setFlowRules(dto.getFlowRules());
+    }
+  }
+
   private FlowNode convertFlow(final FlowNodeDto flowRecordDto,
                                final long previousMessageId,
                                final Character authorEntity,
                                final Simulation simulation) {
 
     if (flowRecordDto instanceof ImagesDto imagesDto) {
-      return ContentQuestion.builder()
+      var node = ContentQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .url(imagesDto.getUrl())
@@ -251,9 +278,11 @@ public class FlowService {
         .hasHint(imagesDto.isHasHint())
         .simulation(simulation)
         .build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     }
     if (flowRecordDto instanceof VideosDto videosDto) {
-      return ContentQuestion.builder()
+      var node = ContentQuestion.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .responseTimeLimit(videosDto.getResponseTimeLimit())
@@ -265,73 +294,74 @@ public class FlowService {
         .hasHint(videosDto.isHasHint())
         .simulation(simulation)
         .build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     } else if (flowRecordDto instanceof EnterTextQuestionDto enterTextQuestionDto) {
-      return EnterTextQuestion.builder()
-        .orderNumber(flowRecordDto.getMessageId())
-        .showPredicate(flowRecordDto.getShowPredicate())
+      var builder = EnterTextQuestion.builder()
         .prompt(enterTextQuestionDto.getPrompt())
-        .responseTimeLimit(enterTextQuestionDto.getResponseTimeLimit())
-        .character(authorEntity)
         .correct(enterTextQuestionDto.getCorrect())
-        .options(String.join(" || ", enterTextQuestionDto.getOptions()))
-        .previousOrderNumber(previousMessageId)
-        .messageType(MessageType.ENTER_TEXT_QUESTION)
-        .hasHint(enterTextQuestionDto.isHasHint())
-        .simulation(simulation)
-        .build();
+        .options(enterTextQuestionDto.getOptions() != null ? 
+                String.join(" || ", enterTextQuestionDto.getOptions()) : "")
+        .messageType(MessageType.ENTER_TEXT_QUESTION);
+      setCommonFlowNodeProperties(builder, flowRecordDto, previousMessageId, authorEntity, simulation);
+      var node = builder.build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     } else if (flowRecordDto instanceof TextDto textDto) {
-      return Text.builder()
-        .orderNumber(flowRecordDto.getMessageId())
-        .showPredicate(flowRecordDto.getShowPredicate())
-        .responseTimeLimit(textDto.getResponseTimeLimit())
+      var builder = Text.builder()
         .text(textDto.getText())
-        .character(authorEntity)
-        .previousOrderNumber(previousMessageId)
-        .messageType(MessageType.TEXT)
-        .hasHint(textDto.isHasHint())
-        .simulation(simulation)
-        .build();
+        .messageType(MessageType.TEXT);
+      setCommonFlowNodeProperties(builder, flowRecordDto, previousMessageId, authorEntity, simulation);
+      var node = builder.build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     } else if (flowRecordDto instanceof SingleChoiceTaskDto singleChoiceTaskDto) {
-      return SingleChoiceTask.builder()
+      var node = SingleChoiceTask.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .responseTimeLimit(singleChoiceTaskDto.getResponseTimeLimit())
         .character(authorEntity)
         .correct(singleChoiceTaskDto.getCorrect())
-        .options(String.join(" || ", singleChoiceTaskDto.getOptions()))
+        .options(singleChoiceTaskDto.getOptions() != null ? 
+                String.join(" || ", singleChoiceTaskDto.getOptions()) : "")
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.SINGLE_CHOICE_TASK)
         .hasHint(singleChoiceTaskDto.isHasHint())
         .simulation(simulation)
         .build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     } else if (flowRecordDto instanceof SingleChoiceQuestionDto singleChoiceQuestionDto) {
-      return SingleChoiceQuestion.builder()
-        .orderNumber(flowRecordDto.getMessageId())
-        .showPredicate(flowRecordDto.getShowPredicate())
-        .responseTimeLimit(singleChoiceQuestionDto.getResponseTimeLimit())
-        .character(authorEntity)
+      var builder = SingleChoiceQuestion.builder()
         .correct(singleChoiceQuestionDto.getCorrect())
-        .options(String.join(" || ", singleChoiceQuestionDto.getOptions()))
-        .previousOrderNumber(previousMessageId)
-        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
-        .hasHint(singleChoiceQuestionDto.isHasHint())
-        .simulation(simulation)
-        .build();
+        .options(singleChoiceQuestionDto.getOptions() != null ? 
+                singleChoiceQuestionDto.getOptions().stream()
+                        .map(option -> option.getText())
+                        .collect(java.util.stream.Collectors.joining(" || ")) : "")
+        .messageType(MessageType.SINGLE_CHOICE_QUESTION);
+      setCommonFlowNodeProperties(builder, flowRecordDto, previousMessageId, authorEntity, simulation);
+      var node = builder.build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     } else if (flowRecordDto instanceof MultiChoiceTaskDto multipleChoiceQuestionDto) {
-      return MultipleChoiceTask.builder()
+      var node = MultipleChoiceTask.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .responseTimeLimit(multipleChoiceQuestionDto.getResponseTimeLimit())
         .character(authorEntity)
-        .correct(String.join(" || ", multipleChoiceQuestionDto.getCorrect()))
-        .options(String.join(" || ", multipleChoiceQuestionDto.getOptions()))
+        .correct(multipleChoiceQuestionDto.getCorrect() != null ? 
+                String.join(" || ", multipleChoiceQuestionDto.getCorrect()) : "")
+        .options(multipleChoiceQuestionDto.getOptions() != null ? 
+                String.join(" || ", multipleChoiceQuestionDto.getOptions()) : "")
         .previousOrderNumber(previousMessageId)
         .messageType(MessageType.MULTI_CHOICE_TASK)
         .simulation(simulation)
         .hasHint(multipleChoiceQuestionDto.isHasHint())
         .build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     } else if (flowRecordDto instanceof HintMessageDto hintMessageDto) {
-      return HintMessageNode.builder()
+      var node = HintMessageNode.builder()
         .orderNumber(flowRecordDto.getMessageId())
         .showPredicate(flowRecordDto.getShowPredicate())
         .responseTimeLimit(hintMessageDto.getResponseTimeLimit())
@@ -342,18 +372,16 @@ public class FlowService {
         .hasHint(false)
         .simulation(simulation)
         .build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     } else if (flowRecordDto instanceof ResultSimulationDto resultSimulationDto) {
-      return ResultSimulationNode.builder()
-        .orderNumber(flowRecordDto.getMessageId())
-        .responseTimeLimit(resultSimulationDto.getResponseTimeLimit())
-        .showPredicate(flowRecordDto.getShowPredicate())
-        .character(authorEntity)
+      var builder = ResultSimulationNode.builder()
         .prompt(resultSimulationDto.getPrompt())
-        .previousOrderNumber(previousMessageId)
-        .messageType(MessageType.RESULT_SIMULATION)
-        .hasHint(false)
-        .simulation(simulation)
-        .build();
+        .messageType(MessageType.RESULT_SIMULATION);
+      setCommonFlowNodeProperties(builder, flowRecordDto, previousMessageId, authorEntity, simulation);
+      var node = builder.build();
+      setFlowRulesOnNode(node, flowRecordDto);
+      return node;
     }
     throw new NoSuchElementException("There is no such type of message type");
   }

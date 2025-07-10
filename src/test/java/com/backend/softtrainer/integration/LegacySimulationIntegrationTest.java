@@ -5,6 +5,7 @@ import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.services.chatgpt.ChatGptServiceJvmOpenAi;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -26,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -38,7 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import org.hamcrest.Matchers;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -47,7 +46,7 @@ import org.hamcrest.Matchers;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Import(TestSecurityConfig.class)
 @Transactional
-public class DualModeRuntimeIntegrationTest {
+public class LegacySimulationIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -66,9 +65,9 @@ public class DualModeRuntimeIntegrationTest {
     public void setupMocks() throws InterruptedException {
         // Mock ChatGPT service to return proper content for ResultSimulation messages
         when(chatGptServiceJvmOpenAi.buildAfterwardSimulationRecommendation(
-            any(), any(), any(), any(), any(), any()
+          any(), any(), any(), any(), any(), any()
         )).thenReturn(CompletableFuture.completedFuture(
-            new MessageDto("Вітаємо! Ви успішно завершили тест симуляції. Ваші навички емпатії, професіоналізму та вирішення проблем були продемонстровані на високому рівні. Результат: відмінно!")
+          new MessageDto("Вітаємо! Ви успішно завершили тест симуляції. Ваші навички емпатії, професіоналізму та вирішення проблем були продемонстровані на високому рівні. Результат: відмінно!")
         ));
     }
 
@@ -83,8 +82,8 @@ public class DualModeRuntimeIntegrationTest {
     @Order(2)
     public void testHealthCheck() throws Exception {
         mockMvc.perform(get("/health"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("Welcome, Miha")));
+          .andExpect(status().isOk())
+          .andExpect(content().string(Matchers.containsString("Welcome, Miha")));
 
         System.out.println("✅ Health check passed");
     }
@@ -218,13 +217,13 @@ public class DualModeRuntimeIntegrationTest {
             """;
 
         MvcResult result = mockMvc.perform(put("/flow/upload")
-                .header("Authorization", "Bearer " + jwtToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(simulationJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.name").value("E2E Test - Legacy Customer Service Training"))
-                .andReturn();
+                                             .header("Authorization", "Bearer " + jwtToken)
+                                             .contentType(MediaType.APPLICATION_JSON)
+                                             .content(simulationJson))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andExpect(jsonPath("$.name").value("E2E Test - Legacy Customer Service Training"))
+          .andReturn();
 
         System.out.println("✅ Legacy simulation imported successfully with show_predicate logic");
         System.out.println("Response: " + result.getResponse().getContentAsString());
@@ -239,9 +238,9 @@ public class DualModeRuntimeIntegrationTest {
         System.out.println("🔍 Calling /skills/available endpoint...");
 
         MvcResult skillsResult = mockMvc.perform(get("/skills/available")
-                .header("Authorization", "Bearer " + jwtToken))
-                .andExpect(status().isOk())
-                .andReturn();
+                                                   .header("Authorization", "Bearer " + jwtToken))
+          .andExpect(status().isOk())
+          .andReturn();
 
         System.out.println("📋 Skills response status: " + skillsResult.getResponse().getStatus());
         System.out.println("📋 Skills response content: " + skillsResult.getResponse().getContentAsString());
@@ -278,11 +277,11 @@ public class DualModeRuntimeIntegrationTest {
 
         // Now get simulations for this skill
         MvcResult simulationsResult = mockMvc.perform(get("/skills/simulations")
-                .param("skillId", skillId.toString())
-                .header("Authorization", "Bearer " + jwtToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andReturn();
+                                                        .param("skillId", skillId.toString())
+                                                        .header("Authorization", "Bearer " + jwtToken))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andReturn();
 
         JsonNode simulationsResponse = objectMapper.readTree(simulationsResult.getResponse().getContentAsString());
         JsonNode simulations = simulationsResponse.get("simulations");
@@ -311,13 +310,13 @@ public class DualModeRuntimeIntegrationTest {
             """.formatted(simulationId);
 
         MvcResult result = mockMvc.perform(put("/chats/create")
-                .header("Authorization", "Bearer " + jwtToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(chatRequest))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.chat_id").exists())
-                .andReturn();
+                                             .header("Authorization", "Bearer " + jwtToken)
+                                             .contentType(MediaType.APPLICATION_JSON)
+                                             .content(chatRequest))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andExpect(jsonPath("$.chat_id").exists())
+          .andReturn();
 
         JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
         chatId = response.get("chat_id").asLong();
@@ -327,7 +326,7 @@ public class DualModeRuntimeIntegrationTest {
         // Verify dual-mode runtime indicators
         String errorMessage = response.get("error_message").asText();
         assertTrue(errorMessage.contains("success") || errorMessage.contains("dual-mode") || errorMessage.contains("legacy fallback"),
-                "Should contain success or dual-mode runtime indicator");
+                   "Should contain success or dual-mode runtime indicator");
 
         // Verify we have initial messages
         JsonNode messages = response.get("messages");
@@ -352,11 +351,11 @@ public class DualModeRuntimeIntegrationTest {
         }
         // Step 1: Get current chat state and find the SingleChoiceQuestion
         MvcResult chatResult = mockMvc.perform(get("/chats/get")
-                .param("simulationId", simulationId.toString())
-                .header("Authorization", "Bearer " + jwtToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andReturn();
+                                                 .param("simulationId", simulationId.toString())
+                                                 .header("Authorization", "Bearer " + jwtToken))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andReturn();
 
         JsonNode chatResponse = objectMapper.readTree(chatResult.getResponse().getContentAsString());
         JsonNode messages = chatResponse.get("messages");
@@ -417,18 +416,18 @@ public class DualModeRuntimeIntegrationTest {
             """.formatted(actualChatId, questionId, correctOptionId);
 
         MvcResult answerResult = mockMvc.perform(put("/message/send")
-                .header("Authorization", "Bearer " + jwtToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(answerRequest))
-                .andExpect(status().isOk())
-                .andExpect(request().asyncStarted())
-                .andReturn();
+                                                   .header("Authorization", "Bearer " + jwtToken)
+                                                   .contentType(MediaType.APPLICATION_JSON)
+                                                   .content(answerRequest))
+          .andExpect(status().isOk())
+          .andExpect(request().asyncStarted())
+          .andReturn();
 
         // Wait for async processing to complete and get the result
         MvcResult asyncAnswerResult = mockMvc.perform(asyncDispatch(answerResult))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andReturn();
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andReturn();
 
         JsonNode answerResponse = objectMapper.readTree(asyncAnswerResult.getResponse().getContentAsString());
         JsonNode newMessages = answerResponse.get("messages");
@@ -476,18 +475,18 @@ public class DualModeRuntimeIntegrationTest {
             """.formatted(actualChatId, textQuestionId, textAnswer);
 
         MvcResult textAnswerResult = mockMvc.perform(put("/message/send")
-                .header("Authorization", "Bearer " + jwtToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(textAnswerRequest))
-                .andExpect(status().isOk())
-                .andExpect(request().asyncStarted())
-                .andReturn();
+                                                       .header("Authorization", "Bearer " + jwtToken)
+                                                       .contentType(MediaType.APPLICATION_JSON)
+                                                       .content(textAnswerRequest))
+          .andExpect(status().isOk())
+          .andExpect(request().asyncStarted())
+          .andReturn();
 
         // Wait for async processing to complete and get the result
         MvcResult asyncTextAnswerResult = mockMvc.perform(asyncDispatch(textAnswerResult))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andReturn();
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andReturn();
 
         JsonNode textAnswerResponse = objectMapper.readTree(asyncTextAnswerResult.getResponse().getContentAsString());
         JsonNode finalMessages = textAnswerResponse.get("messages");
@@ -534,4 +533,3 @@ public class DualModeRuntimeIntegrationTest {
         System.out.println("✅ Dual-mode runtime handled legacy show_predicate simulation correctly");
     }
 }
-

@@ -41,8 +41,7 @@ public abstract class FlowNodeDto {
   private MessageType messageType;
 
   @JsonProperty("show_predicate")
-  @NotNull
-  private String showPredicate;
+  private String showPredicate = "true"; // Default for modern simulations
 
   @NotNull
   @JsonProperty("character_id")
@@ -53,5 +52,8 @@ public abstract class FlowNodeDto {
 
   @JsonProperty("response_time_limit")
   private long responseTimeLimit;
+
+  @JsonProperty("flow_rules")
+  private List<com.backend.softtrainer.entities.flow.FlowRule> flowRules;
 
 }

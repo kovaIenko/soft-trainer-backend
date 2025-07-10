@@ -15,6 +15,6 @@ public class SingleChoiceQuestionDto extends FlowNodeDto {
   @JsonProperty("correct_answer_position")
   private String correct;
 
-  private List<String> options;
+  private List<OptionDto> options;
 
 }
