@@ -46,6 +46,17 @@ public interface BaseSimulationEngine {
     List<Message> initializeSimulation(SimulationContext context);
     
     /**
+     * 🎯 Generate final message when simulation cannot continue
+     * 
+     * Called when hearts reach 0 or simulation needs to end
+     * with a final message explaining the outcome.
+     * 
+     * @param context Simulation context for the chat
+     * @return Final message to display
+     */
+    Message generateFinalMessage(SimulationContext context);
+    
+    /**
      * ✅ Check if this engine can handle the given simulation
      * 
      * @param context Simulation context to validate

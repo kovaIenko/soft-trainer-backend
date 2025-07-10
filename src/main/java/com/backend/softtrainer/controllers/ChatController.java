@@ -12,7 +12,6 @@ import com.backend.softtrainer.services.ChatService;
 import com.backend.softtrainer.services.EnhancedMessageProcessor;
 import com.backend.softtrainer.services.FlowService;
 import com.backend.softtrainer.services.HybridAiProcessingService;
-import com.backend.softtrainer.services.InputMessageService;
 import com.backend.softtrainer.services.SkillService;
 import com.backend.softtrainer.services.UserMessageService;
 import com.backend.softtrainer.services.auth.CustomUsrDetails;
@@ -40,8 +39,6 @@ public class ChatController {
   private final ChatService chatService;
 
   private final FlowService flowService;
-
-  private final InputMessageService inputMessageService;
 
   private final UserMessageService userMessageService;
 
@@ -120,35 +117,15 @@ public class ChatController {
         ));
 
       } catch (Exception e) {
-        log.error("❌ Error creating chat with dual-mode runtime, falling back to legacy", e);
-
-        // Fallback to legacy approach
-        var flowTillActions = flowService.getFirstFlowNodesUntilActionable(chatRequestDto.getSimulationId());
-        if (!flowTillActions.isEmpty()) {
-          var createdChat = chatService.store(simulation, userDetails.user());
-          var messages = inputMessageService.getAndStoreMessageByFlow(flowTillActions, createdChat).stream().toList();
-          var chatParams = new ChatParams(createdChat.getHearts());
-          var combinedMessages = userMessageService.combineMessages(messages, chatParams);
-          initUserDefaultHyperParams(simulation.getId(), createdChat.getId(), userDetails.user().getId());
-
-          return ResponseEntity.ok(new ChatResponseDto(
-            createdChat.getId(),
-            chatRequestDto.getSkillId(),
-            true,
-            "success (legacy fallback)",
-            combinedMessages,
-            chatParams
-          ));
-        } else {
-          return ResponseEntity.ok(new ChatResponseDto(
-            null,
-            chatRequestDto.getSkillId(),
-            false,
-            String.format("No flow nodes to display for simulation %s", chatRequestDto.getSimulationId()),
-            null,
-            new ChatParams(null)
-          ));
-        }
+        log.error("❌ Error creating chat with dual-mode runtime", e);
+        return ResponseEntity.ok(new ChatResponseDto(
+          null,
+          chatRequestDto.getSkillId(),
+          false,
+          String.format("Failed to create chat for simulation %s: %s", chatRequestDto.getSimulationId(), e.getMessage()),
+          null,
+          new ChatParams(null)
+        ));
       }
     } else {
       return ResponseEntity.ok(new ChatResponseDto(

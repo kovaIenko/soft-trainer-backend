@@ -3,6 +3,7 @@ package com.backend.softtrainer.simulation.engine;
 import com.backend.softtrainer.entities.messages.Message;
 import com.backend.softtrainer.dtos.ChatDataDto;
 import com.backend.softtrainer.dtos.messages.MessageRequestDto;
+import com.backend.softtrainer.services.InputMessageService;
 import com.backend.softtrainer.services.InputMessageServiceFactory;
 import com.backend.softtrainer.services.InputMessageServiceInterface;
 import com.backend.softtrainer.services.FlowService;
@@ -105,6 +106,40 @@ public class LegacySimulationEngine implements BaseSimulationEngine {
             log.error("❌ Legacy engine error initializing simulation {}: {}", 
                     context.getSimulationId(), e.getMessage(), e);
             throw new RuntimeException("Legacy initialization failed", e);
+        }
+    }
+    
+    @Override
+    public Message generateFinalMessage(SimulationContext context) {
+        log.debug("🎯 Generating final message for legacy simulation: {} (ID: {})", 
+                context.getSimulation().getName(), context.getSimulationId());
+        
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            // Get appropriate service from factory
+            InputMessageServiceInterface service = inputMessageServiceFactory.getServiceForSimulation(context.getSimulation());
+            
+            // Cast to InputMessageService to access generateLastSimulationMessage method
+            if (service instanceof InputMessageService inputMessageService) {
+                Message finalMessage = inputMessageService.generateLastSimulationMessage(context.getChat());
+                
+                // Update metrics
+                totalProcessingTime += (System.currentTimeMillis() - startTime);
+                
+                log.info("✅ Legacy final message generated in {}ms", 
+                        System.currentTimeMillis() - startTime);
+                
+                return finalMessage;
+            } else {
+                throw new RuntimeException("Service is not InputMessageService instance");
+            }
+            
+        } catch (Exception e) {
+            errorCount.incrementAndGet();
+            log.error("❌ Legacy engine error generating final message for simulation {}: {}", 
+                    context.getSimulationId(), e.getMessage(), e);
+            throw new RuntimeException("Legacy final message generation failed", e);
         }
     }
     

@@ -122,9 +122,10 @@ public class DualModeSimulationRuntime {
     }
     
     /**
-     * 🎬 Initialize New Chat (Universal API)
+     * 🎬 Initialize simulation with first messages
      * 
-     * Creates initial messages for both legacy and modern simulations
+     * Called when a new chat is created to generate the initial
+     * set of messages that start the simulation.
      */
     public CompletableFuture<List<Message>> initializeChat(Chat chat) {
         log.info("🎬 Initializing chat {} for simulation: {} (ID: {})", 
@@ -156,6 +157,42 @@ public class DualModeSimulationRuntime {
             } catch (Exception e) {
                 log.error("❌ Error initializing chat {}: {}", chat.getId(), e.getMessage(), e);
                 throw new RuntimeException("Failed to initialize chat", e);
+            }
+        });
+    }
+    
+    /**
+     * 🎯 Generate Last Simulation Message (Universal API)
+     * 
+     * This method replaces direct calls to InputMessageService.generateLastSimulationMessage()
+     * and provides dual-mode support for final message generation.
+     */
+    public CompletableFuture<Message> generateLastSimulationMessage(Chat chat) {
+        log.info("🎯 Generating last simulation message for chat {} (hearts exhausted)", chat.getId());
+        
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // 1. Build context
+                SimulationContext context = contextBuilder.buildFromChat(chat);
+                
+                // 2. Detect simulation type
+                SimulationType simulationType = typeDetector.detectSimulationType(chat.getSimulation());
+                
+                log.info("🎯 Generating final message for {} simulation: {}", simulationType, chat.getSimulation().getName());
+                
+                // 3. Get appropriate engine
+                BaseSimulationEngine engine = engineFactory.createEngine(simulationType);
+                
+                // 4. Generate final message with selected engine
+                Message finalMessage = engine.generateFinalMessage(context);
+                
+                log.info("✅ Successfully generated final message {} using {} engine", 
+                        finalMessage.getId(), simulationType);
+                return finalMessage;
+                
+            } catch (Exception e) {
+                log.error("❌ Error generating final message for chat {}: {}", chat.getId(), e.getMessage(), e);
+                throw new RuntimeException("Failed to generate final message", e);
             }
         });
     }

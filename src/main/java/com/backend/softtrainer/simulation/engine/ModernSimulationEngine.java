@@ -193,35 +193,76 @@ public class ModernSimulationEngine implements BaseSimulationEngine {
 
     @Override
     public List<Message> initializeSimulation(SimulationContext context) {
-        log.debug("🎬 Initializing modern simulation: {} (ID: {})",
+        log.debug("🚀 Initializing modern simulation: {} (ID: {})", 
                 context.getSimulation().getName(), context.getSimulationId());
-
+        
         long startTime = System.currentTimeMillis();
-
+        
         try {
-            // Find initial nodes to show (nodes with ALWAYS_SHOW rules)
-            List<FlowNode> initialNodes = context.getSimulation().getNodes().stream()
-                    .filter(this::shouldShowInitially)
-                    .sorted((a, b) -> Long.compare(a.getOrderNumber(), b.getOrderNumber()))
-                    .toList();
-
-            log.info("🚀 Found {} initial nodes to show", initialNodes.size());
-
-            // Convert nodes to messages (simplified for now)
-            List<Message> initialMessages = List.of(); // Placeholder - would convert nodes to actual messages
-
+            // TODO: Implement modern initialization logic
+            // For now, create a placeholder message
+            Message welcomeMessage = createWelcomeMessage(context);
+            
             // Update metrics
             initializedChats.incrementAndGet();
             totalProcessingTime += (System.currentTimeMillis() - startTime);
-
-            return initialMessages;
-
+            
+            log.info("✅ Modern initialization completed with 1 message in {}ms", 
+                    System.currentTimeMillis() - startTime);
+            
+            return List.of(welcomeMessage);
+            
         } catch (Exception e) {
             errorCount.incrementAndGet();
-            log.error("❌ Modern engine error initializing simulation {}: {}",
+            log.error("❌ Modern engine error initializing simulation {}: {}", 
                     context.getSimulationId(), e.getMessage(), e);
             throw new RuntimeException("Modern initialization failed", e);
         }
+    }
+    
+    @Override
+    public Message generateFinalMessage(SimulationContext context) {
+        log.debug("🎯 Generating final message for modern simulation: {} (ID: {})", 
+                context.getSimulation().getName(), context.getSimulationId());
+        
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            // Create a modern final message
+            Message finalMessage = createFinalMessage(context);
+            
+            // Update metrics
+            totalProcessingTime += (System.currentTimeMillis() - startTime);
+            
+            log.info("✅ Modern final message generated in {}ms", 
+                    System.currentTimeMillis() - startTime);
+            
+            return finalMessage;
+            
+        } catch (Exception e) {
+            errorCount.incrementAndGet();
+            log.error("❌ Modern engine error generating final message for simulation {}: {}", 
+                    context.getSimulationId(), e.getMessage(), e);
+            throw new RuntimeException("Modern final message generation failed", e);
+        }
+    }
+
+    /**
+     * 🎯 Create welcome message for modern simulation
+     */
+    private Message createWelcomeMessage(SimulationContext context) {
+        // TODO: Implement proper welcome message creation
+        // For now, return a placeholder that would be replaced with actual implementation
+        throw new UnsupportedOperationException("Modern simulation welcome message creation not yet implemented");
+    }
+    
+    /**
+     * 🎯 Create final message for modern simulation
+     */
+    private Message createFinalMessage(SimulationContext context) {
+        // TODO: Implement proper final message creation
+        // For now, return a placeholder that would be replaced with actual implementation
+        throw new UnsupportedOperationException("Modern simulation final message creation not yet implemented");
     }
 
     /**

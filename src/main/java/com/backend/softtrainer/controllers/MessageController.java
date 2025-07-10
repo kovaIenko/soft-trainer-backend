@@ -11,7 +11,6 @@ import com.backend.softtrainer.dtos.messages.MessageRequestDto;
 import com.backend.softtrainer.entities.enums.MessageType;
 import com.backend.softtrainer.exceptions.SendMessageConditionException;
 import com.backend.softtrainer.repositories.ChatRepository;
-import com.backend.softtrainer.services.InputMessageService;
 import com.backend.softtrainer.services.UserMessageService;
 import com.backend.softtrainer.simulation.DualModeSimulationRuntime;
 import lombok.AllArgsConstructor;
@@ -36,8 +35,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Slf4j
 public class MessageController {
-
-  private final InputMessageService inputMessageService;
 
   private final UserMessageService userMessageService;
 
@@ -71,7 +68,7 @@ public class MessageController {
             
             // Generate last message in a separate transaction
             try {
-                var resultMsg = inputMessageService.generateLastSimulationMessage(chat);
+                var resultMsg = dualModeSimulationRuntime.generateLastSimulationMessage(chat).get();
                 if (resultMsg != null) {
                     var userResultMsg = userMessageService.convert(resultMsg, null);
                     log.info("Successfully generated last simulation message: {}", userResultMsg);
@@ -148,32 +145,15 @@ public class MessageController {
           return ResponseEntity.ok(chatResponse);
         })
         .exceptionally(throwable -> {
-          log.error("❌ Dual-mode runtime failed for hint, falling back to legacy", throwable);
-          
-          try {
-            return inputMessageService.buildResponse(messageRequestDto)
-              .thenApply(chatData -> {
-                var combinedMessage = userMessageService.combineMessage(chatData.messages(), chatData.params());
-                return ResponseEntity.ok(new ChatResponseDto(
-                  messageRequestDto.getChatId(),
-                  null,
-                  true,
-                  "success (legacy fallback)",
-                  combinedMessage,
-                  chatData.params()
-                ));
-              }).get();
-          } catch (Exception fallbackError) {
-            log.error("❌ Legacy fallback failed for hint", fallbackError);
-            return ResponseEntity.ok(new ChatResponseDto(
-              messageRequestDto.getChatId(),
-              null,
-              false,
-              "Hint processing failed: " + fallbackError.getMessage(),
-              Collections.emptyList(),
-              null
-            ));
-          }
+          log.error("❌ Dual-mode runtime failed for hint", throwable);
+          return ResponseEntity.ok(new ChatResponseDto(
+            messageRequestDto.getChatId(),
+            null,
+            false,
+            "Hint processing failed: " + throwable.getMessage(),
+            Collections.emptyList(),
+            null
+          ));
         });
   }
 
