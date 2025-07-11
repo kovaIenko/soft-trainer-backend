@@ -569,7 +569,7 @@ public class LegacySimulationIntegrationTest {
           .andExpect(jsonPath("$.name").value("E2E Test - Legacy Customer Service Training"))
           .andReturn();
 
-                System.out.println("✅ Legacy simulation imported successfully with show_predicate logic");
+        System.out.println("✅ Legacy simulation imported successfully with show_predicate logic");
         System.out.println("Response: " + result.getResponse().getContentAsString());
 
         // 🔍 DATABASE VALIDATION: Import response doesn't include simulation ID,

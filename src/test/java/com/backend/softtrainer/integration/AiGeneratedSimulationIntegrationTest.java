@@ -386,6 +386,344 @@ class AiGeneratedSimulationIntegrationTest {
     }
 
     /**
+     * Test 6: AI-agent returns malformed message (missing type, null content, etc.)
+     */
+    @Test
+    @Order(6)
+    void testMalformedAiResponse() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                // Mock malformed AI response - missing required fields
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenReturn(
+                                AiMessageGenerationResponseDto.builder()
+                                        .messages(List.of(
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType(null) // Missing type
+                                                        .content("") // Empty content
+                                                        .characterName(null) // Missing character
+                                                        .requiresResponse(null)
+                                                        .build()
+                                        ))
+                                        .success(true)
+                                        .build()
+                        );
+
+                // Create user response
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(UUID.randomUUID().toString());
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+                userResponse.setAnswer("Test Response");
+
+                // Send response and expect graceful handling
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                System.out.println("✅ Test 6 PASSED: Malformed AI response handled gracefully");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 6 FAILED: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Test 7: AI-agent returns no messages
+     */
+    @Test
+    @Order(7)
+    void testEmptyAiResponse() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                // Mock empty AI response
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenReturn(
+                                AiMessageGenerationResponseDto.builder()
+                                        .messages(Collections.emptyList()) // No messages
+                                        .success(true)
+                                        .build()
+                        );
+
+                // Create user response
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(UUID.randomUUID().toString());
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+                userResponse.setAnswer("Test Response");
+
+                // Send response and expect graceful handling
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                System.out.println("✅ Test 7 PASSED: Empty AI response handled gracefully");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 7 FAILED: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Test 8: Multiple characters respond at once
+     */
+    @Test
+    @Order(8)
+    void testMultipleCharacterResponse() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                // Mock multiple character AI response
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenReturn(
+                                AiMessageGenerationResponseDto.builder()
+                                        .messages(List.of(
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType("Text")
+                                                        .content("Coach response")
+                                                        .characterName("Coach")
+                                                        .characterRole("COACH")
+                                                        .requiresResponse(false)
+                                                        .build(),
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType("Text")
+                                                        .content("Colleague response")
+                                                        .characterName("Colleague")
+                                                        .characterRole("COLLEAGUE")
+                                                        .requiresResponse(false)
+                                                        .build(),
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType("SingleChoiceQuestion")
+                                                        .content("Manager question")
+                                                        .options(List.of("Option 1", "Option 2"))
+                                                        .characterName("Manager")
+                                                        .characterRole("MANAGER")
+                                                        .requiresResponse(true)
+                                                        .build()
+                                        ))
+                                        .success(true)
+                                        .build()
+                        );
+
+                // Create user response
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(UUID.randomUUID().toString());
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+                userResponse.setAnswer("Test Response");
+
+                // Send response and expect proper handling
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                // Validate response
+                String responseContent = result.getResponse().getContentAsString();
+                ChatResponseDto response = objectMapper.readValue(responseContent, ChatResponseDto.class);
+                
+                // Should handle multiple characters
+                assertThat(response.success()).isTrue();
+                assertThat(response.messages()).isNotEmpty();
+
+                System.out.println("✅ Test 8 PASSED: Multiple character response handled correctly");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 8 FAILED: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Test 9: AI-agent returns unsupported message type
+     */
+    @Test
+    @Order(9)
+    void testUnsupportedMessageType() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                // Mock unsupported message type
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenReturn(
+                                AiMessageGenerationResponseDto.builder()
+                                        .messages(List.of(
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType("UnsupportedType") // Invalid type
+                                                        .content("Test content")
+                                                        .characterName("Coach")
+                                                        .characterRole("COACH")
+                                                        .requiresResponse(false)
+                                                        .build()
+                                        ))
+                                        .success(true)
+                                        .build()
+                        );
+
+                // Create user response
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(UUID.randomUUID().toString());
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+                userResponse.setAnswer("Test Response");
+
+                // Send response and expect graceful handling
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                System.out.println("✅ Test 9 PASSED: Unsupported message type handled gracefully");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 9 FAILED: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Test 10: AI-agent returns messages that require response but no requiresResponse is marked
+     */
+    @Test
+    @Order(10)
+    void testInconsistentRequiresResponse() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                // Mock inconsistent requiresResponse
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenReturn(
+                                AiMessageGenerationResponseDto.builder()
+                                        .messages(List.of(
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType("SingleChoiceQuestion") // Question type
+                                                        .content("What do you think?")
+                                                        .options(List.of("Option 1", "Option 2"))
+                                                        .characterName("Coach")
+                                                        .characterRole("COACH")
+                                                        .requiresResponse(false) // Inconsistent - should be true
+                                                        .build()
+                                        ))
+                                        .success(true)
+                                        .build()
+                        );
+
+                // Create user response
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(UUID.randomUUID().toString());
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+                userResponse.setAnswer("Test Response");
+
+                // Send response and expect graceful handling
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                System.out.println("✅ Test 10 PASSED: Inconsistent requiresResponse handled gracefully");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 10 FAILED: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Test 11: User sends unsupported input (wrong option index, etc.)
+     */
+    @Test
+    @Order(11)
+    void testUnsupportedUserInput() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                // Mock normal AI response
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenReturn(
+                                AiMessageGenerationResponseDto.builder()
+                                        .messages(List.of(
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType("Text")
+                                                        .content("Response processed")
+                                                        .characterName("Coach")
+                                                        .characterRole("COACH")
+                                                        .requiresResponse(false)
+                                                        .build()
+                                        ))
+                                        .success(true)
+                                        .build()
+                        );
+
+                // Create invalid user response
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(UUID.randomUUID().toString());
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+                userResponse.setAnswer("InvalidOption999"); // Invalid option
+
+                // Send response and expect graceful handling
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                System.out.println("✅ Test 11 PASSED: Unsupported user input handled gracefully");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 11 FAILED: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Test 12: AI-agent timeout scenario
+     */
+    @Test
+    @Order(12)
+    void testAiAgentTimeout() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                // Mock timeout scenario
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenThrow(new RuntimeException("Connection timeout"));
+
+                // Create user response
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(UUID.randomUUID().toString());
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+                userResponse.setAnswer("Test Response");
+
+                // Send response and expect graceful handling
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                System.out.println("✅ Test 12 PASSED: AI-agent timeout handled gracefully");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 12 FAILED: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
      * Create test simulation and required data
      */
     private void createTestSimulation() {
@@ -478,3 +816,4 @@ class AiGeneratedSimulationIntegrationTest {
         System.out.println("✅ Test data created: Skill ID " + testSkillId + ", Simulation ID " + testSimulationId);
     }
 }
+ 

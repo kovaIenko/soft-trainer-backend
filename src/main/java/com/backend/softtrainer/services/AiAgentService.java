@@ -1,16 +1,14 @@
 package com.backend.softtrainer.services;
 
-import com.backend.softtrainer.dtos.aiagent.AiGeneratePlanRequestDto;
-import com.backend.softtrainer.dtos.aiagent.AiGeneratePlanResponseDto;
-import com.backend.softtrainer.dtos.aiagent.AiAgentOrganizationDto;
-import com.backend.softtrainer.dtos.aiagent.AiAgentSkillDto;
-import com.backend.softtrainer.dtos.aiagent.AiMessageGenerationRequestDto;
-import com.backend.softtrainer.dtos.aiagent.AiMessageGenerationResponseDto;
-import com.backend.softtrainer.dtos.aiagent.AiInitializeSimulationRequestDto;
+import com.backend.softtrainer.dtos.aiagent.*;
 import com.backend.softtrainer.entities.Organization;
 import com.backend.softtrainer.entities.Skill;
+import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
+import com.backend.softtrainer.services.validation.AiAgentResponseValidator;
+import com.backend.softtrainer.configs.AiAgentErrorHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -19,10 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.beans.factory.annotation.Qualifier;
-import com.backend.softtrainer.configs.AiAgentErrorHandler;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -32,6 +29,8 @@ public class AiAgentService {
 
     @Qualifier("aiAgentRestTemplate")
     private final RestTemplate restTemplate;
+    
+    private final AiAgentResponseValidator responseValidator;
     // private final HybridAiProcessingService hybridProcessingService;  // Will inject when ready
     
     @Value("${app.ai-agent.base-url:http://16.171.20.54:8000}")
@@ -298,39 +297,60 @@ public class AiAgentService {
     }
     
     /**
-     * ✅ Validate and sanitize AI response
+     * ✅ Validate and sanitize AI response using comprehensive validator
      */
     private AiMessageGenerationResponseDto validateAndSanitizeResponse(AiMessageGenerationResponseDto response) {
         if (response == null) {
-            throw new RuntimeException("AI response is null");
+            log.error("❌ AI response is null");
+            return createFallbackMessageResponse();
         }
         
-        // Validate basic response structure
-        if (response.getMessages() == null) {
-            response.setMessages(Collections.emptyList());
+        // Use comprehensive validator
+        AiAgentResponseValidator.ValidationResult validationResult = responseValidator.validateResponse(response);
+        
+        if (!validationResult.isValid()) {
+            log.error("❌ AI response validation failed: {}", validationResult.getErrorMessage());
+            
+            // Log detailed validation errors for debugging
+            validationResult.getErrors().forEach(error -> 
+                log.warn("🔍 Validation error: {}", error));
+            
+            // Return fallback response for invalid AI responses
+            return createFallbackMessageResponse();
         }
         
-        // Limit message count to prevent abuse
-        if (response.getMessages().size() > 10) {
-            log.warn("⚠️ AI returned {} messages, limiting to 10", response.getMessages().size());
-            response.setMessages(response.getMessages().subList(0, 10));
-        }
+        // Additional sanitization for production safety
+        sanitizeResponse(response);
         
-        // Validate and sanitize each message
-        response.getMessages().forEach(this::validateAndSanitizeMessage);
+        log.debug("✅ AI response validation passed");
+        return response;
+    }
+    
+    /**
+     * 🧹 Additional sanitization for production safety
+     */
+    private void sanitizeResponse(AiMessageGenerationResponseDto response) {
+        if (response.getMessages() != null) {
+            // Limit message count to prevent abuse
+            if (response.getMessages().size() > 10) {
+                log.warn("⚠️ AI returned {} messages, limiting to 10", response.getMessages().size());
+                response.setMessages(response.getMessages().subList(0, 10));
+            }
+            
+            // Sanitize each message
+            response.getMessages().forEach(this::sanitizeMessage);
+        }
         
         // Validate hyperparameters
         if (response.getUpdatedHyperParameters() != null) {
             validateHyperParameters(response.getUpdatedHyperParameters());
         }
-        
-        return response;
     }
     
     /**
      * 🧹 Sanitize individual message content
      */
-    private void validateAndSanitizeMessage(com.backend.softtrainer.dtos.aiagent.AiGeneratedMessageDto message) {
+    private void sanitizeMessage(AiGeneratedMessageDto message) {
         if (message.getContent() != null) {
             // Limit message content length
             if (message.getContent().length() > 5000) {
@@ -338,7 +358,7 @@ public class AiAgentService {
                 message.setContent(message.getContent().substring(0, 5000) + "...");
             }
             
-            // Basic XSS prevention - remove script tags
+            // Additional XSS prevention (already handled by validator but extra safety)
             String sanitized = message.getContent()
                     .replaceAll("(?i)<script[^>]*>.*?</script>", "")
                     .replaceAll("(?i)javascript:", "")
