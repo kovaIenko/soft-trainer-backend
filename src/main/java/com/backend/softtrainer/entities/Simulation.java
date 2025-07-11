@@ -2,6 +2,7 @@ package com.backend.softtrainer.entities;
 
 
 import com.backend.softtrainer.entities.enums.SimulationComplexity;
+import com.backend.softtrainer.entities.enums.SimulationType;
 import com.backend.softtrainer.entities.flow.FlowNode;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -48,6 +49,11 @@ public class Simulation {
 
   @Enumerated(EnumType.STRING)
   private SimulationComplexity complexity;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "type", nullable = false)
+  @Builder.Default
+  private SimulationType type = SimulationType.PREDEFINED;
 
   @Column(name = "created_at", insertable = false, updatable = false)
   @CreationTimestamp(source = SourceType.DB)

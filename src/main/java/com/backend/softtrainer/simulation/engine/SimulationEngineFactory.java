@@ -21,6 +21,7 @@ public class SimulationEngineFactory {
     
     private final LegacySimulationEngine legacyEngine;
     private final ModernSimulationEngine modernEngine;
+    private final AiGeneratedSimulationEngine aiGeneratedEngine;
     
     // Engine cache for performance
     private final Map<SimulationType, BaseSimulationEngine> engineCache = new HashMap<>();
@@ -50,6 +51,10 @@ public class SimulationEngineFactory {
                 // For hybrid simulations, use legacy engine for maximum compatibility
                 yield legacyEngine;
             }
+            case AI_GENERATED -> {
+                log.debug("🤖 Creating AI-generated simulation engine");
+                yield aiGeneratedEngine;
+            }
             case UNKNOWN -> {
                 log.warn("⚠️ Unknown simulation type, defaulting to legacy engine");
                 yield legacyEngine;
@@ -73,6 +78,7 @@ public class SimulationEngineFactory {
             case LEGACY -> LegacySimulationEngine.class.getSimpleName();
             case MODERN -> ModernSimulationEngine.class.getSimpleName();
             case HYBRID -> LegacySimulationEngine.class.getSimpleName() + " (Hybrid Mode)";
+            case AI_GENERATED -> AiGeneratedSimulationEngine.class.getSimpleName();
             case UNKNOWN -> LegacySimulationEngine.class.getSimpleName() + " (Fallback)";
         };
     }

@@ -40,6 +40,12 @@ public class SimulationTypeDetector {
             return SimulationType.UNKNOWN;
         }
         
+        // Check explicit simulation type field first (for AI-generated simulations)
+        if (simulation.getType() == com.backend.softtrainer.entities.enums.SimulationType.AI_GENERATED) {
+            log.info("🤖 Detected AI-generated simulation: {}", simulation.getName());
+            return SimulationType.AI_GENERATED;
+        }
+        
         try {
             if (simulation.getNodes() == null || simulation.getNodes().isEmpty()) {
                 log.warn("⚠️ Empty or null nodes in simulation for type detection");

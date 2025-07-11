@@ -276,6 +276,7 @@ public class DualModeSimulationRuntime {
         LEGACY("Legacy show_predicate simulation"),
         MODERN("Modern rule-based simulation"),
         HYBRID("Hybrid simulation with both legacy and modern elements"),
+        AI_GENERATED("AI-generated simulation with real-time content"),
         UNKNOWN("Unknown or invalid simulation format");
         
         private final String description;
