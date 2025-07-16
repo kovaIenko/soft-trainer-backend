@@ -39,4 +39,7 @@ public class AiMessageGenerationRequestDto {
     
     @JsonProperty("organization_context")
     private AiAgentOrganizationDto organizationContext;
+    
+    @JsonProperty("skill_materials")
+    private List<AiSkillMaterialDto> skillMaterials;
 } 

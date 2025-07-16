@@ -167,10 +167,11 @@ public class FlowExecutor implements ContentStrategy {
         Message lastMessage = currentMessages.isEmpty() ? 
             null : currentMessages.get(currentMessages.size() - 1);
         
+        int loopGuard = 0;
         // Keep processing until we hit an actionable message or end of flow
-        while (lastMessage != null && !isActionableMessage(lastMessage)) {
-            
-            log.debug("🔄 Message {} is not actionable, continuing flow", lastMessage.getId());
+        while (lastMessage != null && !isActionableMessage(lastMessage) && loopGuard < 50) {
+            loopGuard++;
+            log.debug("🔄 Message {} is not actionable, continuing flow (iteration: {})", lastMessage.getId(), loopGuard);
             
             // Get next nodes based on the last message
             List<Object> nextNodes = flowResolver.resolveNextNodes(context, lastMessage);

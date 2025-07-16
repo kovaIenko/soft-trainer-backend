@@ -106,14 +106,26 @@ public class HyperParameterActionRule implements FlowRule {
         if (current == null) current = 0.0;
         if (actionValue == null) actionValue = 0.0;
         
-        return switch (actionType) {
-            case SET -> actionValue;
-            case INCREMENT -> current + actionValue;
-            case DECREMENT -> current - actionValue;
-            case MULTIPLY -> current * actionValue;
-            case MIN -> Math.min(current, actionValue);
-            case MAX -> Math.max(current, actionValue);
-        };
+        if (actionType == null) {
+            return current;
+        }
+        
+        switch (actionType) {
+            case SET:
+                return actionValue;
+            case INCREMENT:
+                return current + actionValue;
+            case DECREMENT:
+                return current - actionValue;
+            case MULTIPLY:
+                return current * actionValue;
+            case MIN:
+                return Math.min(current, actionValue);
+            case MAX:
+                return Math.max(current, actionValue);
+            default:
+                return current;
+        }
     }
     
     /**
@@ -155,6 +167,10 @@ public class HyperParameterActionRule implements FlowRule {
     public String getDescription() {
         if (description != null && !description.trim().isEmpty()) {
             return description;
+        }
+        
+        if (type == null) {
+            return String.format("Hyperparameter action on %s with value %s", parameter, value);
         }
         
         return String.format("%s %s by %s", type.name(), parameter, value);

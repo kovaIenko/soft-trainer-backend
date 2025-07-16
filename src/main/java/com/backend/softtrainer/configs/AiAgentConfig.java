@@ -21,7 +21,7 @@ public class AiAgentConfig {
     @Value("${app.ai-agent.timeout.connect:5000}")
     private int connectTimeoutMs;
     
-    @Value("${app.ai-agent.timeout.read:30000}")
+    @Value("${app.ai-agent.timeout.read:3000}")
     private int readTimeoutMs;
     
     @Value("${app.ai-agent.pool.core-size:5}")

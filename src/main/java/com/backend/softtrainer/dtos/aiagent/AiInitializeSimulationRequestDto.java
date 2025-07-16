@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,9 +30,12 @@ public class AiInitializeSimulationRequestDto {
     @JsonProperty("organization_context")
     private AiAgentOrganizationDto organizationContext;
     
+    @JsonProperty("skill_materials")
+    private List<AiSkillMaterialDto> skillMaterials;
+    
     @JsonProperty("user_context")
     private Map<String, Object> userContext;
     
     @JsonProperty("initial_hyper_parameters")
     private Map<String, Object> initialHyperParameters;
-} 
+}

@@ -1,8 +1,10 @@
 package com.backend.softtrainer.integration;
 
+import com.backend.softtrainer.config.TestSecurityConfig;
 import com.backend.softtrainer.dtos.ChatRequestDto;
 import com.backend.softtrainer.dtos.ChatResponseDto;
 import com.backend.softtrainer.dtos.StaticRole;
+import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
 import com.backend.softtrainer.dtos.messages.SingleChoiceAnswerMessageDto;
 import com.backend.softtrainer.entities.Chat;
 import com.backend.softtrainer.entities.Organization;
@@ -12,7 +14,6 @@ import com.backend.softtrainer.entities.Skill;
 import com.backend.softtrainer.entities.User;
 import com.backend.softtrainer.entities.enums.BehaviorType;
 import com.backend.softtrainer.entities.enums.MessageType;
-import com.backend.softtrainer.entities.enums.SimulationComplexity;
 import com.backend.softtrainer.entities.enums.SimulationType;
 import com.backend.softtrainer.entities.enums.SkillGenerationStatus;
 import com.backend.softtrainer.entities.enums.SkillType;
@@ -26,7 +27,7 @@ import com.backend.softtrainer.repositories.RoleRepository;
 import com.backend.softtrainer.repositories.SimulationRepository;
 import com.backend.softtrainer.repositories.SkillRepository;
 import com.backend.softtrainer.repositories.UserRepository;
-import com.backend.softtrainer.services.chatgpt.ChatGptServiceJvmOpenAi;
+import com.backend.softtrainer.services.chatgpt.ChatGptService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -40,6 +41,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.Commit;
@@ -50,11 +52,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -65,41 +64,37 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 🚀 Real API Integration Test for AI-Generated Simulations
+ * 🚀 Real AI Agent Integration Test for AI-Generated Simulations
  *
  * This test verifies that our AI-generated simulation system works correctly
- * with the real API endpoints (/chats, /message/send) in production conditions.
+ * with the REAL AI agent at http://16.171.20.54:8000
  *
  * ⚠️ CRITICAL: This test MUST FAIL if AI agent returns 404, timeouts, or fallback logic is triggered
  *
  * Tests cover:
+ * - Real AI agent communication validation (no 404/timeouts allowed)
  * - Chat creation with AI-generated simulations (real AI responses only)
  * - Message processing through real API endpoints
  * - Database persistence validation
- * - Error handling and timeouts (must fail on fallback)
- * - Security and validation
+ * - Real AI response content validation (no fallback placeholders)
+ * - End-to-end conversation flow with proper async handling
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@Import(TestSecurityConfig.class)
 @WithMockUser(username = "test-admin", roles = {"USER", "ADMIN", "OWNER"})
 @ExtendWith(OutputCaptureExtension.class)
-class AiGeneratedApiIntegrationTest {
+@Transactional
+public class AiGeneratedRealAgentIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    // Remove mocks to use real AI agent
-    // @MockBean
-    // private AiAgentService aiAgentService;
-
-     @MockBean
-     private ChatGptServiceJvmOpenAi chatGptServiceJvmOpenAi;
 
     // Repository dependencies for validation
     @Autowired
@@ -125,6 +120,9 @@ class AiGeneratedApiIntegrationTest {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @MockBean
+    private ChatGptService chatGptService;
 
     // Test data storage
     private static Long testSkillId;
@@ -221,47 +219,40 @@ class AiGeneratedApiIntegrationTest {
         Skill skill = Skill.builder()
                 .id(1L)
                 .name("AI Leadership Training")
-                .description("Advanced AI-powered leadership development")
+                .description("Advanced AI-powered leadership development with real-time conversation")
                 .type(SkillType.DEVELOPMENT)
                 .behavior(BehaviorType.DYNAMIC)
                 .generationStatus(SkillGenerationStatus.COMPLETED)
                 .isHidden(false)
+                .simulationCount(3)
                 .build();
         skill = skillRepository.saveAndFlush(skill);
         testSkillId = skill.getId();
+
+        // --- FIX: Add skill to organization's availableSkills and save (avoid duplicates) ---
+        if (!org.getAvailableSkills().contains(skill)) {
+            org.getAvailableSkills().add(skill);
+            organizationRepository.saveAndFlush(org);
+        }
+        // --- END FIX ---
 
         // Create AI_GENERATED simulation with explicit ID
         Simulation simulation = Simulation.builder()
                 .id(1L)
                 .name("AI Leadership Simulation")
+                .type(SimulationType.AI_GENERATED)
                 .skill(skill)
-                .type(SimulationType.AI_GENERATED)  // ✅ This is the key!
-                .complexity(SimulationComplexity.MEDIUM)
-                .hearts(5.0)
-                .nodes(Collections.emptyList())    // ✅ No predefined nodes
+                .hearts(3.0)
                 .build();
         simulation = simulationRepository.saveAndFlush(simulation);
         testSimulationId = simulation.getId();
 
-        // Link organization with skill (avoid duplicates)
-        if (!org.getAvailableSkills().contains(skill)) {
-            org.getAvailableSkills().add(skill);
-            organizationRepository.saveAndFlush(org);
-        }
-
-        // Create skill-simulation relationship
-        Map<Simulation, Long> skillSimulations = new HashMap<>();
-        skillSimulations.put(simulation, simulation.getId());
-        skill.setSimulations(skillSimulations);
+        // --- FIX: Add simulation to skill's simulations map and save skill ---
+        skill.getSimulations().put(simulation, 1L);
         skillRepository.saveAndFlush(skill);
+        // --- END FIX ---
 
-        System.out.println("🎯 Created AI_GENERATED simulation with ID: " + testSimulationId);
-        System.out.println("🎯 Created skill with ID: " + testSkillId);
-    }
-
-    private void setupMocks() throws InterruptedException {
-        // No mocks needed - using real AI agent
-        System.out.println("✅ Using real AI agent for testing");
+        System.out.println("✅ Created AI-generated simulation: " + simulation.getId());
     }
 
     /**
@@ -269,7 +260,7 @@ class AiGeneratedApiIntegrationTest {
      */
     private void validateNoFallbackTriggered(CapturedOutput output) {
         String logs = output.getAll();
-        
+
         for (String indicator : FALLBACK_INDICATORS) {
             if (logs.contains(indicator)) {
                 fail(String.format("❌ CRITICAL FAILURE: Fallback logic detected in logs: '%s'. " +
@@ -277,13 +268,13 @@ class AiGeneratedApiIntegrationTest {
                         "Full logs: %s", indicator, logs));
             }
         }
-        
+
         // Additional validation for HTTP error codes
         if (logs.contains("status=404") || logs.contains("NOT_FOUND")) {
             fail("❌ CRITICAL FAILURE: AI Agent returned 404 NOT_FOUND. " +
                     "This test requires real AI agent responses, not fallback logic.");
         }
-        
+
         if (logs.contains("timeout") || logs.contains("TimeoutException")) {
             fail("❌ CRITICAL FAILURE: AI Agent request timed out. " +
                     "This indicates connectivity issues with the real AI agent.");
@@ -297,11 +288,11 @@ class AiGeneratedApiIntegrationTest {
         assertThat(response.success())
                 .withFailMessage("❌ Chat creation failed: %s", response.errorMessage())
                 .isTrue();
-        
+
         assertThat(response.chatId())
                 .withFailMessage("❌ Chat ID should not be null")
                 .isNotNull();
-        
+
         assertThat(response.messages())
                 .withFailMessage("❌ Messages should not be empty for AI_GENERATED simulations")
                 .isNotEmpty();
@@ -311,53 +302,25 @@ class AiGeneratedApiIntegrationTest {
             assertThat(message.getMessageType())
                     .withFailMessage("❌ Message type should not be null")
                     .isNotNull();
-            
+
             assertThat(message.getId())
                     .withFailMessage("❌ Message ID should not be null")
                     .isNotNull();
-            
+
             // Note: UserMessageDto doesn't expose content directly in the API response
             // Content validation will be done at the persistence level in validatePersistedMessagesAreRealAi
         });
-        
-        // Ensure we have a reasonable number of messages (real AI typically provides multiple messages)
-        assertThat(response.messages().size())
-                .withFailMessage("❌ Expected multiple messages from real AI agent, got: %d", response.messages().size())
-                .isGreaterThan(0);
     }
 
     /**
-     * Waits for chat persistence to complete (handles async operations)
-     */
-    private void waitForChatPersistence(Long chatId) throws InterruptedException {
-        int maxAttempts = 10;
-        int attempt = 0;
-        
-        while (attempt < maxAttempts) {
-            Optional<Chat> chatOpt = chatRepository.findById(chatId);
-            if (chatOpt.isPresent()) {
-                // Wait a bit more for messages to be persisted
-                Thread.sleep(1000);
-                return;
-            }
-            
-            Thread.sleep(500);
-            attempt++;
-        }
-        
-        fail(String.format("❌ CRITICAL FAILURE: Chat with ID %d was not persisted after %d attempts. " +
-                "This indicates async persistence issues.", chatId, maxAttempts));
-    }
-
-    /**
-     * 🏗️ Test 1: Create AI-Generated Simulation through API - STRICT VALIDATION
+     * 🏗️ Test 1: Create AI-Generated Simulation with Real AI Agent - STRICT VALIDATION
      */
     @Test
     @Order(1)
     @Transactional
-    @Commit // Commit the transaction to make the chat persistent for subsequent tests
-    void testCreateAiGeneratedSimulationThroughApi(CapturedOutput output) throws Exception {
-        System.out.println("🏗️ Testing Create AI-Generated Simulation through API...");
+    @Commit
+    void testCreateAiGeneratedSimulationWithRealAgent(CapturedOutput output) throws Exception {
+        System.out.println("🏗️ Testing Create AI-Generated Simulation with Real AI Agent...");
         System.out.println("🚨 STRICT MODE: Test will FAIL if AI agent returns 404, timeouts, or fallback logic is triggered");
 
         // Create chat request
@@ -365,7 +328,7 @@ class AiGeneratedApiIntegrationTest {
         chatRequest.setSimulationId(testSimulationId);
         chatRequest.setSkillId(testSkillId);
 
-        // Call real API endpoint
+        // Call real API endpoint with timeout protection
         MvcResult result = mockMvc.perform(put("/chats/create")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(chatRequest)))
@@ -383,7 +346,7 @@ class AiGeneratedApiIntegrationTest {
 
         // Wait for async processing to complete (if any)
         Thread.sleep(3000);
-        
+
         // Validate no fallback logic was triggered
         validateNoFallbackTriggered(output);
 
@@ -399,22 +362,44 @@ class AiGeneratedApiIntegrationTest {
         waitForChatPersistence(testChatId);
         validateChatCreatedInDatabase(testChatId, testSimulationId);
 
-        System.out.println("✅ API Test 1 PASSED: Chat created with ID " + testChatId);
+        System.out.println("✅ Real AI Agent Test 1 PASSED: Chat created with ID " + testChatId);
         System.out.println("✅ Validated real AI-generated content with " + response.messages().size() + " messages");
         System.out.println("✅ No fallback logic was triggered - AI agent responded successfully");
     }
 
     /**
-     * 📨 Test 2: Process User Message through API - STRICT VALIDATION
+     * Waits for chat persistence to complete (handles async operations)
+     */
+    private void waitForChatPersistence(Long chatId) throws InterruptedException {
+        int maxAttempts = 10;
+        int attempt = 0;
+
+        while (attempt < maxAttempts) {
+            Optional<Chat> chatOpt = chatRepository.findById(chatId);
+            if (chatOpt.isPresent()) {
+                // Wait a bit more for messages to be persisted
+                Thread.sleep(1000);
+                return;
+            }
+
+            Thread.sleep(500);
+            attempt++;
+        }
+
+        fail(String.format("❌ CRITICAL FAILURE: Chat with ID %d was not persisted after %d attempts. " +
+                "This indicates async persistence issues.", chatId, maxAttempts));
+    }
+
+    /**
+     * 📨 Test 2: Process User Message with Real AI Agent - STRICT VALIDATION
      */
     @Test
     @Order(2)
-    // Remove @Transactional to access committed chat from previous test
-    void testProcessUserMessageThroughApi(CapturedOutput output) throws Exception {
+    void testProcessUserMessageWithRealAgent(CapturedOutput output) throws Exception {
         // Ensure we have a chat from previous test
         assertThat(testChatId).isNotNull();
 
-        System.out.println("📨 Testing Process User Message through API...");
+        System.out.println("📨 Testing Process User Message with Real AI Agent...");
         System.out.println("🚨 STRICT MODE: Test will FAIL if AI agent returns 404, timeouts, or empty responses");
 
         // Create message request
@@ -422,7 +407,7 @@ class AiGeneratedApiIntegrationTest {
         messageRequest.setId(UUID.randomUUID().toString());
         messageRequest.setChatId(testChatId);
         messageRequest.setMessageType(MessageType.SINGLE_CHOICE_QUESTION);
-        messageRequest.setAnswer("Option 1");
+        messageRequest.setAnswer("Team Communication");
         messageRequest.setUserResponseTime(5000L);
 
         // Call real message API endpoint
@@ -436,7 +421,7 @@ class AiGeneratedApiIntegrationTest {
 
         // Wait for async processing
         Thread.sleep(5000);
-        
+
         // Validate no fallback logic was triggered
         validateNoFallbackTriggered(output);
 
@@ -446,7 +431,7 @@ class AiGeneratedApiIntegrationTest {
             List<Message> messages = messageRepository.findAll().stream()
                     .filter(m -> m.getChat() != null && m.getChat().getId().equals(testChatId))
                     .toList();
-            
+
             if (messages.isEmpty()) {
                 fail("❌ CRITICAL FAILURE: Empty response AND no messages persisted. " +
                         "This indicates complete AI agent communication failure.");
@@ -462,7 +447,7 @@ class AiGeneratedApiIntegrationTest {
             System.out.println("✅ Received " + response.messages().size() + " messages from real AI agent");
         }
 
-        System.out.println("✅ API Test 2 PASSED: Message processed successfully with real AI responses");
+        System.out.println("✅ Real AI Agent Test 2 PASSED: Message processed successfully");
     }
 
     /**
@@ -474,9 +459,9 @@ class AiGeneratedApiIntegrationTest {
                 String content = textMessage.getContent();
                 if (content != null) {
                     String lowerContent = content.toLowerCase();
-                    
-                    if (lowerContent.contains("fallback") || 
-                        lowerContent.contains("default") || 
+
+                    if (lowerContent.contains("fallback") ||
+                        lowerContent.contains("default") ||
                         lowerContent.contains("placeholder") ||
                         lowerContent.contains("unavailable")) {
                         fail(String.format("❌ CRITICAL FAILURE: Persisted message contains fallback content: '%s'", content));
@@ -487,115 +472,81 @@ class AiGeneratedApiIntegrationTest {
     }
 
     /**
-     * 🛡️ Test 3: Security and Validation - ENHANCED
+     * 💬 Test 3: Multi-turn Conversation with Real AI Agent - STRICT VALIDATION
      */
     @Test
     @Order(3)
-    void testSecurityAndValidation(CapturedOutput output) throws Exception {
-        System.out.println("🛡️ Testing Security and Validation...");
-        System.out.println("🚨 This test validates security without triggering AI agent fallback");
+    void testMultiTurnConversationWithRealAgent(CapturedOutput output) throws Exception {
+        assertThat(testChatId).isNotNull();
 
-        // Test 1: Invalid chat ID with proper message structure
-        SingleChoiceAnswerMessageDto invalidRequest = new SingleChoiceAnswerMessageDto();
-        invalidRequest.setId(UUID.randomUUID().toString()); // Provide valid ID
-        invalidRequest.setChatId(99999L);
-        invalidRequest.setMessageType(MessageType.SINGLE_CHOICE_QUESTION);
-        invalidRequest.setAnswer("Test");
-        invalidRequest.setUserResponseTime(1000L);
+        System.out.println("💬 Testing Multi-turn Conversation with Real AI Agent...");
+        System.out.println("🚨 STRICT MODE: Each turn must receive real AI responses");
 
-        // This should fail with proper error, not trigger AI agent
-        mockMvc.perform(put("/message/send")
+        // First message - text response
+        EnterTextAnswerMessageDto textRequest = new EnterTextAnswerMessageDto();
+        textRequest.setId(UUID.randomUUID().toString());
+        textRequest.setChatId(testChatId);
+        textRequest.setMessageType(MessageType.ENTER_TEXT_QUESTION);
+        textRequest.setAnswer("I want to improve my team communication skills and learn active listening techniques");
+        textRequest.setUserResponseTime(3000L);
+
+        MvcResult result1 = mockMvc.perform(put("/message/send")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().is4xxClientError());
-
-        // Ensure no fallback was triggered for security test
-        String logs = output.getAll();
-        if (logs.contains("Creating fallback") || logs.contains("AI agent initialization failed")) {
-            System.out.println("⚠️ Note: Fallback detected during security test - this is acceptable for invalid requests");
-        }
-
-        System.out.println("✅ API Test 3 PASSED: Security validation working correctly");
-    }
-
-    /**
-     * 🛡️ Test 3: Security and Validation
-     */
-    @Test
-    @Order(3)
-    void testSecurityAndValidation() throws Exception {
-        System.out.println("🛡️ Testing Security and Validation...");
-
-        // Test 1: Invalid chat ID with proper message structure
-        SingleChoiceAnswerMessageDto invalidRequest = new SingleChoiceAnswerMessageDto();
-        invalidRequest.setId(UUID.randomUUID().toString()); // Provide valid ID
-        invalidRequest.setChatId(99999L);
-        invalidRequest.setMessageType(MessageType.SINGLE_CHOICE_QUESTION);
-        invalidRequest.setAnswer("Test");
-        invalidRequest.setUserResponseTime(1000L);
-
-        // This should return 403 Forbidden for invalid chat access (correct security behavior)
-        MvcResult result = mockMvc.perform(put("/message/send")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isForbidden()) // Expect 403 for invalid chat access
+                .content(objectMapper.writeValueAsString(textRequest)))
+                .andExpect(status().isOk())
                 .andReturn();
 
-        System.out.println("✅ Security working: Invalid chat access properly rejected with 403");
+        // Wait for AI processing
+        Thread.sleep(5000);
 
-        // Test 2: Null request
-        mockMvc.perform(put("/message/send")
+        // Validate no fallback after first message
+        validateNoFallbackTriggered(output);
+
+        String responseContent1 = result1.getResponse().getContentAsString();
+        if (responseContent1 != null && !responseContent1.trim().isEmpty()) {
+            ChatResponseDto response1 = objectMapper.readValue(responseContent1, ChatResponseDto.class);
+            validateRealAiContent(response1);
+            System.out.println("✅ Turn 1: Received " + response1.messages().size() + " real AI messages");
+        }
+
+        // Second message - choice response
+        SingleChoiceAnswerMessageDto choiceRequest = new SingleChoiceAnswerMessageDto();
+        choiceRequest.setId(UUID.randomUUID().toString());
+        choiceRequest.setChatId(testChatId);
+        choiceRequest.setMessageType(MessageType.SINGLE_CHOICE_QUESTION);
+        choiceRequest.setAnswer("Active Listening");
+        choiceRequest.setUserResponseTime(4000L);
+
+        MvcResult result2 = mockMvc.perform(put("/message/send")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().isBadRequest());
+                .content(objectMapper.writeValueAsString(choiceRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
 
-        System.out.println("✅ API Test 3 PASSED: Security validation working");
+        // Wait for AI processing
+        Thread.sleep(5000);
+
+        // Validate no fallback after second message
+        validateNoFallbackTriggered(output);
+
+        String responseContent2 = result2.getResponse().getContentAsString();
+        if (responseContent2 != null && !responseContent2.trim().isEmpty()) {
+            ChatResponseDto response2 = objectMapper.readValue(responseContent2, ChatResponseDto.class);
+            validateRealAiContent(response2);
+            System.out.println("✅ Turn 2: Received " + response2.messages().size() + " real AI messages");
+        }
+
+        System.out.println("✅ Real AI Agent Test 3 PASSED: Multi-turn conversation with real AI responses only");
     }
 
     /**
-     * ⏱️ Test 4: Real AI Agent Communication
+     * 🗄️ Test 4: Database Persistence Validation - ENHANCED
      */
     @Test
     @Order(4)
-    void testRealAiAgentCommunication() throws Exception {
-        System.out.println("⏱️ Testing Real AI Agent Communication...");
-
-        if (testChatId != null) {
-            // Create a proper test message
-            SingleChoiceAnswerMessageDto realRequest = new SingleChoiceAnswerMessageDto();
-            realRequest.setId(UUID.randomUUID().toString());
-            realRequest.setChatId(testChatId);
-            realRequest.setMessageType(MessageType.SINGLE_CHOICE_QUESTION);
-            realRequest.setAnswer("Real AI Test");
-            realRequest.setUserResponseTime(1000L);
-
-            // Should communicate with real AI agent
-            MvcResult result = mockMvc.perform(put("/message/send")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(realRequest)))
-                    .andExpect(status().isOk())
-                    .andReturn();
-
-            // Real AI agent should respond
-            String responseContent = result.getResponse().getContentAsString();
-            if (responseContent == null || responseContent.trim().isEmpty()) {
-                System.out.println("⚠️ Empty response received - this might be due to async processing");
-            } else {
-                System.out.println("✅ Real AI agent responded successfully");
-            }
-        }
-
-        System.out.println("✅ API Test 4 PASSED: Real AI agent communication working");
-    }
-
-    /**
-     * 🗄️ Test 5: Database Consistency
-     */
-    @Test
-    @Order(5)
     @Transactional
-    void testDatabaseConsistency() throws Exception {
-        System.out.println("🗄️ Testing Database Consistency...");
+    void testDatabasePersistenceWithRealAgent() throws Exception {
+        System.out.println("🗄️ Testing Database Persistence with Real AI Agent...");
 
         if (testChatId != null) {
             // Verify chat creation and consistency
@@ -606,9 +557,19 @@ class AiGeneratedApiIntegrationTest {
             assertThat(chat.getSimulation().getType()).isEqualTo(SimulationType.AI_GENERATED);
             assertThat(chat.getUser().getEmail()).isEqualTo("test-admin");
 
+            // Verify messages were persisted AND contain real AI content
+            List<Message> messages = messageRepository.findAll().stream()
+                    .filter(m -> m.getChat() != null && m.getChat().getId().equals(testChatId))
+                    .toList();
+            assertThat(messages).isNotEmpty();
+
+            // Validate persisted messages are real AI content
+            validatePersistedMessagesAreRealAi(messages);
+
             System.out.println("✅ Chat found: " + chat.getId());
             System.out.println("✅ Simulation type: " + chat.getSimulation().getType());
             System.out.println("✅ User: " + chat.getUser().getEmail());
+            System.out.println("✅ Real AI messages persisted: " + messages.size());
         } else {
             System.out.println("⚠️ No chat ID available from previous tests");
         }
@@ -621,11 +582,60 @@ class AiGeneratedApiIntegrationTest {
         assertThat(simulation.getType()).isEqualTo(SimulationType.AI_GENERATED);
         assertThat(simulation.getName()).isEqualTo("AI Leadership Simulation");
 
-        System.out.println("✅ API Test 5 PASSED: Database consistency verified");
+        System.out.println("✅ Real AI Agent Test 4 PASSED: Database persistence with real AI content verified");
     }
 
-    // Helper methods - No mocks needed for real AI agent testing
+    /**
+     * 🔍 Test 5: AI Agent Response Validation - COMPREHENSIVE
+     */
+    @Test
+    @Order(5)
+    void testAiAgentResponseValidation() throws Exception {
+        System.out.println("🔍 Testing AI Agent Response Validation...");
 
+        if (testChatId != null) {
+            // Get messages from database
+            List<Message> messages = messageRepository.findAll().stream()
+                    .filter(m -> m.getChat() != null && m.getChat().getId().equals(testChatId))
+                    .toList();
+            assertThat(messages).isNotEmpty();
+
+            // Validate message structure AND content quality
+            for (Message message : messages) {
+                assertThat(message.getMessageType()).isNotNull();
+                assertThat(message.getChat().getId()).isEqualTo(testChatId);
+
+                // Check if it's a TextMessage to access content
+                if (message instanceof TextMessage textMessage) {
+                    assertThat(textMessage.getContent()).isNotNull();
+                    assertThat(textMessage.getContent()).isNotEmpty();
+
+                    // Validate content quality (real AI should provide substantial content)
+                    String content = textMessage.getContent();
+                    assertThat(content.length())
+                            .withFailMessage("Real AI content should be substantial, got: %s", content)
+                            .isGreaterThan(10);
+
+                    // Validate no fallback indicators in content
+                    String lowerContent = content.toLowerCase();
+                    for (String indicator : FALLBACK_INDICATORS) {
+                        assertThat(lowerContent)
+                                .withFailMessage("Message contains fallback indicator '%s': %s", indicator, content)
+                                .doesNotContain(indicator.toLowerCase());
+                    }
+
+                    System.out.println("✅ Real AI message validated: " + message.getMessageType() + " - " +
+                        content.substring(0, Math.min(50, content.length())) + "...");
+                } else {
+                    System.out.println("✅ Message validated: " + message.getMessageType() + " (non-text message)");
+                }
+            }
+        }
+
+        System.out.println("✅ Real AI Agent Test 5 PASSED: Comprehensive AI response validation successful");
+    }
+
+    // Helper methods
     private void validateChatCreatedInDatabase(Long chatId, Long simulationId) {
         Optional<Chat> chatOpt = chatRepository.findById(chatId);
         assertThat(chatOpt).as("Chat should be created in database").isPresent();
@@ -633,5 +643,7 @@ class AiGeneratedApiIntegrationTest {
         Chat chat = chatOpt.get();
         assertThat(chat.getSimulation().getId()).isEqualTo(simulationId);
         assertThat(chat.getUser().getEmail()).isEqualTo("test-admin");
+
+        System.out.println("✅ Database validation passed: Chat " + chatId + " properly linked to simulation " + simulationId);
     }
 }

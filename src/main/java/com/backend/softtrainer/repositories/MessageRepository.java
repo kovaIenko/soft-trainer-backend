@@ -66,4 +66,6 @@ public interface MessageRepository extends JpaRepository<Message, String> {
   @Query("SELECT m FROM messages m JOIN FETCH m.flowNode f WHERE m.chat = :chat and f.orderNumber = :orderNumber")
   List<Message> existsByOrderNumberAndChatId(@Param("chat") final Chat chat, @Param("orderNumber") long orderNumber);
 
+    @Query("SELECT COUNT(m) FROM messages m WHERE m.chat.id = :chatId")
+    long countByChatId(@Param("chatId") Long chatId);
 }

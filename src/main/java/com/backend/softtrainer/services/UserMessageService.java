@@ -161,7 +161,7 @@ public class UserMessageService {
           msg.setCharacter(null);
         }
       })
-      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
+      .sorted(Comparator.comparing(UserMessageDto::getTimestamp, Comparator.nullsLast(Comparator.naturalOrder())))
       .collect(Collectors.toList());
   }
 
@@ -174,7 +174,7 @@ public class UserMessageService {
           msg.setCharacter(null);
         }
       })
-      .sorted(Comparator.comparing(UserMessageDto::getTimestamp))
+      .sorted(Comparator.comparing(UserMessageDto::getTimestamp, Comparator.nullsLast(Comparator.naturalOrder())))
       .collect(Collectors.toList());
   }
 

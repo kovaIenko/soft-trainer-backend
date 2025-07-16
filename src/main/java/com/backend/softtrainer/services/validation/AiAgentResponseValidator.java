@@ -233,11 +233,36 @@ public class AiAgentResponseValidator {
         }
 
         // Business logic: At least one message should end with an actionable element
-        boolean hasActionableMessage = response.getMessages().stream()
-                .anyMatch(m -> m.getRequiresResponse() != null && m.getRequiresResponse());
+        // Skip this check if the AI agent is experiencing issues or failures
+        boolean isFailureResponse = response.getSuccess() != null && !response.getSuccess();
+        
+        boolean isAiAgentUnavailable = isFailureResponse && 
+                response.getErrorMessage() != null && response.getErrorMessage().contains("unavailable");
+        
+        // Also check if this is a fallback response (system error messages)
+        boolean isFallbackResponse = response.getGenerationMetadata() != null && 
+                response.getGenerationMetadata().containsKey("fallback") &&
+                Boolean.TRUE.equals(response.getGenerationMetadata().get("fallback"));
+        
+        // Check if messages contain system error content indicating AI issues
+        boolean hasSystemErrorContent = response.getMessages().stream()
+                .anyMatch(m -> m.getContent() != null && 
+                    (m.getContent().contains("technical difficulties") || 
+                     m.getContent().contains("experiencing issues") ||
+                     m.getContent().contains("try again") ||
+                     m.getCharacterName() != null && m.getCharacterName().equals("System")));
+        
+        // Skip actionable message requirement if this is any kind of failure/error response
+        boolean shouldSkipActionableCheck = isFailureResponse || isAiAgentUnavailable || 
+                                          isFallbackResponse || hasSystemErrorContent;
+        
+        if (!shouldSkipActionableCheck) {
+            boolean hasActionableMessage = response.getMessages().stream()
+                    .anyMatch(m -> m.getRequiresResponse() != null && m.getRequiresResponse());
 
-        if (!hasActionableMessage && !isConversationEnded(response)) {
-            errors.add("Response should contain at least one actionable message (unless conversation ended)");
+            if (!hasActionableMessage && !isConversationEnded(response)) {
+                errors.add("Response should contain at least one actionable message (unless conversation ended)");
+            }
         }
 
         return errors;

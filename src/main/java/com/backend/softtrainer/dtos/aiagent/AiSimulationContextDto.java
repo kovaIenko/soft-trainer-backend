@@ -6,8 +6,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 /**
  * DTO representing simulation context for AI generation
+ * Matches the updated AI agent schema
  */
 @Data
 @Builder
@@ -21,24 +24,12 @@ public class AiSimulationContextDto {
     @JsonProperty("simulation_description")
     private String simulationDescription;
     
-    @JsonProperty("skill_name")
-    private String skillName;
-    
-    @JsonProperty("skill_description")
-    private String skillDescription;
-    
-    @JsonProperty("complexity")
-    private String complexity;
-    
-    @JsonProperty("conversation_turn")
-    private Integer conversationTurn;
-    
-    @JsonProperty("hearts_remaining")
-    private Double heartsRemaining;
-    
-    @JsonProperty("characters")
-    private String characters;
-    
     @JsonProperty("learning_objectives")
     private String learningObjectives;
+    
+    @JsonProperty("character_info")
+    private String characterInfo;
+    
+    @JsonProperty("user_context")
+    private Map<String, Object> userContext;
 } 

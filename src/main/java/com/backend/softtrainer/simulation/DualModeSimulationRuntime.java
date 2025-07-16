@@ -67,24 +67,32 @@ public class DualModeSimulationRuntime {
      * and provides transparent dual-mode processing.
      */
     public CompletableFuture<ChatDataDto> processUserMessage(MessageRequestDto messageRequest) {
-        log.info("🔄 Processing user message {} for chat {}", 
-                messageRequest.getId(), messageRequest.getChatId());
-
-        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
-        
-        // Set transaction attributes for better isolation
-        txTemplate.setIsolationLevel(TransactionTemplate.ISOLATION_READ_COMMITTED);
-        txTemplate.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+        log.info("🚀 Starting dual-mode message processing for chat {} on thread: {}", 
+                messageRequest.getChatId(), Thread.currentThread().getName());
         
         return CompletableFuture.supplyAsync(() -> {
+            // Log async thread information
+            String asyncThreadName = Thread.currentThread().getName();
+            log.debug("🔄 Async processing started on thread: {} for chat: {}", 
+                    asyncThreadName, messageRequest.getChatId());
+            
             try {
+                TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+                
+                // Set transaction attributes for better isolation
+                txTemplate.setIsolationLevel(TransactionTemplate.ISOLATION_READ_COMMITTED);
+                txTemplate.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+                
                 return txTemplate.execute((TransactionStatus status) -> {
+                    SimulationType simulationType = null; // Declare outside try block
+                    SimulationContext context = null;
+                    
                     try {
                         // 1. Build simulation context
-                        SimulationContext context = contextBuilder.buildFromMessageRequest(messageRequest);
+                        context = contextBuilder.buildFromMessageRequest(messageRequest);
                         
                         // 2. Detect simulation type
-                        SimulationType simulationType = typeDetector.detectSimulationType(context.getSimulation());
+                        simulationType = typeDetector.detectSimulationType(context.getSimulation());
                         log.info("📊 Detected simulation type: {} for simulation: {} (ID: {})", 
                                 simulationType, context.getSimulation().getName(), context.getSimulationId());
                         
@@ -103,9 +111,27 @@ public class DualModeSimulationRuntime {
                         log.error("❌ Error in dual-mode processing for chat {}: {}", 
                                 messageRequest.getChatId(), e.getMessage(), e);
                         
-                        // Try legacy fallback in the same transaction
+                        // Determine simulation type for fallback decision
+                        SimulationType finalSimulationType = simulationType;
+                        if (finalSimulationType == null && context != null) {
+                            try {
+                                finalSimulationType = typeDetector.detectSimulationType(context.getSimulation());
+                            } catch (Exception typeDetectionError) {
+                                log.warn("🚨 Failed to detect simulation type for fallback decision", typeDetectionError);
+                            }
+                        }
+                        
+                        // For AI-generated simulations, NEVER fallback to legacy
+                        // This ensures proper error handling without masking issues
+                        if (finalSimulationType == SimulationType.AI_GENERATED) {
+                            log.error("🚫 AI-generated simulation failed - no legacy fallback allowed");
+                            status.setRollbackOnly();
+                            throw new RuntimeException("AI-generated simulation failed: " + e.getMessage(), e);
+                        }
+                        
+                        // Try legacy fallback only for non-AI simulations
                         try {
-                            log.info("🔄 Attempting legacy fallback in same transaction");
+                            log.info("🔄 Attempting legacy fallback for {} simulation", finalSimulationType);
                             return fallbackToLegacyProcessing(messageRequest, e);
                         } catch (Exception fallbackError) {
                             log.error("❌ Legacy fallback failed: {}", fallbackError.getMessage(), fallbackError);
@@ -116,7 +142,7 @@ public class DualModeSimulationRuntime {
                 });
             } catch (Exception e) {
                 log.error("❌ All processing attempts failed for chat {}", messageRequest.getChatId(), e);
-                return new ChatDataDto(List.of(), new ChatParams(0.0));
+                throw new RuntimeException("Dual-mode processing failed: " + e.getMessage(), e);
             }
         });
     }
@@ -126,39 +152,46 @@ public class DualModeSimulationRuntime {
      * 
      * Called when a new chat is created to generate the initial
      * set of messages that start the simulation.
+     * 
+     * ⚠️ CRITICAL FIX: This method now runs SYNCHRONOUSLY in the same thread/transaction
+     * as chat creation to prevent race conditions and ensure chat visibility.
      */
     public CompletableFuture<List<Message>> initializeChat(Chat chat) {
-        log.info("🎬 Initializing chat {} for simulation: {} (ID: {})", 
-                chat.getId(), chat.getSimulation().getName(), chat.getSimulation().getId());
+        log.info("🎬 Initializing chat {} for simulation: {} (ID: {}) on thread: {}", 
+                chat.getId(), chat.getSimulation().getName(), chat.getSimulation().getId(), 
+                Thread.currentThread().getName());
         
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // 1. Build context
-                SimulationContext context = contextBuilder.buildFromChat(chat);
-                
-                // 2. Detect simulation type
-                SimulationType simulationType = typeDetector.detectSimulationType(chat.getSimulation());
-                
-                log.info("🎯 Initializing {} simulation: {}", simulationType, chat.getSimulation().getName());
-                
-                // 3. Validate simulation
-                compatibilityValidator.validateSimulation(chat.getSimulation(), simulationType);
-                
-                // 4. Get appropriate engine
-                BaseSimulationEngine engine = engineFactory.createEngine(simulationType);
-                
-                // 5. Initialize with selected engine
-                List<Message> initialMessages = engine.initializeSimulation(context);
-                
-                log.info("✅ Successfully initialized chat with {} messages using {} engine", 
-                        initialMessages.size(), simulationType);
-                return initialMessages;
-                
-            } catch (Exception e) {
-                log.error("❌ Error initializing chat {}: {}", chat.getId(), e.getMessage(), e);
-                throw new RuntimeException("Failed to initialize chat", e);
-            }
-        });
+        // 🚨 CRITICAL FIX: Always run synchronously to prevent race conditions
+        // The chat creation and initialization must happen in the same transaction context
+        // to ensure the chat is visible during initialization
+        try {
+            // Use the same transaction context as the chat creation
+            // This ensures the chat is visible to the initialization process
+            SimulationContext context = contextBuilder.buildFromChat(chat);
+            
+            // Detect simulation type
+            SimulationType simulationType = typeDetector.detectSimulationType(chat.getSimulation());
+            
+            log.info("🎯 Initializing {} simulation: {}", simulationType, chat.getSimulation().getName());
+            
+            // Validate simulation
+            compatibilityValidator.validateSimulation(chat.getSimulation(), simulationType);
+            
+            // Get appropriate engine
+            BaseSimulationEngine engine = engineFactory.createEngine(simulationType);
+            
+            // Initialize with selected engine (synchronously)
+            List<Message> initialMessages = engine.initializeSimulation(context);
+            
+            log.info("✅ Successfully initialized chat with {} messages using {} engine", 
+                    initialMessages.size(), simulationType);
+            
+            return CompletableFuture.completedFuture(initialMessages);
+            
+        } catch (Exception e) {
+            log.error("❌ Error initializing chat {}: {}", chat.getId(), e.getMessage(), e);
+            return CompletableFuture.failedFuture(new RuntimeException("Failed to initialize chat", e));
+        }
     }
     
     /**
@@ -172,23 +205,40 @@ public class DualModeSimulationRuntime {
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // 1. Build context
-                SimulationContext context = contextBuilder.buildFromChat(chat);
+                TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+                txTemplate.setIsolationLevel(TransactionTemplate.ISOLATION_READ_COMMITTED);
+                txTemplate.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
                 
-                // 2. Detect simulation type
-                SimulationType simulationType = typeDetector.detectSimulationType(chat.getSimulation());
-                
-                log.info("🎯 Generating final message for {} simulation: {}", simulationType, chat.getSimulation().getName());
-                
-                // 3. Get appropriate engine
-                BaseSimulationEngine engine = engineFactory.createEngine(simulationType);
-                
-                // 4. Generate final message with selected engine
-                Message finalMessage = engine.generateFinalMessage(context);
-                
-                log.info("✅ Successfully generated final message {} using {} engine", 
-                        finalMessage.getId(), simulationType);
-                return finalMessage;
+                return txTemplate.execute((TransactionStatus status) -> {
+                    try {
+                        // 🚨 CRITICAL FIX: Reload chat with messages in new transaction context
+                        // This prevents LazyInitializationException when accessing chat.getMessages()
+                        Chat reloadedChat = contextBuilder.loadChatWithRetry(chat.getId());
+                        
+                        // 1. Build context with reloaded chat
+                        SimulationContext context = contextBuilder.buildFromChat(reloadedChat);
+                        
+                        // 2. Detect simulation type
+                        SimulationType simulationType = typeDetector.detectSimulationType(reloadedChat.getSimulation());
+                        
+                        log.info("🎯 Generating final message for {} simulation: {}", simulationType, reloadedChat.getSimulation().getName());
+                        
+                        // 3. Get appropriate engine
+                        BaseSimulationEngine engine = engineFactory.createEngine(simulationType);
+                        
+                        // 4. Generate final message with selected engine
+                        Message finalMessage = engine.generateFinalMessage(context);
+                        
+                        log.info("✅ Successfully generated final message {} using {} engine", 
+                                finalMessage.getId(), simulationType);
+                        return finalMessage;
+                        
+                    } catch (Exception e) {
+                        log.error("❌ Error generating final message for chat {}: {}", chat.getId(), e.getMessage(), e);
+                        status.setRollbackOnly();
+                        throw new RuntimeException("Failed to generate final message", e);
+                    }
+                });
                 
             } catch (Exception e) {
                 log.error("❌ Error generating final message for chat {}: {}", chat.getId(), e.getMessage(), e);

@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -12,4 +14,5 @@ import lombok.NoArgsConstructor;
 public class AiGeneratePlanRequestDto {
     private AiAgentOrganizationDto organization;
     private AiAgentSkillDto skill;
+    private List<AiSkillMaterialDto> skillMaterials;
 } 
