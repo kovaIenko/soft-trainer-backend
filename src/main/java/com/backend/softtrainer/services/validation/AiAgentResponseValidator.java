@@ -135,8 +135,13 @@ public class AiAgentResponseValidator {
             errors.add(prefix + "Invalid messageType: " + message.getMessageType());
         }
 
+        // Content validation - some message types can have null content
         if (isNullOrEmpty(message.getContent())) {
-            errors.add(prefix + "content is required");
+            // Allow null content for specific message types that don't need content
+            Set<String> messagesWithOptionalContent = Set.of("EnterTextQuestion");
+            if (!messagesWithOptionalContent.contains(message.getMessageType())) {
+                errors.add(prefix + "content is required");
+            }
         }
 
         if (isNullOrEmpty(message.getCharacterName())) {
@@ -252,16 +257,34 @@ public class AiAgentResponseValidator {
                      m.getContent().contains("try again") ||
                      m.getCharacterName() != null && m.getCharacterName().equals("System")));
         
-        // Skip actionable message requirement if this is any kind of failure/error response
+        // UPDATED: Removed overly strict actionable message requirement
+        // The original rule was too restrictive and rejected valid AI responses
+        // that provide context, feedback, or narrative without requiring immediate user response.
+        // Valid scenarios include:
+        // - AI providing feedback after user choice
+        // - AI giving explanations or context  
+        // - AI acknowledging input before next interaction
+        // - Narrative progression in simulations
+        //
+        // We keep this validation only for responses that appear to be completely empty
+        // or system error responses, but allow normal conversational AI responses
         boolean shouldSkipActionableCheck = isFailureResponse || isAiAgentUnavailable || 
                                           isFallbackResponse || hasSystemErrorContent;
         
         if (!shouldSkipActionableCheck) {
+            // Only require actionable messages for responses that have no meaningful content
+            boolean hasAnyMeaningfulContent = response.getMessages().stream()
+                    .anyMatch(m -> m.getContent() != null && 
+                             m.getContent().trim().length() > 10 && // More than just placeholder text
+                             !m.getContent().toLowerCase().contains("error") &&
+                             !m.getContent().toLowerCase().contains("failed"));
+            
             boolean hasActionableMessage = response.getMessages().stream()
                     .anyMatch(m -> m.getRequiresResponse() != null && m.getRequiresResponse());
 
-            if (!hasActionableMessage && !isConversationEnded(response)) {
-                errors.add("Response should contain at least one actionable message (unless conversation ended)");
+            // Only fail validation if there's no meaningful content AND no actionable message AND conversation not ended
+            if (!hasAnyMeaningfulContent && !hasActionableMessage && !isConversationEnded(response)) {
+                errors.add("Response appears to be empty or invalid (no meaningful content or actionable elements)");
             }
         }
 

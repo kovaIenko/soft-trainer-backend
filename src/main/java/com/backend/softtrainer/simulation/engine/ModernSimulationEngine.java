@@ -12,10 +12,18 @@ import com.backend.softtrainer.dtos.messages.EnterTextAnswerMessageDto;
 import com.backend.softtrainer.simulation.context.SimulationContext;
 import com.backend.softtrainer.simulation.DualModeSimulationRuntime.SimulationType;
 import com.backend.softtrainer.simulation.rules.ModernRuleEvaluator;
+import com.backend.softtrainer.dtos.messages.MultiChoiceTaskAnswerMessageDto;
+import com.backend.softtrainer.entities.messages.EnterTextQuestionMessage;
+import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
+import com.backend.softtrainer.entities.messages.SingleChoiceTaskQuestionMessage;
+import com.backend.softtrainer.entities.messages.MultiChoiceTaskQuestionMessage;
+import com.backend.softtrainer.repositories.MessageRepository;
+import com.backend.softtrainer.entities.enums.ChatRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -41,6 +49,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ModernSimulationEngine implements BaseSimulationEngine {
 
     private final ModernRuleEvaluator ruleEvaluator;
+    private final MessageRepository messageRepository;
 
     // Mock dependencies for compilation - will be implemented later
     // private final RuleEngine ruleEngine;
@@ -64,6 +73,13 @@ public class ModernSimulationEngine implements BaseSimulationEngine {
         long startTime = System.currentTimeMillis();
 
         try {
+            // TODO: Add updateUserAnsweredMessage() call here similar to AiGeneratedSimulationEngine
+            // to ensure message type conversion works correctly in UserMessageService
+            updateUserAnsweredMessage(messageRequest, context);
+
+            // Fetch the updated message to include in the response
+            Message updatedInteractedMessage = messageRepository.findById(messageRequest.getId()).orElse(null);
+
             // Extract user response data
             String selectedOptionId = extractSelectedOptionId(messageRequest);
             String userAnswer = extractUserAnswer(messageRequest);
@@ -86,7 +102,12 @@ public class ModernSimulationEngine implements BaseSimulationEngine {
             totalProcessingTime += (System.currentTimeMillis() - startTime);
 
             // Create response
-            ChatDataDto response = new ChatDataDto(nextMessages, new ChatParams(context.getHearts()));
+            List<Message> responseMessages = new ArrayList<>();
+            if (updatedInteractedMessage != null) {
+                responseMessages.add(updatedInteractedMessage);
+            }
+            responseMessages.addAll(nextMessages);
+            ChatDataDto response = new ChatDataDto(responseMessages, new ChatParams(context.getHearts()));
 
             log.info("✅ Modern engine processed message successfully. Next messages: {}", nextMessages.size());
             return response;
@@ -360,6 +381,61 @@ public class ModernSimulationEngine implements BaseSimulationEngine {
         @Override
         public String getEngineVersion() {
             return "Modern-1.0.0 (rule-based framework)";
+        }
+    }
+
+    private void updateUserAnsweredMessage(MessageRequestDto messageRequest, SimulationContext context) {
+        try {
+            // Find the message the user is responding to
+            Message message = messageRepository.findById(messageRequest.getId()).orElse(null);
+            if (message == null) {
+                log.warn("⚠️ Could not find message with ID: {} to update with user answer", messageRequest.getId());
+                return;
+            }
+
+            log.debug("🔄 Updating message {} with user answer", messageRequest.getId());
+
+            // Update the message based on type, similar to legacy InputMessageService
+            if (messageRequest instanceof SingleChoiceAnswerMessageDto singleChoice) {
+                if (message instanceof SingleChoiceQuestionMessage singleChoiceMsg) {
+                    singleChoiceMsg.setAnswer(singleChoice.getAnswer());
+                    singleChoiceMsg.setInteracted(true);
+                    singleChoiceMsg.setRole(ChatRole.USER);
+                    singleChoiceMsg.setUserResponseTime(messageRequest.getUserResponseTime());
+                }
+            } else if (messageRequest instanceof SingleChoiceTaskAnswerMessageDto singleChoiceTask) {
+                if (message instanceof SingleChoiceTaskQuestionMessage singleChoiceTaskMsg) {
+                    singleChoiceTaskMsg.setAnswer(singleChoiceTask.getAnswer());
+                    singleChoiceTaskMsg.setInteracted(true);
+                    singleChoiceTaskMsg.setRole(ChatRole.USER);
+                    singleChoiceTaskMsg.setUserResponseTime(messageRequest.getUserResponseTime());
+                }
+            } else if (messageRequest instanceof EnterTextAnswerMessageDto enterText) {
+                if (message instanceof EnterTextQuestionMessage enterTextMsg) {
+                    enterTextMsg.setAnswer(enterText.getAnswer());
+                    enterTextMsg.setOpenAnswer(enterText.getAnswer());
+                    enterTextMsg.setContent(enterText.getAnswer());
+                    enterTextMsg.setInteracted(true);
+                    enterTextMsg.setRole(ChatRole.USER);
+                    enterTextMsg.setUserResponseTime(messageRequest.getUserResponseTime());
+                }
+            } else if (messageRequest instanceof MultiChoiceTaskAnswerMessageDto multiChoice) {
+                if (message instanceof MultiChoiceTaskQuestionMessage multiChoiceMsg) {
+                    multiChoiceMsg.setAnswer(multiChoice.getAnswer());
+                    multiChoiceMsg.setInteracted(true);
+                    multiChoiceMsg.setRole(ChatRole.USER);
+                    multiChoiceMsg.setUserResponseTime(messageRequest.getUserResponseTime());
+                }
+            }
+
+            // Save the updated message
+            messageRepository.save(message);
+
+            log.debug("✅ Successfully updated message {} with user answer", messageRequest.getId());
+
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to update user answered message {}: {}", messageRequest.getId(), e.getMessage());
+            // Don't throw exception as this is not critical for AI generation, just for display conversion
         }
     }
 }

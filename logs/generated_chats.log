@@ -1,0 +1,324 @@
+
+================================================================================
+CHAT CREATION: 13852
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-17 22:24:10.985
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 13902
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-17 22:30:36.616
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+[2025-07-17 22:38:39.170] INTERACTION | Chat: 13902 | User Type: EnterTextAnswerMessageDto | User Content: as usual i try to avoid the negative feedback | Success: true | Processing Time: 0ms | AI Messages: 2
+  ├─ AI Message 1: It's common to feel uneasy about negative feedback, but addressing it constructively is crucial for growth. In our scenario, your colleague, Sarah, ap...
+  ├─ AI Message 2: EnterTextQuestionMessage
+
+[2025-07-17 22:41:03.621] INTERACTION | Chat: 13902 | User Type: SingleChoiceAnswerMessageDto | User Content: Try different approach | Success: true | Processing Time: 0ms | AI Messages: 1
+  ├─ AI Message 1: Single Choice Question: Continue simulation||Try different approach||End simulation
+
+
+================================================================================
+CHAT CREATION: 13952
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-17 23:19:25.843
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+[2025-07-17 23:20:34.761] INTERACTION | Chat: 13952 | User Type: EnterTextAnswerMessageDto | User Content: jj | Success: true | Processing Time: 0ms | AI Messages: 4
+  ├─ AI Message 1: Thanks for sharing that. Let's continue with the simulation. Imagine you are a team leader conducting a professional development workshop. Your partic...
+  ├─ AI Message 2: I would try to understand John's perspective and engage him in a one-on-one discussion during a break to see if there are any issues affecting his par...
+  ├─ AI Message 3: Great approach! Your empathy and proactive attitude are key in such situations. During the discussion, John expresses concerns about feeling overwhelm...
+  ├─ AI Message 4: EnterTextQuestionMessage
+
+
+================================================================================
+CHAT CREATION: 13953
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-17 23:24:41.982
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 13954
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-17 23:33:12.818
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 13955
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-17 23:39:59.564
+Success: true
+Initial Messages Count: 1
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 13956
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-17 23:47:50.133
+Success: true
+Initial Messages Count: 1
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14002
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 09:41:33.848
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14003
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 09:53:23.308
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14004
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 09:59:19.903
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14005
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 10:51:50.791
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14052
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 12:48:45.276
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14053
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 13:07:20.250
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14102
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 13:44:46.737
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14103
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 13:47:05.811
+Success: true
+Initial Messages Count: 1
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 1
+Simulation ID: 1
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 13:57:37.544
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 1
+Simulation ID: 1
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 13:58:02.701
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 1
+Simulation ID: 1
+Simulation Type: PREDEFINED
+User ID: 1
+Timestamp: 2025-07-18 13:58:11.119
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 1
+Simulation ID: 1
+Simulation Type: PREDEFINED
+User ID: 1
+Timestamp: 2025-07-18 13:58:14.230
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 1
+Simulation ID: 1
+Simulation Type: PREDEFINED
+User ID: 1
+Timestamp: 2025-07-18 13:58:17.995
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+[2025-07-18 13:58:18.147] INTERACTION | Chat: 1 | User Type: SingleChoiceAnswerMessageDto | User Content: 33aae0b4-091b-4b52-ad82-67ae38decb62 | Success: true | Processing Time: 0ms | AI Messages: 2
+  ├─ AI Message 1: Single Choice Question: I sincerely apologize for this unacceptable delay. Let me prioritize resolving this immediately. || Unfortunately, delays can ...
+  ├─ AI Message 2: EnterTextQuestionMessage
+
+[2025-07-18 13:58:18.249] INTERACTION | Chat: 1 | User Type: EnterTextAnswerMessageDto | User Content: I would immediately escalate this to our logistics team, contact the customer directly with a sincer... | Success: true | Processing Time: 0ms | AI Messages: 2
+  ├─ AI Message 1: EnterTextQuestionMessage
+  ├─ AI Message 2: LastSimulationMessage
+
+
+================================================================================
+CHAT CREATION: 14152
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 14:16:51.989
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 1
+Simulation ID: 1
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 14:20:08.193
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14153
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 14:46:22.305
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14154
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 14:47:22.833
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14155
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 14:47:23.209
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14156
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 14:54:42.341
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+[2025-07-18 14:55:23.005] INTERACTION | Chat: 14156 | User Type: EnterTextAnswerMessageDto | User Content: as usual I don't know how to deal with that | Success: true | Processing Time: 0ms | AI Messages: 4
+  ├─ AI Message 1: EnterTextQuestionMessage
+  ├─ AI Message 2: Welcome to your professional development simulation, Руслан Коваленко Demo! I'm here to guide you through a challenging workplace scenario that will t...
+  ├─ AI Message 3: In this Professional Services scenario, you'll face a complex situation where your ability to navigate professional development challenges will be cru...
+  ├─ AI Message 4: EnterTextQuestionMessage
+
+
+================================================================================
+CHAT CREATION: 14157
+Simulation ID: 1952
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 15:01:34.138
+Success: true
+Initial Messages Count: 3
+================================================================================
+

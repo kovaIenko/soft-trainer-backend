@@ -24,6 +24,15 @@ public class AiInitializeSimulationRequestDto {
     @JsonProperty("chat_id")
     private String chatId;
     
+    @JsonProperty("skill")
+    private AiAgentSkillDto skill;
+    
+    @JsonProperty("character")
+    private String character;
+    
+    @JsonProperty("chat_history")
+    private List<Map<String, Object>> chatHistory;
+    
     @JsonProperty("simulation_context")
     private AiSimulationContextDto simulationContext;
     

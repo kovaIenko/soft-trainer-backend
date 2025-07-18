@@ -27,8 +27,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -406,14 +408,31 @@ public class AiAgentService {
 
     /**
      * 🚨 Create fallback message response when AI agent is unavailable
+     * 
+     * CRITICAL FIX: Must provide actionable fallback message to prevent simulation timeout
      */
     private AiMessageGenerationResponseDto createFallbackMessageResponse() {
+        // Create actionable fallback message
+        AiGeneratedMessageDto fallbackMessage = AiGeneratedMessageDto.builder()
+                .messageType("SingleChoiceQuestion")
+                .content("I'm experiencing technical difficulties. How would you like to proceed?")
+                .options(List.of("Continue simulation", "Try different approach", "End simulation"))
+                .characterName("AI Assistant")
+                .characterRole("COACH")
+                .requiresResponse(true)
+                .hint(null)
+                .build();
+
         return AiMessageGenerationResponseDto.builder()
-                .messages(Collections.emptyList())
+                .messages(List.of(fallbackMessage))
                 .conversationEnded(false)
-                .success(false)
-                .errorMessage("AI Agent is unavailable")
-                .generationMetadata(Collections.singletonMap("fallback", true))
+                .success(true) // Mark as success since we're providing actionable response
+                .errorMessage("Using fallback response due to AI service issues")
+                .generationMetadata(Map.of(
+                    "fallback", true,
+                    "provider", "system",
+                    "timestamp", String.valueOf(System.currentTimeMillis()/1000)
+                ))
                 .build();
     }
 
@@ -503,8 +522,43 @@ public class AiAgentService {
      * 🧹 Sanitize individual message content
      */
     private void sanitizeMessage(AiGeneratedMessageDto message) {
+        log.debug("🔍 Sanitizing message: type='{}', content='{}...'",
+                message.getMessageType(),
+                message.getContent() != null ? message.getContent().substring(0, Math.min(20, message.getContent().length())) : "null"
+        );
+
+        // Sanitize character info
+        if (isNullOrEmpty(message.getCharacterName())) {
+            message.setCharacterName("AI Assistant");
+            log.debug("🔧 SANITIZATION: Set characterName to default 'AI Assistant'");
+        }
+        if (message.getCharacterRole() == null) {
+            message.setCharacterRole("COACH");
+            log.debug("🔧 SANITIZATION: Set characterRole to default 'COACH'");
+        }
+
+        // Actionable messages can now have empty content, which is set in a preceding Text message
+        // so we skip the content validation for them.
+        Set<String> scorableMessagesWithOptionalContent = Set.of(
+            "EnterTextQuestion", "SingleChoiceQuestion", "MultipleChoiceQuestion"
+        );
+
+        if (!scorableMessagesWithOptionalContent.contains(message.getMessageType())) {
+            if (isNullOrEmpty(message.getContent())) {
+                message.setContent("AI-generated response");
+                log.debug("🔧 SANITIZATION: Set content to default for non-scorable message");
+            }
+        }
+        
+        // Sanitize requiresResponse
+        // This is a critical fix to ensure boolean consistency
+        if (message.getRequiresResponse() == null) {
+            message.setRequiresResponse(true); // Default to true for scorable messages
+            log.debug("🔧 SANITIZATION: Set requires_response to true for message with null value");
+        }
+
+        // Limit message content length
         if (message.getContent() != null) {
-            // Limit message content length
             if (message.getContent().length() > 5000) {
                 log.warn("⚠️ Truncating long message content from {} to 5000 chars", message.getContent().length());
                 message.setContent(message.getContent().substring(0, 5000) + "...");
@@ -534,20 +588,28 @@ public class AiAgentService {
      */
     private void sanitizeAiResponse(AiMessageGenerationResponseDto response) {
         if (response == null || response.getMessages() == null) {
+            log.warn("🔧 SANITIZATION: Response or messages is null, skipping sanitization");
             return;
         }
 
+        log.info("🔧 SANITIZATION: Processing {} messages", response.getMessages().size());
         int fixedCount = 0;
-        for (AiGeneratedMessageDto message : response.getMessages()) {
+        
+        for (int i = 0; i < response.getMessages().size(); i++) {
+            AiGeneratedMessageDto message = response.getMessages().get(i);
             String messageType = message.getMessageType();
             Boolean requiresResponse = message.getRequiresResponse();
+            
+            log.debug("🔍 Message[{}]: type='{}', requires_response={}", i, messageType, requiresResponse);
 
             // Fix Text and Hint messages (should NOT require response)
             if (("Text".equals(messageType) || "Hint".equals(messageType))) {
                 if (requiresResponse != null && requiresResponse) {
-                    log.info("🔧 AUTO-FIXING: Setting requires_response=false for {} message", messageType);
+                    log.warn("🔧 CRITICAL FIX: Message[{}] type='{}' has requires_response=true, setting to false", i, messageType);
                     message.setRequiresResponse(false);
                     fixedCount++;
+                } else {
+                    log.debug("✅ Message[{}] type='{}' correctly has requires_response={}", i, messageType, requiresResponse);
                 }
             }
             // Fix Choice questions (should require response)
@@ -555,15 +617,23 @@ public class AiAgentService {
                      "MultipleChoiceQuestion".equals(messageType) || 
                      "EnterTextQuestion".equals(messageType))) {
                 if (requiresResponse == null || !requiresResponse) {
-                    log.info("🔧 AUTO-FIXING: Setting requires_response=true for {} message", messageType);
+                    log.warn("🔧 CRITICAL FIX: Message[{}] type='{}' has requires_response={}, setting to true", i, messageType, requiresResponse);
                     message.setRequiresResponse(true);
                     fixedCount++;
+                } else {
+                    log.debug("✅ Message[{}] type='{}' correctly has requires_response=true", i, messageType);
                 }
+            }
+            // Handle any unknown message types
+            else {
+                log.warn("⚠️ UNKNOWN MESSAGE TYPE: Message[{}] has unknown type='{}', requires_response={}", i, messageType, requiresResponse);
             }
         }
 
         if (fixedCount > 0) {
-            log.info("✅ SANITIZATION: Fixed {} requires_response field(s) in AI response", fixedCount);
+            log.error("🚨 SANITIZATION APPLIED: Fixed {} requires_response field(s) in AI response. This indicates AI agent is sending incorrect data!", fixedCount);
+        } else {
+            log.info("✅ SANITIZATION: No fixes needed, all {} messages are correctly configured", response.getMessages().size());
         }
     }
 
@@ -587,5 +657,9 @@ public class AiAgentService {
                 return true;
             }
         });
+    }
+
+    private boolean isNullOrEmpty(String str) {
+        return str == null || str.trim().isEmpty();
     }
 }

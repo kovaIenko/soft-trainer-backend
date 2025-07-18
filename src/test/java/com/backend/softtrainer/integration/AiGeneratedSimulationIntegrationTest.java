@@ -12,6 +12,7 @@ import com.backend.softtrainer.entities.messages.TextMessage;
 import com.backend.softtrainer.repositories.*;
 import com.backend.softtrainer.dtos.StaticRole;
 import com.backend.softtrainer.services.AiAgentService;
+import com.backend.softtrainer.services.UserMessageService;
 import com.backend.softtrainer.services.chatgpt.ChatGptServiceJvmOpenAi;
 import com.backend.softtrainer.dtos.MessageDto;
 import com.backend.softtrainer.dtos.aiagent.*;
@@ -36,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumingThat;
@@ -46,6 +48,28 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
 import static org.junit.jupiter.api.Assertions.fail;
+
+import com.backend.softtrainer.entities.Chat;
+import com.backend.softtrainer.entities.Character;
+import com.backend.softtrainer.entities.Organization;
+import com.backend.softtrainer.entities.Role;
+import com.backend.softtrainer.entities.Simulation;
+import com.backend.softtrainer.entities.Skill;
+import com.backend.softtrainer.entities.User;
+import com.backend.softtrainer.entities.enums.AuthWay;
+import com.backend.softtrainer.entities.enums.ChatRole;
+import com.backend.softtrainer.entities.enums.MessageType;
+import com.backend.softtrainer.entities.enums.SimulationType;
+import com.backend.softtrainer.entities.messages.Message;
+import com.backend.softtrainer.entities.messages.SingleChoiceQuestionMessage;
+import com.backend.softtrainer.dtos.ChatParams;
+import com.backend.softtrainer.dtos.client.UserMessageDto;
+import com.backend.softtrainer.dtos.client.UserSingleChoiceMessageDto;
+import com.backend.softtrainer.dtos.ChatDataDto;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.backend.softtrainer.dtos.client.UserTextMessageDto;
 
 /**
  * Comprehensive Integration Tests for AI-Generated Simulations
@@ -98,6 +122,9 @@ class AiGeneratedSimulationIntegrationTest {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private UserMessageService userMessageService;
 
     // Test data
     private static Long testSkillId;
@@ -838,6 +865,115 @@ class AiGeneratedSimulationIntegrationTest {
         });
     }
 
+    /**
+     * Test 12: Message Type Conversion for AI-Generated Simulations
+     * 
+     * This test verifies that AI-generated simulations properly convert answered message types
+     * for user display, matching the behavior of legacy simulations:
+     * - answered single choice question → TEXT
+     * - answered enter text → TEXT  
+     * - answered single choice task → SINGLE_CHOICE_TASK
+     */
+    @Test
+    @Order(12)
+    void testMessageTypeConversionForAiGenerated() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                System.out.println("🔄 Testing Message Type Conversion for AI-Generated Simulations...");
+
+                // Mock AI response to simulate AI generating a SingleChoiceQuestion
+                when(aiAgentService.generateMessage(any(AiMessageGenerationRequestDto.class)))
+                        .thenReturn(
+                                AiMessageGenerationResponseDto.builder()
+                                        .messages(List.of(
+                                                AiGeneratedMessageDto.builder()
+                                                        .messageType("Text")
+                                                        .content("Thank you for your answer! Based on your response, let's move forward.")
+                                                        .characterName("Coach")
+                                                        .characterRole("COACH")
+                                                        .requiresResponse(false)
+                                                        .build()
+                                        ))
+                                        .success(true)
+                                        .build()
+                        );
+
+                // First, create a SingleChoiceQuestion message manually to simulate an AI-generated question
+                Chat chat = chatRepository.findById(testChatId).orElseThrow();
+                SingleChoiceQuestionMessage questionMessage = SingleChoiceQuestionMessage.builder()
+                        .id(UUID.randomUUID().toString())
+                        .chat(chat)
+                        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+                        .role(ChatRole.CHARACTER)
+                        .interacted(false)
+                        .options("Option A||Option B||Option C||Option D")
+                        .build();
+                
+                messageRepository.save(questionMessage);
+
+                // Create user response to this question
+                SingleChoiceAnswerMessageDto userResponse = new SingleChoiceAnswerMessageDto();
+                userResponse.setId(questionMessage.getId()); // Respond to the specific question
+                userResponse.setChatId(testChatId);
+                userResponse.setMessageType(MessageType.SINGLE_CHOICE_QUESTION);
+                userResponse.setAnswer("Option A");
+                userResponse.setUserResponseTime(2000L);
+
+                // Send user response through AI-generated simulation engine
+                MvcResult result = mockMvc.perform(put("/message/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userResponse)))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+                // Wait for processing
+                Thread.sleep(2000);
+
+                // Verify the user's answered message was updated in database
+                SingleChoiceQuestionMessage updatedMessage = (SingleChoiceQuestionMessage) 
+                        messageRepository.findById(questionMessage.getId()).orElseThrow();
+                
+                assertThat(updatedMessage.getAnswer()).isEqualTo("Option A");
+                assertThat(updatedMessage.isInteracted()).isTrue();
+                assertThat(updatedMessage.getRole()).isEqualTo(ChatRole.USER);
+
+                // Now test the message type conversion by UserMessageService
+                // Get all messages for this chat and convert them for display
+                List<Message> allMessages = messageRepository.findAll().stream()
+                        .filter(m -> m.getChat() != null && m.getChat().getId().equals(testChatId))
+                        .collect(Collectors.toList());
+
+                ChatParams chatParams = new ChatParams(5.0);
+                List<UserMessageDto> convertedMessages = userMessageService.combineMessage(allMessages, chatParams);
+
+                // Find the converted user message
+                UserMessageDto convertedUserMessage = convertedMessages.stream()
+                        .filter(msg -> questionMessage.getId().equals(msg.getId()))
+                        .findFirst()
+                        .orElse(null);
+
+                assertThat(convertedUserMessage).isNotNull();
+                
+                // CRITICAL: Verify that answered SingleChoiceQuestion gets converted to TEXT
+                // This is the core behavior that should match legacy simulations
+                assertThat(convertedUserMessage.getMessageType()).isEqualTo(MessageType.TEXT);
+                
+                // For UserSingleChoiceMessageDto, check the answer field instead of content
+                if (convertedUserMessage instanceof UserSingleChoiceMessageDto singleChoiceDto) {
+                    assertThat(singleChoiceDto.getAnswer()).isEqualTo("Option A");
+                }
+
+                System.out.println("✅ Test 12 PASSED: Message type conversion works correctly for AI-generated simulations");
+                System.out.println("✅ Answered SingleChoiceQuestion converted to TEXT type as expected");
+                System.out.println("✅ AI-generated simulations now match legacy behavior for message display");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test 12 FAILED: " + e.getMessage());
+                throw new RuntimeException("Message type conversion test failed", e);
+            }
+        });
+    }
+
     @Test
     @Order(13)
     void testRaceConditionVisibility() throws Exception {
@@ -920,6 +1056,73 @@ class AiGeneratedSimulationIntegrationTest {
             assertThat(chatResponse.success()).isFalse();
             assertThat(chatResponse.errorMessage()).isNotNull();
         }
+    }
+
+    /**
+     * Test 13: Verify Interacted Message is Returned
+     *
+     * This test ensures that when a user sends a message, the response from `/send-message`
+     * includes the updated (interacted) message along with any new messages from the AI.
+     */
+    @Test
+    @Order(13)
+    void testInteractedMessageIsReturnedOnSend() throws Exception {
+        assumingThat(testChatId != null, () -> {
+            try {
+                System.out.println("🔄 Testing Interacted Message Return for AI-Generated Simulation 🔄");
+
+                // First, create a question message to reply to
+                Chat chat = chatRepository.findById(testChatId).orElseThrow();
+                SingleChoiceQuestionMessage questionMessage = SingleChoiceQuestionMessage.builder()
+                        .id(UUID.randomUUID().toString())
+                        .chat(chat)
+                        .messageType(MessageType.SINGLE_CHOICE_QUESTION)
+                        .role(ChatRole.CHARACTER)
+                        .interacted(false)
+                        .options("Yes||No")
+                        .build();
+                messageRepository.save(questionMessage);
+
+                // Simulate a user answering the question
+                SingleChoiceAnswerMessageDto answerDto = new SingleChoiceAnswerMessageDto();
+                answerDto.setChatId(testChatId);
+                answerDto.setId(questionMessage.getId());
+                answerDto.setAnswer("Yes");
+                answerDto.setMessageType(MessageType.SINGLE_CHOICE_ANSWER);
+
+                // Send the answer and get the response
+                String responseString = mockMvc.perform(post("/send-message")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(answerDto)))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString();
+
+                ChatResponseDto chatData = objectMapper.readValue(responseString, ChatResponseDto.class);
+
+                // Verify that the response contains at least two messages
+                assertNotNull(chatData.messages(), "Response should contain messages");
+                assertTrue(chatData.messages().size() >= 1, "Should be at least one message in response");
+
+                // Verify the first message is the updated, interacted message
+                UserMessageDto interactedMessage = chatData.messages().get(0);
+                assertEquals(questionMessage.getId(), interactedMessage.getId(), "First message should be the interacted one");
+                assertEquals(MessageType.TEXT.name(), interactedMessage.getMessageType().name(), "Interacted message should be converted to TEXT");
+                
+                // The answer of a single choice question is converted to the content of a text message
+                if (interactedMessage instanceof UserTextMessageDto textMessage) {
+                    assertEquals("Yes", textMessage.getContent(), "Interacted message should contain the user's answer");
+                } else {
+                    fail("Interacted message was not of expected type UserTextMessageDto, but was " + interactedMessage.getClass().getSimpleName());
+                }
+
+
+                System.out.println("✅ Test Passed: Interacted message was returned correctly.");
+
+            } catch (Exception e) {
+                System.err.println("❌ Test Failed: " + e.getMessage());
+                throw e;
+            }
+        });
     }
 
     /**
