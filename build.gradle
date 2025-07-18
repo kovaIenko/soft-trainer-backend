@@ -10,7 +10,7 @@ plugins {
 }
 
 group = 'com.backend'
-version = '0.0.504'
+version = '0.0.505'
 
 java {
   sourceCompatibility = '17'

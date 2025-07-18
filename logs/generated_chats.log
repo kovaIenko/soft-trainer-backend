@@ -322,3 +322,166 @@ Success: true
 Initial Messages Count: 3
 ================================================================================
 
+
+================================================================================
+CHAT CREATION: 14202
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 16:08:52.097
+Success: true
+Initial Messages Count: 1
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14203
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 16:28:47.414
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14204
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 16:29:08.825
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+[2025-07-18 16:52:52.600] INTERACTION | Chat: 14204 | User Type: EnterTextAnswerMessageDto | User Content: hey | Success: true | Processing Time: 0ms | AI Messages: 4
+  ├─ AI Message 1: EnterTextQuestionMessage
+  ├─ AI Message 2: When providing feedback, it's crucial to be specific and focus on behaviors rather than personality traits. This helps the recipient understand what t...
+  ├─ AI Message 3: Additionally, consider the timing of your feedback. Providing it promptly after the observed behavior can make it more impactful and actionable.
+  ├─ AI Message 4: Single Choice Question: Being specific||Focusing on behaviors||Providing feedback promptly||Emphasizing personality traits
+
+
+================================================================================
+CHAT CREATION: 14206
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 17:11:26.355
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14205
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 17:11:36.431
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14252
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 17:47:46.137
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+[2025-07-18 17:52:09.168] INTERACTION | Chat: 14252 | User Type: EnterTextAnswerMessageDto | User Content: hey | Success: true | Processing Time: 0ms | AI Messages: 4
+  ├─ AI Message 1: EnterTextQuestionMessage
+  ├─ AI Message 2: Great! Initiating the feedback conversation is crucial for setting the right tone. It helps create a safe space for open communication. How did you ap...
+  ├─ AI Message 3: Remember, showing empathy and being specific about the behavior or situation you want to address can make a significant difference in how feedback is ...
+  ├─ AI Message 4: EnterTextQuestionMessage
+
+
+================================================================================
+CHAT CREATION: 14302
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 18:22:12.149
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+[2025-07-18 18:22:51.483] INTERACTION | Chat: 14302 | User Type: EnterTextAnswerMessageDto | User Content: hey I would like to talk with you | Success: true | Processing Time: 0ms | AI Messages: 2
+  ├─ AI Message 1: EnterTextQuestionMessage
+  ├─ AI Message 2: Single Choice Question: Continue simulation||Try different approach||End simulation
+
+
+================================================================================
+CHAT CREATION: 14352
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 18:39:06.478
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14353
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 18:41:36.355
+Success: true
+Initial Messages Count: 2
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14354
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 18:42:59.137
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14355
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 18:51:03.289
+Success: true
+Initial Messages Count: 1
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14356
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 19:08:29.209
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+
+================================================================================
+CHAT CREATION: 14357
+Simulation ID: 1955
+Simulation Type: AI_GENERATED
+User ID: 1
+Timestamp: 2025-07-18 19:08:53.573
+Success: true
+Initial Messages Count: 3
+================================================================================
+
+[2025-07-18 19:09:24.830] INTERACTION | Chat: 14357 | User Type: EnterTextAnswerMessageDto | User Content: hey Alex | Success: true | Processing Time: 0ms | AI Messages: 2
+  ├─ AI Message 1: EnterTextQuestionMessage
+  ├─ AI Message 2: Single Choice Question: Continue simulation||Try different approach||End simulation
+

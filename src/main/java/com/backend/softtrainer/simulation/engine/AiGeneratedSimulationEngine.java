@@ -35,6 +35,7 @@ import com.backend.softtrainer.repositories.ChatRepository;
 import com.backend.softtrainer.repositories.MessageRepository;
 import com.backend.softtrainer.repositories.UserRepository;
 import com.backend.softtrainer.services.AiAgentService;
+import com.backend.softtrainer.services.CharacterService;
 import com.backend.softtrainer.services.MessageService;
 import com.backend.softtrainer.services.UserHyperParameterService;
 import com.backend.softtrainer.simulation.DualModeSimulationRuntime.SimulationType;
@@ -78,6 +79,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
     private final MessageRepository messageRepository;
     private final MessageService messageService;
     private final CharacterRepository characterRepository;
+    private final CharacterService characterService;
     private final UserRepository userRepository;
     private final ChatRepository chatRepository;
     private final UserHyperParameterService hyperParameterService;
@@ -507,7 +509,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                         .chat(chat)
                         .messageType(messageType)
                         .role(ChatRole.CHARACTER)
-                        .character(resolveCharacter(aiMessage.getCharacterName()))
+                        .character(resolveCharacter(aiMessage.getCharacterName(), aiMessage.getCharacterRole(), aiMessage.getRequiresResponse(), context))
                         .interacted(false)
                         .responseTimeLimit(aiMessage.getResponseTimeLimit())
                         .content(aiMessage.getContent() != null ? aiMessage.getContent() : "AI-generated text message")
@@ -520,7 +522,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                         .chat(chat)
                         .messageType(messageType)
                         .role(ChatRole.CHARACTER)
-                        .character(resolveCharacter(aiMessage.getCharacterName()))
+                        .character(resolveCharacter(aiMessage.getCharacterName(), aiMessage.getCharacterRole(), aiMessage.getRequiresResponse(), context))
                         .interacted(false)
                         .responseTimeLimit(aiMessage.getResponseTimeLimit())
                         .options(aiMessage.getOptions() != null && !aiMessage.getOptions().isEmpty() ?
@@ -534,7 +536,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                         .chat(chat)
                         .messageType(messageType)
                         .role(ChatRole.CHARACTER)
-                        .character(resolveCharacter(aiMessage.getCharacterName()))
+                        .character(resolveCharacter(aiMessage.getCharacterName(), aiMessage.getCharacterRole(), aiMessage.getRequiresResponse(), context))
                         .interacted(false)
                         .responseTimeLimit(aiMessage.getResponseTimeLimit())
                         .content(aiMessage.getContent() != null ? aiMessage.getContent() : "AI-generated enter text question")
@@ -549,7 +551,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                         .chat(chat)
                         .messageType(messageType)
                         .role(ChatRole.CHARACTER)
-                        .character(resolveCharacter(aiMessage.getCharacterName()))
+                        .character(resolveCharacter(aiMessage.getCharacterName(), aiMessage.getCharacterRole(), aiMessage.getRequiresResponse(), context))
                         .interacted(false)
                         .responseTimeLimit(aiMessage.getResponseTimeLimit())
                         .options(aiMessage.getOptions() != null && !aiMessage.getOptions().isEmpty() ?
@@ -563,7 +565,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                         .chat(chat)
                         .messageType(messageType)
                         .role(ChatRole.CHARACTER)
-                        .character(resolveCharacter(aiMessage.getCharacterName()))
+                        .character(resolveCharacter(aiMessage.getCharacterName(), aiMessage.getCharacterRole(), aiMessage.getRequiresResponse(), context))
                         .interacted(false)
                         .responseTimeLimit(aiMessage.getResponseTimeLimit())
                         .options(aiMessage.getOptions() != null && !aiMessage.getOptions().isEmpty() ?
@@ -577,7 +579,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                         .chat(chat)
                         .messageType(messageType)
                         .role(ChatRole.CHARACTER)
-                        .character(resolveCharacter(aiMessage.getCharacterName()))
+                        .character(resolveCharacter(aiMessage.getCharacterName(), aiMessage.getCharacterRole(), aiMessage.getRequiresResponse(), context))
                         .interacted(false)
                         .content(aiMessage.getContent() != null ? aiMessage.getContent() : "AI-generated simulation result")
                         .build();
@@ -591,7 +593,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                         .chat(chat)
                         .messageType(MessageType.TEXT)
                         .role(ChatRole.CHARACTER)
-                        .character(resolveCharacter(aiMessage.getCharacterName()))
+                        .character(resolveCharacter(aiMessage.getCharacterName(), aiMessage.getCharacterRole(), aiMessage.getRequiresResponse(), context))
                         .interacted(false)
                         .responseTimeLimit(aiMessage.getResponseTimeLimit())
                         .content(aiMessage.getContent() != null ? aiMessage.getContent() : "AI-generated message")
@@ -612,18 +614,39 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
     }
 
     /**
-     * 🎭 Resolve character by name
+     * 🎭 Resolve character by name using dynamic CharacterService
+     * 
+     * @param characterName The character name from AI response
+     * @param characterRole The character role from AI response  
+     * @param requiresResponse Whether this message is actionable (requires user response)
+     * @param context The simulation context
+     * @return Character object or null for actionable messages
      */
-    private Character resolveCharacter(String characterName) {
+    private Character resolveCharacter(String characterName, String characterRole, Boolean requiresResponse, SimulationContext context) {
+        // Actionable messages (questions, prompts) should have null character/author
+        if (requiresResponse != null && requiresResponse) {
+            log.debug("🎭 Actionable message detected (requires_response=true) - returning null character");
+            return null;
+        }
+        
         if (characterName == null || characterName.trim().isEmpty()) {
             return null;
         }
 
-        // Since CharacterRepository doesn't have findByName, we'll use a simple approach
-        // In a real implementation, you'd add the findByName method to the repository
-        log.debug("Character lookup requested for: {}, using null for now", characterName);
-        return null;
+        log.debug("🎭 Dynamically resolving character: '{}' with role: '{}'", characterName, characterRole);
+        
+        // Use new dynamic character processing from AI response
+        return characterService.processCharacterFromAiResponse(characterName, characterRole);
     }
+    
+    /**
+     * 🎭 Resolve character by name (fallback with no role)
+     */
+    private Character resolveCharacter(String characterName, SimulationContext context) {
+        return resolveCharacter(characterName, null, false, context);
+    }
+
+
 
     /**
      * 📊 Parse message type from string
@@ -928,7 +951,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                 .chat(chat)
                 .messageType(MessageType.TEXT)
                 .role(ChatRole.CHARACTER)
-                .character(resolveCharacter("AI Assistant"))
+                .character(resolveCharacter("AI Assistant", "COACH", false, context))
                 .interacted(false)
                 .content("We are so sorry, but the dynamic simulation is currently unavailable. " +
                          "Please try again later or contact support if this issue persists.")
@@ -940,7 +963,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                 .chat(chat)
                 .messageType(MessageType.RESULT_SIMULATION)
                 .role(ChatRole.CHARACTER)
-                .character(resolveCharacter("AI Assistant"))
+                .character(resolveCharacter("AI Assistant", "COACH", false, context))
                 .interacted(false)
                 .build();
 
@@ -968,7 +991,7 @@ public class AiGeneratedSimulationEngine implements BaseSimulationEngine {
                 .chat(chat)
                 .messageType(MessageType.RESULT_SIMULATION)
                 .role(ChatRole.CHARACTER)
-                .character(resolveCharacter("AI Assistant")) // Set a default character
+                .character(resolveCharacter("AI Assistant", "COACH", false, context)) // Set a default character
                 .interacted(false)
                 .content("Thank you for completing this simulation! Your responses have been recorded.")
                 .build();

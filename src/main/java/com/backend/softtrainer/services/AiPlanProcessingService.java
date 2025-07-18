@@ -28,6 +28,7 @@ public class AiPlanProcessingService {
 
     private final SimulationRepository simulationRepository;
     private final SkillRepository skillRepository;
+    private final CharacterService characterService;
 
     @Async("aiAgentTaskExecutor")
     @Transactional
@@ -54,7 +55,8 @@ public class AiPlanProcessingService {
                 // Add to skill with order
                 skill.getSimulations().put(simulation, (long) (i + 1));
 
-                log.debug("Created simulation: {} for skill: {}", simulation.getName(), skill.getName());
+                log.debug("Created simulation: {} for skill: {}", 
+                        simulation.getName(), skill.getName());
             }
 
             // Update skill with AI metadata and mark as completed

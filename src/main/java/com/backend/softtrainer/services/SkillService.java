@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -31,7 +30,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.backend.softtrainer.utils.Converter.convertSimulation;
@@ -278,61 +276,83 @@ public class SkillService {
   }
 
   public Set<SimulationAvailabilityStatusDto> findSimulationsBySkill(final User user, final Long skillId) {
-    var optSkill = skillRepository.findById(skillId);
-    if (optSkill.isPresent()) {
-      if(optSkill.get().isAdminHidden() || optSkill.get().isHidden()) {
-        throw new NoSuchElementException(String.format("You have no permission to get the skill with id %s", skillId));
-      }
-      log.info("Skill {} is present ", skillId);
-      var simulations = optSkill.get().getSimulations();
-      var chats = chatRepository.findAllBySkillId(user, skillId);
-      var chatBySimulationId = chats.stream().collect(Collectors.groupingBy(a -> a.getSimulation().getId()));
-      final AtomicBoolean isFirst = new AtomicBoolean(true);
+    // Single repository call with validation
+    Skill skill = skillRepository.findById(skillId)
+        .filter(s -> !s.isAdminHidden() && !s.isHidden())
+        .orElseThrow(() -> new NoSuchElementException(
+            String.format("You have no permission to get the skill with id %s", skillId)));
 
-      return simulations.entrySet().stream().sorted(Map.Entry.comparingByValue())
+    log.info("Skill {} is present", skillId);
+
+    // Get all chats for this skill and group by simulation
+    Map<Long, List<Chat>> chatsBySimulation = chatRepository.findAllBySkillId(user, skillId)
+        .stream()
+        .collect(Collectors.groupingBy(chat -> chat.getSimulation().getId()));
+
+    // Get sorted simulations (open only)
+    List<Simulation> sortedSimulations = skill.getSimulations().entrySet().stream()
+        .sorted(Map.Entry.comparingByValue())
         .map(Map.Entry::getKey)
         .filter(Simulation::isOpen)
-        .map(simulation -> {
-          var chatsPerSimulation = chatBySimulationId.getOrDefault(simulation.getId(), List.of());
+        .toList();
 
-          log.info(
-            "For simulation {} with the order {} there are {} chats",
-            simulation.getId(),
-            simulations.get(simulation),
-            chatsPerSimulation.size()
-          );
+    // Process simulations with proper availability logic
+    return processSimulationsWithAvailability(sortedSimulations, chatsBySimulation, skill.getSimulations());
+}
 
-          if (chatsPerSimulation.isEmpty()) {
-            if (isFirst.get()) {
-              isFirst.set(false);
-              return convertSimulation(simulation, true, false, simulations.get(simulation));
-            } else {
-              return convertSimulation(simulation, false, false, simulations.get(simulation));
-            }
-          }
+private Set<SimulationAvailabilityStatusDto> processSimulationsWithAvailability(
+  List<Simulation> sortedSimulations,
+  Map<Long, List<Chat>> chatsBySimulation,
+  Map<Simulation, Long> simulationOrders) {
 
-          var atLeastOneCompleted = chatsPerSimulation.stream()
-            .anyMatch(Chat::isFinished);
+    Set<SimulationAvailabilityStatusDto> results = new LinkedHashSet<>();
+    boolean hasAvailableSimulation = false;
 
-          log.info(
-            "At least one completed chat: {} for simulation {}",
-            atLeastOneCompleted,
-            simulation.getId()
-          );
+    for (Simulation simulation : sortedSimulations) {
+        List<Chat> chatsForSimulation = chatsBySimulation.getOrDefault(simulation.getId(), List.of());
+        Long order = simulationOrders.get(simulation);
 
-          if (atLeastOneCompleted) {
-            return convertSimulation(simulation, true, true, simulations.get(simulation));
-          } else {
-            isFirst.set(false);
-            return convertSimulation(simulation, true, false, simulations.get(simulation));
-          }
+        log.info("For simulation {} with order {} there are {} chats",
+                simulation.getId(), order, chatsForSimulation.size());
 
-        })
-        .sorted(Comparator.comparing(SimulationAvailabilityStatusDto::order))
-        .peek(simulation -> log.info("Simulation {} is available {}", simulation.id(), simulation.available()))
-        .collect(Collectors.toCollection(LinkedHashSet::new));
+        // Determine availability based on clear business rules
+        SimulationAvailabilityStatus status = determineSimulationStatus(
+            chatsForSimulation, hasAvailableSimulation);
+
+        results.add(convertSimulation(simulation, status.available(), status.completed(), order));
+
+        if (status.available()) {
+            hasAvailableSimulation = true;
+        }
+
+        log.info("Simulation {} is available {}", simulation.getId(), status.available());
     }
-    throw new NoSuchElementException(String.format("There is no skills with id %s", skillId));
-  }
+
+    return results;
+}
+
+private SimulationAvailabilityStatus determineSimulationStatus(
+        List<Chat> chatsForSimulation,
+        boolean hasAvailableSimulation) {
+
+    // No chats = available if no previous simulation is available, not completed
+    if (chatsForSimulation.isEmpty()) {
+        return new SimulationAvailabilityStatus(!hasAvailableSimulation, false);
+    }
+
+    // Has chats - check if any are completed
+    boolean hasCompletedChat = chatsForSimulation.stream().anyMatch(Chat::isFinished);
+
+    // If completed, always available and completed
+    if (hasCompletedChat) {
+        return new SimulationAvailabilityStatus(true, true);
+    }
+
+    // Has chats but none completed - available but not completed
+    return new SimulationAvailabilityStatus(true, false);
+}
+
+// Helper record for cleaner code
+private record SimulationAvailabilityStatus(boolean available, boolean completed) {}
 
 }
