@@ -462,10 +462,43 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
 
   @Override
   public String generateOverview(String prompt, String assistantId, String model) {
+    // OpenAI Assistant API has a hard limit of 256,000 characters for instructions
+    final int MAX_INSTRUCTION_LENGTH = 256000;
+    final int SAFE_BUFFER = 1000; // Leave buffer for safety
+    final int MAX_SAFE_LENGTH = MAX_INSTRUCTION_LENGTH - SAFE_BUFFER;
+    
     log.info("[AI Overview] Starting overview generation at {}", LocalDateTime.now());
     log.info("[AI Overview] Using assistant ID: {}", assistantId);
     log.info("[AI Overview] Using model: {}", model);
-    log.info("[AI Overview] Prompt length: {} characters", prompt.length());
+    log.info("[AI Overview] Original prompt length: {} characters", prompt.length());
+
+    // Truncate prompt if it exceeds the safe limit (this should rarely happen due to upstream data reduction)
+    String truncatedPrompt = prompt;
+    if (prompt.length() > MAX_SAFE_LENGTH) {
+      log.error("[AI Overview] CRITICAL: Prompt still exceeds safe length ({} > {}) despite upstream reduction. Emergency truncation required.", 
+        prompt.length(), MAX_SAFE_LENGTH);
+      
+      // Find the last complete JSON-like structure or paragraph before the limit
+      int truncateAt = MAX_SAFE_LENGTH - 500; // Leave room for warning message
+      
+      // Try to truncate at a reasonable boundary (newline, closing brace, etc.)
+      String searchZone = prompt.substring(Math.max(0, truncateAt - 200), truncateAt);
+      int lastNewline = searchZone.lastIndexOf('\n');
+      int lastBrace = searchZone.lastIndexOf('}');
+      int lastBracket = searchZone.lastIndexOf(']');
+      
+      int bestCutpoint = Math.max(Math.max(lastNewline, lastBrace), lastBracket);
+      if (bestCutpoint > 0) {
+        truncateAt = truncateAt - 200 + bestCutpoint + 1;
+      }
+      
+      truncatedPrompt = prompt.substring(0, truncateAt) + 
+        "\n\n[IMPORTANT: Content was truncated due to OpenAI API length constraints (256k limit). " +
+        "Please provide analysis based on the available data above. Some recent data may be missing.]";
+      
+      log.warn("[AI Overview] Prompt emergency-truncated from {} to {} characters", 
+        prompt.length(), truncatedPrompt.length());
+    }
 
     try {
       // Create a new thread
@@ -482,7 +515,7 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
       log.info("[AI Overview] Creating run with instructions...");
       CreateRunRequest createRunRequest = CreateRunRequest.newBuilder()
         .assistantId(assistantId)
-        .instructions(prompt)
+        .instructions(truncatedPrompt)
         .responseFormat(AssistantsResponseFormat.responseFormat(ResponseFormat.json()))
         .build();
 
@@ -509,7 +542,8 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
         if (retrievedRun.lastError() != null) {
           log.error("[AI Overview] Run error: {}", retrievedRun.lastError().message());
         }
-        return "Failed to generate AI overview. Please try again later.";
+        // Return null instead of error message to avoid JSON parsing issues downstream
+        return null;
       }
 
       // Get the response
@@ -523,7 +557,8 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
 
       if (messagesResponse.isEmpty()) {
         log.warn("[AI Overview] No messages found in thread");
-        return "No overview could be generated at this time.";
+        // Return null instead of error message to avoid JSON parsing issues downstream
+        return null;
       }
 
       String content = messagesResponse.get(0)
@@ -538,7 +573,8 @@ public class ChatGptServiceJvmOpenAi implements ChatGptService {
 
     } catch (Exception e) {
       log.error("[AI Overview] Error generating overview", e);
-      return "Error generating AI overview: " + e.getMessage();
+      // Return null instead of error message to avoid JSON parsing issues downstream
+      return null;
     }
   }
 

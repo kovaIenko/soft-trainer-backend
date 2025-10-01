@@ -42,9 +42,11 @@ public class TeamAiOverviewService {
     private static final String LLM_MODEL = "gpt-3.5-turbo";
     private static final PromptName PROMPT_NAME = PromptName.TEAM_AI_OVERVIEW;
     private static final int MAX_SIMULATIONS_FOR_OVERVIEW = 2;
+    private static final int MAX_TEAM_MEMBERS_TO_INCLUDE = 20; // Limit members to prevent prompt overflow
     private static final int MAX_ORGANIZATIONS_PER_BATCH = 10;
     private static final int MAX_RETRIES = 3;
     private static final int LLM_TIMEOUT_SECONDS = 30;
+    private static final int MAX_PROMPT_LENGTH = 255000; // OpenAI limit is 256k, keep buffer
 
     public Optional<AiOverview> getLatestTeamOverview(Long organizationId) {
         return aiOverviewRepository.findLatestByEntity(TEAM_ENTITY_TYPE, organizationId);
@@ -72,16 +74,47 @@ public class TeamAiOverviewService {
             .orElseThrow(() -> new RuntimeException("Prompt for team AI overview not found"));
         log.info("[Team AI Overview] Retrieved prompt: {} (ID: {})", PROMPT_NAME, prompt.getId());
 
-        Map<String, Object> analytics = collectTeamAnalytics(organization);
-        stopWatch.stop();
-        log.info("[Team AI Overview] Analytics collection completed in {} ms", stopWatch.getLastTaskTimeMillis());
+        // Start with maximum limits and progressively reduce if prompt is too long
+        int maxMembers = MAX_TEAM_MEMBERS_TO_INCLUDE;
+        int simulationsPerMember = MAX_SIMULATIONS_FOR_OVERVIEW;
+        String filledPrompt;
+        Map<String, Object> analytics;
+        
+        // Iteratively reduce data until prompt fits
+        do {
+            analytics = collectTeamAnalytics(organization, maxMembers, simulationsPerMember);
+            stopWatch.stop();
+            log.info("[Team AI Overview] Analytics collected (members: {}, simulations: {})", 
+                maxMembers, simulationsPerMember);
 
-        log.info("[Team AI Overview] Analytics data size: {} entries", analytics.size());
-        log.debug("[Team AI Overview] Full analytics data: {}", analytics);
-
-        String filledPrompt = fillPrompt(prompt.getPrompt(), analytics);
-        log.info("[Team AI Overview] Prompt filled with analytics data (length: {} chars)", filledPrompt.length());
-        log.debug("[Team AI Overview] Filled prompt:\n{}", filledPrompt);
+            filledPrompt = fillPrompt(prompt.getPrompt(), analytics);
+            log.info("[Team AI Overview] Prompt filled with analytics data (length: {} chars)", filledPrompt.length());
+            
+            if (filledPrompt.length() > MAX_PROMPT_LENGTH) {
+                // First try reducing simulations per member
+                if (simulationsPerMember > 1) {
+                    simulationsPerMember--;
+                    log.warn("[Team AI Overview] Prompt too long ({} chars), reducing to {} simulations per member", 
+                        filledPrompt.length(), simulationsPerMember);
+                    stopWatch.start("collect-analytics-retry");
+                // Then try reducing number of members
+                } else if (maxMembers > 5) {
+                    maxMembers = Math.max(5, maxMembers - 5);
+                    simulationsPerMember = MAX_SIMULATIONS_FOR_OVERVIEW; // Reset simulations
+                    log.warn("[Team AI Overview] Prompt too long ({} chars), reducing to {} team members", 
+                        filledPrompt.length(), maxMembers);
+                    stopWatch.start("collect-analytics-retry");
+                } else {
+                    log.warn("[Team AI Overview] Prompt still too long ({} chars) even with minimal data. Will truncate.", 
+                        filledPrompt.length());
+                    break;
+                }
+            } else {
+                break;
+            }
+        } while (true);
+        
+        log.debug("[Team AI Overview] Final filled prompt:\n{}", filledPrompt);
 
         String overviewText = null;
         com.fasterxml.jackson.databind.JsonNode overviewJson = null;
@@ -94,11 +127,17 @@ public class TeamAiOverviewService {
             log.info("[Team AI Overview] Attempting LLM generation (attempt {}/{})", retryCount + 1, MAX_RETRIES);
             try {
                 overviewText = chatGptService.generateOverview(filledPrompt, prompt.getAssistantId(), LLM_MODEL);
+                
+                // Check if response is null or empty
                 if (overviewText == null || overviewText.trim().isEmpty()) {
                     success = false;
-                    errorMessage = "LLM returned empty response";
+                    errorMessage = "LLM returned null or empty response";
                     log.warn("[Team AI Overview] Generation failed: {}", errorMessage);
                 } else {
+                    log.info("[Team AI Overview] LLM response received (length: {} characters)", overviewText.length());
+                    log.debug("[Team AI Overview] LLM response:\n{}", overviewText);
+                    
+                    // Try to parse as JSON only if we have content
                     try {
                         overviewJson = new com.fasterxml.jackson.databind.ObjectMapper().readTree(overviewText);
                         success = true;
@@ -106,24 +145,30 @@ public class TeamAiOverviewService {
                     } catch (Exception e) {
                         log.error("[Team AI Overview] Failed to parse LLM response as JSON: {}", e.getMessage(), e);
                         success = false;
-                        errorMessage = "Invalid JSON response";
+                        errorMessage = "Invalid JSON response: " + e.getMessage();
+                        // Keep the text even if JSON parsing fails
                     }
                 }
             } catch (Exception e) {
                 success = false;
-                errorMessage = e.getMessage();
+                errorMessage = "Exception during generation: " + e.getMessage();
                 log.error("[Team AI Overview] Generation failed with exception: {}", errorMessage, e);
             }
 
+            // Retry logic with exponential backoff
             if (!success && retryCount < MAX_RETRIES - 1) {
                 retryCount++;
-                log.info("[Team AI Overview] Retrying generation (attempt {}/{})", retryCount + 1, MAX_RETRIES);
+                log.info("[Team AI Overview] Retrying generation (attempt {}/{}) after error: {}", 
+                    retryCount + 1, MAX_RETRIES, errorMessage);
                 try {
                     Thread.sleep(1000 * retryCount); // Exponential backoff
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
+                    log.warn("[Team AI Overview] Retry interrupted");
                     break;
                 }
+            } else {
+                break; // Exit loop if successful or no more retries
             }
         }
         stopWatch.stop();
@@ -157,8 +202,9 @@ public class TeamAiOverviewService {
         return overview;
     }
 
-    private Map<String, Object> collectTeamAnalytics(Organization organization) {
-        log.info("[Team AI Overview] Collecting analytics for organization: {}", organization.getName());
+    private Map<String, Object> collectTeamAnalytics(Organization organization, int maxMembers, int simulationsPerMember) {
+        log.info("[Team AI Overview] Collecting analytics for organization: {} (max members: {}, simulations: {})", 
+            organization.getName(), maxMembers, simulationsPerMember);
         Map<String, Object> analytics = new HashMap<>();
 
         // Basic organization info
@@ -169,12 +215,38 @@ public class TeamAiOverviewService {
             organization.getName(), organization.getLocalization(), organization.getAvailableSkills());
 
         // Team members data
-        List<User> teamMembers = userRepository.findAllByOrganization(organization);
-        analytics.put("team_size", teamMembers.size());
-        log.info("[Team AI Overview] Found {} team members", teamMembers.size());
+        List<User> allTeamMembers = userRepository.findAllByOrganization(organization);
+        analytics.put("team_size", allTeamMembers.size());
+        log.info("[Team AI Overview] Found {} total team members", allTeamMembers.size());
 
-        // Department distribution
-        Map<String, Long> departmentDistribution = teamMembers.stream()
+        // Limit team members - prioritize most recently active users (within last 24h)
+        LocalDateTime cutoffTime = LocalDateTime.now().minusHours(24);
+        List<User> recentlyActiveMembers = allTeamMembers.stream()
+            .filter(user -> userHyperParameterRepository.hasRecentUpdates(user.getId(), cutoffTime))
+            .limit(maxMembers)
+            .toList();
+        
+        // If we don't have enough recently active members, fill with others
+        List<User> teamMembers = recentlyActiveMembers;
+        if (recentlyActiveMembers.size() < maxMembers && recentlyActiveMembers.size() < allTeamMembers.size()) {
+            int remainingSlots = maxMembers - recentlyActiveMembers.size();
+            List<User> additionalMembers = allTeamMembers.stream()
+                .filter(user -> !recentlyActiveMembers.contains(user))
+                .limit(remainingSlots)
+                .toList();
+            
+            // Combine both lists
+            teamMembers = new java.util.ArrayList<>(recentlyActiveMembers);
+            teamMembers.addAll(additionalMembers);
+        }
+        
+        if (allTeamMembers.size() > maxMembers) {
+            log.info("[Team AI Overview] Limited to {} most active members (from {})", 
+                teamMembers.size(), allTeamMembers.size());
+        }
+
+        // Department distribution (from all members)
+        Map<String, Long> departmentDistribution = allTeamMembers.stream()
             .collect(java.util.stream.Collectors.groupingBy(
                 user -> user.getDepartment() != null ? user.getDepartment() : "Unassigned",
                 java.util.stream.Collectors.counting()
@@ -187,7 +259,7 @@ public class TeamAiOverviewService {
         analytics.put("team_heatmap", heatmap);
         log.debug("[Team AI Overview] Team heatmap collected: {}", heatmap);
 
-        // Individual member analytics
+        // Individual member analytics (limited set)
         List<Map<String, Object>> memberAnalytics = teamMembers.stream()
             .map(member -> {
                 log.debug("[Team AI Overview] Collecting analytics for member: {}", member.getEmail());
@@ -198,7 +270,7 @@ public class TeamAiOverviewService {
                 memberData.put("department", member.getDepartment());
                 memberData.put("roles", member.getRoles());
                 memberData.put("hyperparams", profileAnalyticsService.getProfileRadar(member.getEmail()));
-                memberData.put("progression", profileAnalyticsService.getProfileProgression(member.getEmail(), MAX_SIMULATIONS_FOR_OVERVIEW));
+                memberData.put("progression", profileAnalyticsService.getProfileProgression(member.getEmail(), simulationsPerMember));
                 return memberData;
             })
             .toList();
