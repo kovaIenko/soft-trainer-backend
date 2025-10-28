@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'com.backend'
-version = '0.0.507'
+version = '0.0.509'
 
 java {
   sourceCompatibility = '17'
@@ -114,6 +114,10 @@ dependencies {
   implementation 'org.telegram:telegrambots-spring-boot-starter:6.9.7.1'
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'org.springframework.boot:spring-boot-starter-security'
+  
+  // Spring Retry for retry patterns
+  implementation 'org.springframework.retry:spring-retry:2.0.1'
+  implementation 'org.springframework:spring-aspects:6.0.7'
 
   // JAXB dependencies
   implementation 'javax.xml.bind:jaxb-api:2.3.1'

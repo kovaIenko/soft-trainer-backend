@@ -78,7 +78,15 @@ public class CustomUsrDetailsService implements UserDetailsService {
       java.time.LocalDateTime.now()
     );
     
-    telegramService.sendMessage(notificationMessage);
+    // Send notification asynchronously to prevent blocking login process
+    telegramService.sendMessageAsync(notificationMessage)
+        .whenComplete((result, throwable) -> {
+          if (throwable != null) {
+            log.warn("Failed to send login notification for user: {}", user.getEmail(), throwable);
+          } else {
+            log.debug("Login notification sent successfully for user: {}", user.getEmail());
+          }
+        });
   }
 
   public void createUser(String email, String password) throws UserAlreadyExitsException {
